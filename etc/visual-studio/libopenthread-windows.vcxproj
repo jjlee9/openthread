@@ -35,7 +35,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{30723C38-BA3B-44C9-8D64-C5861A26934F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>thread</RootNamespace>
+    <RootNamespace>Thread</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
     <ProjectName>libopenthread-windows</ProjectName>
   </PropertyGroup>

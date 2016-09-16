@@ -27,7 +27,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{41B32069-632E-4578-855B-A36EBFA80B56}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>cli</RootNamespace>
+    <RootNamespace>Thread</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
