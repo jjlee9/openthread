@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{91D3ADEA-F1FE-4433-95B6-F8F6A7CF7BAF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>thread</RootNamespace>
+    <RootNamespace>Thread</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
     <ProjectName>ot-cli</ProjectName>
   </PropertyGroup>
