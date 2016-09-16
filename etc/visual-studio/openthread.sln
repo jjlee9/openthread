@@ -28,11 +28,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mbedtls_k", "mbedtls_k.vcxp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UnitTests", "UnitTests.vcxproj", "{FD64BF17-8D36-4578-8D13-77B123BE30D3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-windows", "etc\visual-studio\libopenthread-windows.vcxproj", "{30723C38-BA3B-44C9-8D64-C5861A26934F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-windows", "libopenthread-windows.vcxproj", "{30723C38-BA3B-44C9-8D64-C5861A26934F}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-cli", "etc\visual-studio\libopenthread-cli.vcxproj", "{41B32069-632E-4578-855B-A36EBFA80B56}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-cli", "libopenthread-cli.vcxproj", "{41B32069-632E-4578-855B-A36EBFA80B56}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ot-cli", "etc\visual-studio\ot-cli.vcxproj", "{91D3ADEA-F1FE-4433-95B6-F8F6A7CF7BAF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ot-cli", "ot-cli.vcxproj", "{91D3ADEA-F1FE-4433-95B6-F8F6A7CF7BAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

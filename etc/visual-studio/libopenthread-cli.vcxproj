@@ -77,23 +77,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(SolutionDir)build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <OutDir>$(SolutionDir)build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
+    <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IntDir>$(SolutionDir)build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <OutDir>$(SolutionDir)build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
+    <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(SolutionDir)build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <OutDir>$(SolutionDir)build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
+    <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IntDir>$(SolutionDir)build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <OutDir>$(SolutionDir)build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
+    <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\lib\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -103,7 +103,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;MBEDTLS_CONFIG_FILE="mbedtls-config.h";OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)src\core;$(SolutionDir)third_party\mbedtls;$(SolutionDir)third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include;..\..\src;..\..\src\core;..\..\third_party\mbedtls;..\..\third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -117,7 +117,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_LIB;MBEDTLS_CONFIG_FILE="mbedtls-config.h";OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)src\core;$(SolutionDir)third_party\mbedtls;$(SolutionDir)third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include;..\..\src;..\..\src\core;..\..\third_party\mbedtls;..\..\third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -133,7 +133,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;MBEDTLS_CONFIG_FILE="mbedtls-config.h";OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)src\core;$(SolutionDir)third_party\mbedtls;$(SolutionDir)third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include;..\..\src;..\..\src\core;..\..\third_party\mbedtls;..\..\third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -151,7 +151,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_LIB;MBEDTLS_CONFIG_FILE="mbedtls-config.h";OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)src;$(SolutionDir)src\core;$(SolutionDir)third_party\mbedtls;$(SolutionDir)third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include;..\..\src;..\..\src\core;..\..\third_party\mbedtls;..\..\third_party\mbedtls\repo\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
