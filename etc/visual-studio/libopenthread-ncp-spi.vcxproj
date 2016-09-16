@@ -33,9 +33,9 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B92F449E-0FD9-44FC-ACFA-6521A3240CA2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ncp_spi</RootNamespace>
+    <RootNamespace>Thread</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>ncp_spi</ProjectName>
+    <ProjectName>libopenthread-ncp-spi</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
