@@ -51,6 +51,9 @@
     <ClCompile Include="..\..\tests\unit\test_platform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\unit\test_ncp_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\tests\unit\test_util.h">

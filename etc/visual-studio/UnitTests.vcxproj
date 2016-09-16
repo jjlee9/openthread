@@ -104,7 +104,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread-ncp-uart.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -120,7 +120,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread-ncp-uart.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -138,7 +138,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread-ncp-uart.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -158,7 +158,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread-ncp-uart.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -168,6 +168,7 @@
     <ClCompile Include="..\..\tests\unit\test_lowpan.cpp" />
     <ClCompile Include="..\..\tests\unit\test_mac_frame.cpp" />
     <ClCompile Include="..\..\tests\unit\test_message.cpp" />
+    <ClCompile Include="..\..\tests\unit\test_ncp_buffer.cpp" />
     <ClCompile Include="..\..\tests\unit\test_platform.cpp" />
     <ClCompile Include="..\..\tests\unit\test_timer.cpp" />
     <ClCompile Include="..\..\tests\unit\test_toolchain.cpp" />
@@ -181,6 +182,9 @@
     <ClInclude Include="..\..\tests\unit\test_vector.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="libopenthread-ncp-uart.vcxproj">
+      <Project>{d94867d2-6dae-47e2-962a-5e8e658134d1}</Project>
+    </ProjectReference>
     <ProjectReference Include="libopenthread.vcxproj">
       <Project>{dd5018be-54c6-4fd4-9f8d-08d52fc0cd40}</Project>
     </ProjectReference>
