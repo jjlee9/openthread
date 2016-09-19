@@ -40,6 +40,10 @@
 #pragma warning(disable:4244)  // conversion from '*' to '*', possible loss of data
 #endif
 
+#if defined(WINDOWS_KERNEL)
+#define MBEDTLS_PLATFORM_EXIT_MACRO
+#endif
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE) && !defined(WINDOWS_KERNEL)
 #define _CRT_SECURE_NO_DEPRECATE 1
 #endif
