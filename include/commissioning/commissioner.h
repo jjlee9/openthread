@@ -102,8 +102,8 @@ typedef void (*otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const 
  * @retval kThreadError_NoBufs  Insufficient buffers to generate an Energy Scan Query message.
  *
  */
-OTAPI ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,
-                                           uint16_t aScanDuration, const otIp6Address *aAddress,
+OTAPI ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
+                                           uint16_t aPeriod, uint16_t aScanDuration, const otIp6Address *aAddress,
                                            otCommissionerEnergyReportCallback aCallback, void *aContext);
 
 /**
