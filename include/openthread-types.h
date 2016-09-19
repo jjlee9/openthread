@@ -44,6 +44,18 @@
 extern "C" {
 #endif
 
+#ifndef CONTAINING_RECORD
+/*#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#define CONTAINING_RECORD(address, type, field) \
+    ((type *)((uint8_t*)(address) - offsetof(type, field)))
+#pragma GCC diagnostic pop*/
+#define BASE 0x1
+#define myoffsetof(s,m) (((size_t)&(((s*)BASE)->m))-BASE)
+#define CONTAINING_RECORD(address, type, field) \
+    ((type *)((uint8_t*)(address) - myoffsetof(type, field)))
+#endif
+
 /**
  * This type represents the OpenThread instance structure.
  */

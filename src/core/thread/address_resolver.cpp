@@ -173,7 +173,7 @@ ThreadError AddressResolver::SendAddressQuery(const Ip6::Address &aEid)
     Ip6::MessageInfo messageInfo;
 
     sockaddr.mPort = kCoapUdpPort;
-    mSocket.Open(&HandleUdpReceive, this);
+    mSocket.Open(&AddressResolver::HandleUdpReceive, this);
     mSocket.Bind(sockaddr);
 
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
@@ -352,7 +352,7 @@ ThreadError AddressResolver::SendAddressError(const ThreadTargetTlv &aTarget, co
     Ip6::SockAddr sockaddr;
 
     sockaddr.mPort = kCoapUdpPort;
-    mSocket.Open(&HandleUdpReceive, this);
+    mSocket.Open(&AddressResolver::HandleUdpReceive, this);
     mSocket.Bind(sockaddr);
 
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, error = kThreadError_NoBufs);

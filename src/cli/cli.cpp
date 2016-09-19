@@ -42,6 +42,7 @@
 #include <string.h>
 
 #include <openthread.h>
+#include <openthreadinstance.h>
 #include <openthread-diag.h>
 #include <commissioning/commissioner.h>
 #include <commissioning/joiner.h>
@@ -59,8 +60,6 @@ using Thread::Encoding::BigEndian::HostSwap16;
 using Thread::Encoding::BigEndian::HostSwap32;
 
 namespace Thread {
-
-extern Ip6::Ip6 *sIp6;
 
 namespace Cli {
 
@@ -131,10 +130,10 @@ Interpreter::Interpreter(otInstance *aInstance):
     sLength(8),
     sCount(1),
     sInterval(1000),
-    sPingTimer(sIp6->mTimerScheduler, &Interpreter::s_HandlePingTimer, this),
+    sPingTimer(aInstance->mIp6.mTimerScheduler, &Interpreter::s_HandlePingTimer, this),
     mInstance(aInstance)
 {
-    sIp6->mIcmp.SetEchoReplyHandler(&s_HandleEchoResponse, this);
+    mInstance->mIp6.mIcmp.SetEchoReplyHandler(&s_HandleEchoResponse, this);
     otSetStateChangedCallback(mInstance, &Interpreter::s_HandleNetifStateChanged, this);
 }
 
@@ -1109,11 +1108,11 @@ void Interpreter::HandlePingTimer()
     uint32_t timestamp = HostSwap32(Timer::GetNow());
     Message *message;
 
-    VerifyOrExit((message = sIp6->mIcmp.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mInstance->mIp6.mIcmp.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
     SuccessOrExit(error = message->Append(&timestamp, sizeof(timestamp)));
     SuccessOrExit(error = message->SetLength(sLength));
 
-    SuccessOrExit(error = sIp6->mIcmp.SendEchoRequest(*message, sMessageInfo));
+    SuccessOrExit(error = mInstance->mIp6.mIcmp.SendEchoRequest(*message, sMessageInfo));
     sCount--;
 
 exit:
@@ -1681,12 +1680,12 @@ void Interpreter::ProcessRouterDowngradeThreshold(int argc, char *argv[])
 
     if (argc == 0)
     {
-        sServer->OutputFormat("%d\r\n", otGetRouterDowngradeThreshold());
+        sServer->OutputFormat("%d\r\n", otGetRouterDowngradeThreshold(mInstance));
     }
     else
     {
         SuccessOrExit(error = ParseLong(argv[0], value));
-        otSetRouterDowngradeThreshold(static_cast<uint8_t>(value));
+        otSetRouterDowngradeThreshold(mInstance, static_cast<uint8_t>(value));
     }
 
 exit:

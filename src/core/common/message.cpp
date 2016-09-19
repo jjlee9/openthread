@@ -33,6 +33,7 @@
 
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
+#include <common/logging.hpp>
 #include <common/message.hpp>
 #include <net/ip6.hpp>
 
@@ -83,6 +84,11 @@ ThreadError MessagePool::Free(Message *aMessage)
 Buffer *MessagePool::NewBuffer(void)
 {
     Buffer *buffer = NULL;
+
+    if (mFreeBuffers == NULL)
+    {
+        otLogWarnMem("Ran out of buffers!");
+    }
 
     VerifyOrExit(mFreeBuffers != NULL, ;);
 

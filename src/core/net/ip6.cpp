@@ -43,6 +43,7 @@
 #include <net/netif.hpp>
 #include <net/udp6.hpp>
 #include <thread/mle.hpp>
+#include <openthreadinstance.h>
 
 namespace Thread {
 namespace Ip6 {
@@ -812,6 +813,11 @@ int8_t Ip6::GetOnLinkNetif(const Address &aAddress)
 
 exit:
     return rval;
+}
+
+otInstance *Ip6::GetInstance()
+{
+    return otInstanceFromIp6(this);
 }
 
 }  // namespace Ip6

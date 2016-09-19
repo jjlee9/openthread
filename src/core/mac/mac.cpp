@@ -49,13 +49,13 @@
 #include <platform/random.h>
 #include <thread/mle_router.hpp>
 #include <thread/thread_netif.hpp>
+#include <openthreadinstance.h>
 
 namespace Thread {
 namespace Mac {
 
 static const uint8_t sExtendedPanidInit[] = {0xde, 0xad, 0x00, 0xbe, 0xef, 0x00, 0xca, 0xfe};
 static const char sNetworkNameInit[] = "OpenThread";
-static Mac *sMac;
 
 void Mac::StartCsmaBackoff(void)
 {
@@ -85,8 +85,6 @@ Mac::Mac(ThreadNetif &aThreadNetif):
     mWhitelist(),
     mBlacklist()
 {
-    sMac = this;
-
     mState = kStateIdle;
 
     mRxOnWhenIdle = false;
@@ -134,7 +132,7 @@ Mac::Mac(ThreadNetif &aThreadNetif):
     mPcapCallback = NULL;
     mPcapCallbackContext = NULL;
 
-    otPlatRadioEnable(NULL);
+    otPlatRadioEnable(mNetif.GetInstance());
 }
 
 ThreadError Mac::ActiveScan(uint32_t aScanChannels, uint16_t aScanDuration, ActiveScanHandler aHandler, void *aContext)
@@ -293,7 +291,7 @@ ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
         buf[i] = aExtAddress.m8[7 - i];
     }
 
-    SuccessOrExit(error = otPlatRadioSetExtendedAddress(NULL, buf));
+    SuccessOrExit(error = otPlatRadioSetExtendedAddress(mNetif.GetInstance(), buf));
     mExtAddress = aExtAddress;
 
 exit:
@@ -321,7 +319,7 @@ ShortAddress Mac::GetShortAddress(void) const
 ThreadError Mac::SetShortAddress(ShortAddress aShortAddress)
 {
     mShortAddress = aShortAddress;
-    return otPlatRadioSetShortAddress(NULL, aShortAddress);
+    return otPlatRadioSetShortAddress(mNetif.GetInstance(), aShortAddress);
 }
 
 uint8_t Mac::GetChannel(void) const
@@ -371,7 +369,7 @@ PanId Mac::GetPanId(void) const
 ThreadError Mac::SetPanId(PanId aPanId)
 {
     mPanId = aPanId;
-    return otPlatRadioSetPanId(NULL, mPanId);
+    return otPlatRadioSetPanId(mNetif.GetInstance(), mPanId);
 }
 
 const uint8_t *Mac::GetExtendedPanId(void) const
@@ -418,17 +416,17 @@ void Mac::NextOperation(void)
     {
     case kStateActiveScan:
     case kStateEnergyScan:
-        otPlatRadioReceive(NULL, mScanChannel);
+        otPlatRadioReceive(mNetif.GetInstance(), mScanChannel);
         break;
 
     default:
-        if (mRxOnWhenIdle || mReceiveTimer.IsRunning() || otPlatRadioGetPromiscuous(NULL))
+        if (mRxOnWhenIdle || mReceiveTimer.IsRunning() || otPlatRadioGetPromiscuous(mNetif.GetInstance()))
         {
-            otPlatRadioReceive(NULL, mChannel);
+            otPlatRadioReceive(mNetif.GetInstance(), mChannel);
         }
         else
         {
-            otPlatRadioSleep(NULL);
+            otPlatRadioSleep(mNetif.GetInstance());
         }
 
         break;
@@ -596,10 +594,10 @@ exit:
 
 void Mac::HandleBeginTransmit(void)
 {
-    Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(NULL)));
+    Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(mNetif.GetInstance())));
     ThreadError error = kThreadError_None;
 
-    if (otPlatRadioReceive(NULL, mChannel) != kThreadError_None)
+    if (otPlatRadioReceive(mNetif.GetInstance(), mChannel) != kThreadError_None)
     {
         mBeginTransmit.Post();
         ExitNow();
@@ -640,9 +638,9 @@ void Mac::HandleBeginTransmit(void)
         sendFrame.SetPower(mMaxTransmitPower);
     }
 
-    SuccessOrExit(error = otPlatRadioTransmit(NULL));
+    SuccessOrExit(error = otPlatRadioTransmit(mNetif.GetInstance()));
 
-    if (sendFrame.GetAckRequest() && !(otPlatRadioGetCaps(NULL) & kRadioCapsAckTimeout))
+    if (sendFrame.GetAckRequest() && !(otPlatRadioGetCaps(mNetif.GetInstance()) & kRadioCapsAckTimeout))
     {
         mAckTimer.Start(kAckTimeout);
         otLogDebgMac("ack timer start\n");
@@ -656,9 +654,9 @@ exit:
     }
 }
 
-extern "C" void otPlatRadioTransmitDone(otInstance *, bool aRxPending, ThreadError aError)
+extern "C" void otPlatRadioTransmitDone(otInstance *aInstance, bool aRxPending, ThreadError aError)
 {
-    sMac->TransmitDoneTask(aRxPending, aError);
+    aInstance->mThreadNetif.GetMac().TransmitDoneTask(aRxPending, aError);
 }
 
 void Mac::TransmitDoneTask(bool aRxPending, ThreadError aError)
@@ -716,7 +714,7 @@ void Mac::HandleAckTimer(void *aContext)
 
 void Mac::HandleAckTimer(void)
 {
-    otPlatRadioReceive(NULL, mChannel);
+    otPlatRadioReceive(mNetif.GetInstance(), mChannel);
 
     switch (mState)
     {
@@ -795,7 +793,7 @@ void Mac::HandleReceiveTimer(void)
 
 void Mac::SentFrame(bool aAcked)
 {
-    Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(NULL)));
+    Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(mNetif.GetInstance())));
     Address destination;
     Sender *sender;
 
@@ -995,9 +993,9 @@ exit:
     return error;
 }
 
-extern "C" void otPlatRadioReceiveDone(otInstance *, RadioPacket *aFrame, ThreadError aError)
+extern "C" void otPlatRadioReceiveDone(otInstance *aInstance, RadioPacket *aFrame, ThreadError aError)
 {
-    sMac->ReceiveDoneTask(static_cast<Frame *>(aFrame), aError);
+    aInstance->mThreadNetif.GetMac().ReceiveDoneTask(static_cast<Frame *>(aFrame), aError);
 }
 
 void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
@@ -1235,14 +1233,14 @@ void Mac::SetPcapCallback(otLinkPcapCallback aPcapCallback, void *aCallbackConte
 
 bool Mac::IsPromiscuous(void)
 {
-    return otPlatRadioGetPromiscuous(NULL);
+    return otPlatRadioGetPromiscuous(mNetif.GetInstance());
 }
 
 void Mac::SetPromiscuous(bool aPromiscuous)
 {
-    otPlatRadioSetPromiscuous(NULL, aPromiscuous);
+    otPlatRadioSetPromiscuous(mNetif.GetInstance(), aPromiscuous);
 
-    SuccessOrExit(otPlatRadioReceive(NULL, mChannel));
+    SuccessOrExit(otPlatRadioReceive(mNetif.GetInstance(), mChannel));
     NextOperation();
 
 exit:

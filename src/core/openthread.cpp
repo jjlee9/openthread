@@ -52,128 +52,115 @@
 #include <platform/misc.h>
 #include <thread/thread_netif.hpp>
 #include <thread/thread_uris.hpp>
-
-// Temporary definition
-typedef struct otInstance
-{
-} otInstance;
-
-namespace Thread {
-
-// This needs to not be static until the NCP
-// the OpenThread API is capable enough for
-// of of the features in the NCP.
-ThreadNetif *sThreadNetif;
+#include <openthreadinstance.h>
 
 #ifndef OPENTHREAD_MULTIPLE_INSTANCE
 static otDEFINE_ALIGNED_VAR(sInstanceRaw, sizeof(otInstance), uint64_t);
 otInstance *sInstance = NULL;
 #endif
 
-static Ip6::NetifCallback sNetifCallback;
+otInstance::otInstance(void) :
+    mReceiveIp6DatagramCallback(NULL),
+    mReceiveIp6DatagramCallbackContext(NULL),
+    mActiveScanCallback(NULL),
+    mActiveScanCallbackContext(NULL),
+    mDiscoverCallback(NULL),
+    mDiscoverCallbackContext(NULL),
+    mMbedTls(),
+    mIp6(),
+    mThreadNetif(mIp6)
+{
+}
 
-static otDEFINE_ALIGNED_VAR(sMbedTlsRaw, sizeof(Crypto::MbedTls), uint64_t);
-
-static otDEFINE_ALIGNED_VAR(sIp6Raw, sizeof(Ip6::Ip6), uint64_t);
-Ip6::Ip6 *sIp6;
+namespace Thread {
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static otDEFINE_ALIGNED_VAR(sThreadNetifRaw, sizeof(ThreadNetif), uint64_t);
-
 static void HandleActiveScanResult(void *aContext, Mac::Frame *aFrame);
 static void HandleEnergyScanResult(void *aContext, otEnergyScanResult *aResult);
 static void HandleMleDiscover(otActiveScanResult *aResult, void *aContext);
 
-static otHandleActiveScanResult sActiveScanCallback = NULL;
-static void *sActiveScanCallbackContext = NULL;
-
-static otHandleEnergyScanResult sEnergyScanCallback = NULL;
-static void *sEnergyScanCallbackContext = NULL;
-
-static otHandleActiveScanResult sDiscoverCallback = NULL;
-static void *sDiscoverCallbackContext = NULL;
-
-void otProcessNextTasklet(otInstance *)
+void otProcessNextTasklet(otInstance *aInstance)
 {
-    sIp6->mTaskletScheduler.RunNextTasklet();
+    aInstance->mIp6.mTaskletScheduler.RunNextTasklet();
 }
 
-bool otAreTaskletsPending(otInstance *)
+bool otAreTaskletsPending(otInstance *aInstance)
 {
-    return sIp6->mTaskletScheduler.AreTaskletsPending();
+    return aInstance->mIp6.mTaskletScheduler.AreTaskletsPending();
 }
 
-uint8_t otGetChannel(otInstance *)
+uint8_t otGetChannel(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().GetChannel();
+    return aInstance->mThreadNetif.GetMac().GetChannel();
 }
 
-ThreadError otSetChannel(otInstance *, uint8_t aChannel)
+ThreadError otSetChannel(otInstance *aInstance, uint8_t aChannel)
 {
-    return sThreadNetif->GetMac().SetChannel(aChannel);
+    return aInstance->mThreadNetif.GetMac().SetChannel(aChannel);
 }
 
-uint8_t otGetMaxAllowedChildren(otInstance *)
+uint8_t otGetMaxAllowedChildren(otInstance *aInstance)
 {
     uint8_t aNumChildren;
 
-    (void)sThreadNetif->GetMle().GetChildren(&aNumChildren);
+    (void)aInstance->mThreadNetif.GetMle().GetChildren(&aNumChildren);
 
     return aNumChildren;
 }
 
-ThreadError otSetMaxAllowedChildren(otInstance *, uint8_t aMaxChildren)
+ThreadError otSetMaxAllowedChildren(otInstance *aInstance, uint8_t aMaxChildren)
 {
-    return sThreadNetif->GetMle().SetMaxAllowedChildren(aMaxChildren);
+    return aInstance->mThreadNetif.GetMle().SetMaxAllowedChildren(aMaxChildren);
 }
 
-uint32_t otGetChildTimeout(otInstance *)
+uint32_t otGetChildTimeout(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetTimeout();
+    return aInstance->mThreadNetif.GetMle().GetTimeout();
 }
 
-void otSetChildTimeout(otInstance *, uint32_t aTimeout)
+void otSetChildTimeout(otInstance *aInstance, uint32_t aTimeout)
 {
-    sThreadNetif->GetMle().SetTimeout(aTimeout);
+    aInstance->mThreadNetif.GetMle().SetTimeout(aTimeout);
 }
 
-const uint8_t *otGetExtendedAddress(otInstance *)
+const uint8_t *otGetExtendedAddress(otInstance *aInstance)
 {
-    return reinterpret_cast<const uint8_t *>(sThreadNetif->GetMac().GetExtAddress());
+    return reinterpret_cast<const uint8_t *>(aInstance->mThreadNetif.GetMac().GetExtAddress());
 }
 
-ThreadError otSetExtendedAddress(otInstance *, const otExtAddress *aExtAddress)
+ThreadError otSetExtendedAddress(otInstance *aInstance, const otExtAddress *aExtAddress)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aExtAddress != NULL, error = kThreadError_InvalidArgs);
 
-    SuccessOrExit(error = sThreadNetif->GetMac().SetExtAddress(*static_cast<const Mac::ExtAddress *>(aExtAddress)));
-    SuccessOrExit(error = sThreadNetif->GetMle().UpdateLinkLocalAddress());
+    SuccessOrExit(error = aInstance->mThreadNetif.GetMac().SetExtAddress(*static_cast<const Mac::ExtAddress *>
+                                                                         (aExtAddress)));
+    SuccessOrExit(error = aInstance->mThreadNetif.GetMle().UpdateLinkLocalAddress());
 
 exit:
     return error;
 }
 
-const uint8_t *otGetExtendedPanId(otInstance *)
+const uint8_t *otGetExtendedPanId(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().GetExtendedPanId();
+    return aInstance->mThreadNetif.GetMac().GetExtendedPanId();
 }
 
-void otSetExtendedPanId(otInstance *, const uint8_t *aExtendedPanId)
+void otSetExtendedPanId(otInstance *aInstance, const uint8_t *aExtendedPanId)
 {
     uint8_t mlPrefix[8];
 
-    sThreadNetif->GetMac().SetExtendedPanId(aExtendedPanId);
+    aInstance->mThreadNetif.GetMac().SetExtendedPanId(aExtendedPanId);
 
     mlPrefix[0] = 0xfd;
     memcpy(mlPrefix + 1, aExtendedPanId, 5);
     mlPrefix[6] = 0x00;
     mlPrefix[7] = 0x00;
-    sThreadNetif->GetMle().SetMeshLocalPrefix(mlPrefix);
+    aInstance->mThreadNetif.GetMle().SetMeshLocalPrefix(mlPrefix);
 }
 
 void otGetFactoryAssignedIeeeEui64(otInstance *aInstance, otExtAddress *aEui64)
@@ -181,27 +168,27 @@ void otGetFactoryAssignedIeeeEui64(otInstance *aInstance, otExtAddress *aEui64)
     otPlatRadioGetIeeeEui64(aInstance, aEui64->m8);
 }
 
-void otGetHashMacAddress(otInstance *, otExtAddress *aHashMacAddress)
+void otGetHashMacAddress(otInstance *aInstance, otExtAddress *aHashMacAddress)
 {
-    sThreadNetif->GetMac().GetHashMacAddress(static_cast<Mac::ExtAddress *>(aHashMacAddress));
+    aInstance->mThreadNetif.GetMac().GetHashMacAddress(static_cast<Mac::ExtAddress *>(aHashMacAddress));
 }
 
-ThreadError otGetLeaderRloc(otInstance *, otIp6Address *aAddress)
+ThreadError otGetLeaderRloc(otInstance *aInstance, otIp6Address *aAddress)
 {
     ThreadError error;
 
     VerifyOrExit(aAddress != NULL, error = kThreadError_InvalidArgs);
 
-    error = sThreadNetif->GetMle().GetLeaderAddress(*static_cast<Ip6::Address *>(aAddress));
+    error = aInstance->mThreadNetif.GetMle().GetLeaderAddress(*static_cast<Ip6::Address *>(aAddress));
 
 exit:
     return error;
 }
 
-otLinkModeConfig otGetLinkMode(otInstance *)
+otLinkModeConfig otGetLinkMode(otInstance *aInstance)
 {
     otLinkModeConfig config;
-    uint8_t mode = sThreadNetif->GetMle().GetDeviceMode();
+    uint8_t mode = aInstance->mThreadNetif.GetMle().GetDeviceMode();
 
     memset(&config, 0, sizeof(otLinkModeConfig));
 
@@ -228,7 +215,7 @@ otLinkModeConfig otGetLinkMode(otInstance *)
     return config;
 }
 
-ThreadError otSetLinkMode(otInstance *, otLinkModeConfig aConfig)
+ThreadError otSetLinkMode(otInstance *aInstance, otLinkModeConfig aConfig)
 {
     uint8_t mode = 0;
 
@@ -252,134 +239,134 @@ ThreadError otSetLinkMode(otInstance *, otLinkModeConfig aConfig)
         mode |= Mle::ModeTlv::kModeFullNetworkData;
     }
 
-    return sThreadNetif->GetMle().SetDeviceMode(mode);
+    return aInstance->mThreadNetif.GetMle().SetDeviceMode(mode);
 }
 
-const uint8_t *otGetMasterKey(otInstance *, uint8_t *aKeyLength)
+const uint8_t *otGetMasterKey(otInstance *aInstance, uint8_t *aKeyLength)
 {
-    return sThreadNetif->GetKeyManager().GetMasterKey(aKeyLength);
+    return aInstance->mThreadNetif.GetKeyManager().GetMasterKey(aKeyLength);
 }
 
-ThreadError otSetMasterKey(otInstance *, const uint8_t *aKey, uint8_t aKeyLength)
+ThreadError otSetMasterKey(otInstance *aInstance, const uint8_t *aKey, uint8_t aKeyLength)
 {
-    return sThreadNetif->GetKeyManager().SetMasterKey(aKey, aKeyLength);
+    return aInstance->mThreadNetif.GetKeyManager().SetMasterKey(aKey, aKeyLength);
 }
 
-int8_t otGetMaxTransmitPower(otInstance *)
+int8_t otGetMaxTransmitPower(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().GetMaxTransmitPower();
+    return aInstance->mThreadNetif.GetMac().GetMaxTransmitPower();
 }
 
-void otSetMaxTransmitPower(otInstance *, int8_t aPower)
+void otSetMaxTransmitPower(otInstance *aInstance, int8_t aPower)
 {
-    sThreadNetif->GetMac().SetMaxTransmitPower(aPower);
+    aInstance->mThreadNetif.GetMac().SetMaxTransmitPower(aPower);
 }
 
-const otIp6Address *otGetMeshLocalEid(otInstance *)
+const otIp6Address *otGetMeshLocalEid(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetMeshLocal64();
+    return aInstance->mThreadNetif.GetMle().GetMeshLocal64();
 }
 
-const uint8_t *otGetMeshLocalPrefix(otInstance *)
+const uint8_t *otGetMeshLocalPrefix(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetMeshLocalPrefix();
+    return aInstance->mThreadNetif.GetMle().GetMeshLocalPrefix();
 }
 
-ThreadError otSetMeshLocalPrefix(otInstance *, const uint8_t *aMeshLocalPrefix)
+ThreadError otSetMeshLocalPrefix(otInstance *aInstance, const uint8_t *aMeshLocalPrefix)
 {
-    return sThreadNetif->GetMle().SetMeshLocalPrefix(aMeshLocalPrefix);
+    return aInstance->mThreadNetif.GetMle().SetMeshLocalPrefix(aMeshLocalPrefix);
 }
 
-ThreadError otGetNetworkDataLeader(otInstance *, bool aStable, uint8_t *aData, uint8_t *aDataLength)
-{
-    ThreadError error = kThreadError_None;
-
-    VerifyOrExit(aData != NULL && aDataLength != NULL, error = kThreadError_InvalidArgs);
-
-    sThreadNetif->GetNetworkDataLeader().GetNetworkData(aStable, aData, *aDataLength);
-
-exit:
-    return error;
-}
-
-ThreadError otGetNetworkDataLocal(otInstance *, bool aStable, uint8_t *aData, uint8_t *aDataLength)
+ThreadError otGetNetworkDataLeader(otInstance *aInstance, bool aStable, uint8_t *aData, uint8_t *aDataLength)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aData != NULL && aDataLength != NULL, error = kThreadError_InvalidArgs);
 
-    sThreadNetif->GetNetworkDataLocal().GetNetworkData(aStable, aData, *aDataLength);
+    aInstance->mThreadNetif.GetNetworkDataLeader().GetNetworkData(aStable, aData, *aDataLength);
 
 exit:
     return error;
 }
 
-const char *otGetNetworkName(otInstance *)
+ThreadError otGetNetworkDataLocal(otInstance *aInstance, bool aStable, uint8_t *aData, uint8_t *aDataLength)
 {
-    return sThreadNetif->GetMac().GetNetworkName();
+    ThreadError error = kThreadError_None;
+
+    VerifyOrExit(aData != NULL && aDataLength != NULL, error = kThreadError_InvalidArgs);
+
+    aInstance->mThreadNetif.GetNetworkDataLocal().GetNetworkData(aStable, aData, *aDataLength);
+
+exit:
+    return error;
 }
 
-ThreadError otSetNetworkName(otInstance *, const char *aNetworkName)
+const char *otGetNetworkName(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().SetNetworkName(aNetworkName);
+    return aInstance->mThreadNetif.GetMac().GetNetworkName();
 }
 
-otPanId otGetPanId(otInstance *)
+ThreadError otSetNetworkName(otInstance *aInstance, const char *aNetworkName)
 {
-    return sThreadNetif->GetMac().GetPanId();
+    return aInstance->mThreadNetif.GetMac().SetNetworkName(aNetworkName);
 }
 
-ThreadError otSetPanId(otInstance *, otPanId aPanId)
+otPanId otGetPanId(otInstance *aInstance)
+{
+    return aInstance->mThreadNetif.GetMac().GetPanId();
+}
+
+ThreadError otSetPanId(otInstance *aInstance, otPanId aPanId)
 {
     ThreadError error = kThreadError_None;
 
     // do not allow setting PAN ID to broadcast if Thread is running
     VerifyOrExit(aPanId != Mac::kPanIdBroadcast ||
-                 sThreadNetif->GetMle().GetDeviceState() != Mle::kDeviceStateDisabled,
+                 aInstance->mThreadNetif.GetMle().GetDeviceState() != Mle::kDeviceStateDisabled,
                  error = kThreadError_InvalidState);
 
-    error = sThreadNetif->GetMac().SetPanId(aPanId);
+    error = aInstance->mThreadNetif.GetMac().SetPanId(aPanId);
 
 exit:
     return error;
 }
 
-bool otIsRouterRoleEnabled(otInstance *)
+bool otIsRouterRoleEnabled(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().IsRouterRoleEnabled();
+    return aInstance->mThreadNetif.GetMle().IsRouterRoleEnabled();
 }
 
-void otSetRouterRoleEnabled(otInstance *, bool aEnabled)
+void otSetRouterRoleEnabled(otInstance *aInstance, bool aEnabled)
 {
-    sThreadNetif->GetMle().SetRouterRoleEnabled(aEnabled);
+    aInstance->mThreadNetif.GetMle().SetRouterRoleEnabled(aEnabled);
 }
 
-otShortAddress otGetShortAddress(otInstance *)
+otShortAddress otGetShortAddress(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().GetShortAddress();
+    return aInstance->mThreadNetif.GetMac().GetShortAddress();
 }
 
-uint8_t otGetLocalLeaderWeight(otInstance *)
+uint8_t otGetLocalLeaderWeight(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderWeight();
+    return aInstance->mThreadNetif.GetMle().GetLeaderWeight();
 }
 
-void otSetLocalLeaderWeight(otInstance *, uint8_t aWeight)
+void otSetLocalLeaderWeight(otInstance *aInstance, uint8_t aWeight)
 {
-    sThreadNetif->GetMle().SetLeaderWeight(aWeight);
+    aInstance->mThreadNetif.GetMle().SetLeaderWeight(aWeight);
 }
 
-uint32_t otGetLocalLeaderPartitionId(otInstance *)
+uint32_t otGetLocalLeaderPartitionId(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderPartitionId();
+    return aInstance->mThreadNetif.GetMle().GetLeaderPartitionId();
 }
 
-void otSetLocalLeaderPartitionId(otInstance *, uint32_t aPartitionId)
+void otSetLocalLeaderPartitionId(otInstance *aInstance, uint32_t aPartitionId)
 {
-    return sThreadNetif->GetMle().SetLeaderPartitionId(aPartitionId);
+    return aInstance->mThreadNetif.GetMle().SetLeaderPartitionId(aPartitionId);
 }
 
-ThreadError otAddBorderRouter(otInstance *, const otBorderRouterConfig *aConfig)
+ThreadError otAddBorderRouter(otInstance *aInstance, const otBorderRouterConfig *aConfig)
 {
     uint8_t flags = 0;
 
@@ -413,17 +400,17 @@ ThreadError otAddBorderRouter(otInstance *, const otBorderRouterConfig *aConfig)
         flags |= NetworkData::BorderRouterEntry::kOnMeshFlag;
     }
 
-    return sThreadNetif->GetNetworkDataLocal().AddOnMeshPrefix(aConfig->mPrefix.mPrefix.mFields.m8,
-                                                               aConfig->mPrefix.mLength,
-                                                               aConfig->mPreference, flags, aConfig->mStable);
+    return aInstance->mThreadNetif.GetNetworkDataLocal().AddOnMeshPrefix(aConfig->mPrefix.mPrefix.mFields.m8,
+                                                                         aConfig->mPrefix.mLength,
+                                                                         aConfig->mPreference, flags, aConfig->mStable);
 }
 
-ThreadError otRemoveBorderRouter(otInstance *, const otIp6Prefix *aPrefix)
+ThreadError otRemoveBorderRouter(otInstance *aInstance, const otIp6Prefix *aPrefix)
 {
-    return sThreadNetif->GetNetworkDataLocal().RemoveOnMeshPrefix(aPrefix->mPrefix.mFields.m8, aPrefix->mLength);
+    return aInstance->mThreadNetif.GetNetworkDataLocal().RemoveOnMeshPrefix(aPrefix->mPrefix.mFields.m8, aPrefix->mLength);
 }
 
-ThreadError otGetNextOnMeshPrefix(otInstance *, bool aLocal, otNetworkDataIterator *aIterator,
+ThreadError otGetNextOnMeshPrefix(otInstance *aInstance, bool aLocal, otNetworkDataIterator *aIterator,
                                   otBorderRouterConfig *aConfig)
 {
     ThreadError error = kThreadError_None;
@@ -432,99 +419,100 @@ ThreadError otGetNextOnMeshPrefix(otInstance *, bool aLocal, otNetworkDataIterat
 
     if (aLocal)
     {
-        error = sThreadNetif->GetNetworkDataLocal().GetNextOnMeshPrefix(aIterator, aConfig);
+        error = aInstance->mThreadNetif.GetNetworkDataLocal().GetNextOnMeshPrefix(aIterator, aConfig);
     }
     else
     {
-        error = sThreadNetif->GetNetworkDataLeader().GetNextOnMeshPrefix(aIterator, aConfig);
+        error = aInstance->mThreadNetif.GetNetworkDataLeader().GetNextOnMeshPrefix(aIterator, aConfig);
     }
 
 exit:
     return error;
 }
 
-ThreadError otAddExternalRoute(otInstance *, const otExternalRouteConfig *aConfig)
+ThreadError otAddExternalRoute(otInstance *aInstance, const otExternalRouteConfig *aConfig)
 {
-    return sThreadNetif->GetNetworkDataLocal().AddHasRoutePrefix(aConfig->mPrefix.mPrefix.mFields.m8,
-                                                                 aConfig->mPrefix.mLength,
-                                                                 aConfig->mPreference, aConfig->mStable);
+    return aInstance->mThreadNetif.GetNetworkDataLocal().AddHasRoutePrefix(aConfig->mPrefix.mPrefix.mFields.m8,
+                                                                           aConfig->mPrefix.mLength,
+                                                                           aConfig->mPreference, aConfig->mStable);
 }
 
-ThreadError otRemoveExternalRoute(otInstance *, const otIp6Prefix *aPrefix)
+ThreadError otRemoveExternalRoute(otInstance *aInstance, const otIp6Prefix *aPrefix)
 {
-    return sThreadNetif->GetNetworkDataLocal().RemoveHasRoutePrefix(aPrefix->mPrefix.mFields.m8, aPrefix->mLength);
+    return aInstance->mThreadNetif.GetNetworkDataLocal().RemoveHasRoutePrefix(aPrefix->mPrefix.mFields.m8,
+                                                                              aPrefix->mLength);
 }
 
-ThreadError otSendServerData(otInstance *)
+ThreadError otSendServerData(otInstance *aInstance)
 {
-    return sThreadNetif->GetNetworkDataLocal().SendServerDataNotification();
+    return aInstance->mThreadNetif.GetNetworkDataLocal().SendServerDataNotification();
 }
 
-ThreadError otAddUnsecurePort(otInstance *, uint16_t aPort)
+ThreadError otAddUnsecurePort(otInstance *aInstance, uint16_t aPort)
 {
-    return sThreadNetif->GetIp6Filter().AddUnsecurePort(aPort);
+    return aInstance->mThreadNetif.GetIp6Filter().AddUnsecurePort(aPort);
 }
 
-ThreadError otRemoveUnsecurePort(otInstance *, uint16_t aPort)
+ThreadError otRemoveUnsecurePort(otInstance *aInstance, uint16_t aPort)
 {
-    return sThreadNetif->GetIp6Filter().RemoveUnsecurePort(aPort);
+    return aInstance->mThreadNetif.GetIp6Filter().RemoveUnsecurePort(aPort);
 }
 
-const uint16_t *otGetUnsecurePorts(otInstance *, uint8_t *aNumEntries)
+const uint16_t *otGetUnsecurePorts(otInstance *aInstance, uint8_t *aNumEntries)
 {
-    return sThreadNetif->GetIp6Filter().GetUnsecurePorts(*aNumEntries);
+    return aInstance->mThreadNetif.GetIp6Filter().GetUnsecurePorts(*aNumEntries);
 }
 
-uint32_t otGetContextIdReuseDelay(otInstance *)
+uint32_t otGetContextIdReuseDelay(otInstance *aInstance)
 {
-    return sThreadNetif->GetNetworkDataLeader().GetContextIdReuseDelay();
+    return aInstance->mThreadNetif.GetNetworkDataLeader().GetContextIdReuseDelay();
 }
 
-void otSetContextIdReuseDelay(otInstance *, uint32_t aDelay)
+void otSetContextIdReuseDelay(otInstance *aInstance, uint32_t aDelay)
 {
-    sThreadNetif->GetNetworkDataLeader().SetContextIdReuseDelay(aDelay);
+    aInstance->mThreadNetif.GetNetworkDataLeader().SetContextIdReuseDelay(aDelay);
 }
 
-uint32_t otGetKeySequenceCounter(otInstance *)
+uint32_t otGetKeySequenceCounter(otInstance *aInstance)
 {
-    return sThreadNetif->GetKeyManager().GetCurrentKeySequence();
+    return aInstance->mThreadNetif.GetKeyManager().GetCurrentKeySequence();
 }
 
-void otSetKeySequenceCounter(otInstance *, uint32_t aKeySequenceCounter)
+void otSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceCounter)
 {
-    sThreadNetif->GetKeyManager().SetCurrentKeySequence(aKeySequenceCounter);
+    aInstance->mThreadNetif.GetKeyManager().SetCurrentKeySequence(aKeySequenceCounter);
 }
 
-uint8_t otGetNetworkIdTimeout(otInstance *)
+uint8_t otGetNetworkIdTimeout(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetNetworkIdTimeout();
+    return aInstance->mThreadNetif.GetMle().GetNetworkIdTimeout();
 }
 
-void otSetNetworkIdTimeout(otInstance *, uint8_t aTimeout)
+void otSetNetworkIdTimeout(otInstance *aInstance, uint8_t aTimeout)
 {
-    sThreadNetif->GetMle().SetNetworkIdTimeout(aTimeout);
+    aInstance->mThreadNetif.GetMle().SetNetworkIdTimeout((uint8_t)aTimeout);
 }
 
-uint8_t otGetRouterUpgradeThreshold(otInstance *)
+uint8_t otGetRouterUpgradeThreshold(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetRouterUpgradeThreshold();
+    return aInstance->mThreadNetif.GetMle().GetRouterUpgradeThreshold();
 }
 
-void otSetRouterUpgradeThreshold(otInstance *, uint8_t aThreshold)
+void otSetRouterUpgradeThreshold(otInstance *aInstance, uint8_t aThreshold)
 {
-    sThreadNetif->GetMle().SetRouterUpgradeThreshold(aThreshold);
+    aInstance->mThreadNetif.GetMle().SetRouterUpgradeThreshold(aThreshold);
 }
 
-ThreadError otReleaseRouterId(otInstance *, uint8_t aRouterId)
+ThreadError otReleaseRouterId(otInstance *aInstance, uint8_t aRouterId)
 {
-    return sThreadNetif->GetMle().ReleaseRouterId(aRouterId);
+    return aInstance->mThreadNetif.GetMle().ReleaseRouterId(aRouterId);
 }
 
-ThreadError otAddMacWhitelist(otInstance *, const uint8_t *aExtAddr)
+ThreadError otAddMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr)
 {
     ThreadError error = kThreadError_None;
 
-    if (sThreadNetif->GetMac().GetWhitelist().Add(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr)) == NULL)
+    if (aInstance->mThreadNetif.GetMac().GetWhitelist().Add(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr)) == NULL)
     {
         error = kThreadError_NoBufs;
     }
@@ -532,80 +520,80 @@ ThreadError otAddMacWhitelist(otInstance *, const uint8_t *aExtAddr)
     return error;
 }
 
-ThreadError otAddMacWhitelistRssi(otInstance *, const uint8_t *aExtAddr, int8_t aRssi)
+ThreadError otAddMacWhitelistRssi(otInstance *aInstance, const uint8_t *aExtAddr, int8_t aRssi)
 {
     ThreadError error = kThreadError_None;
     otMacWhitelistEntry *entry;
 
-    entry = sThreadNetif->GetMac().GetWhitelist().Add(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr));
+    entry = aInstance->mThreadNetif.GetMac().GetWhitelist().Add(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr));
     VerifyOrExit(entry != NULL, error = kThreadError_NoBufs);
-    sThreadNetif->GetMac().GetWhitelist().SetFixedRssi(*entry, aRssi);
+    aInstance->mThreadNetif.GetMac().GetWhitelist().SetFixedRssi(*entry, aRssi);
 
 exit:
     return error;
 }
 
-void otRemoveMacWhitelist(otInstance *, const uint8_t *aExtAddr)
+void otRemoveMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr)
 {
-    sThreadNetif->GetMac().GetWhitelist().Remove(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr));
+    aInstance->mThreadNetif.GetMac().GetWhitelist().Remove(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr));
 }
 
-void otClearMacWhitelist(otInstance *)
+void otClearMacWhitelist(otInstance *aInstance)
 {
-    sThreadNetif->GetMac().GetWhitelist().Clear();
+    aInstance->mThreadNetif.GetMac().GetWhitelist().Clear();
 }
 
-ThreadError otGetMacWhitelistEntry(otInstance *, uint8_t aIndex, otMacWhitelistEntry *aEntry)
+ThreadError otGetMacWhitelistEntry(otInstance *aInstance, uint8_t aIndex, otMacWhitelistEntry *aEntry)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aEntry != NULL, error = kThreadError_InvalidArgs);
-    error = sThreadNetif->GetMac().GetWhitelist().GetEntry(aIndex, *aEntry);
+    error = aInstance->mThreadNetif.GetMac().GetWhitelist().GetEntry(aIndex, *aEntry);
 
 exit:
     return error;
 }
 
-void otDisableMacWhitelist(otInstance *)
+void otDisableMacWhitelist(otInstance *aInstance)
 {
-    sThreadNetif->GetMac().GetWhitelist().Disable();
+    aInstance->mThreadNetif.GetMac().GetWhitelist().Disable();
 }
 
-void otEnableMacWhitelist(otInstance *)
+void otEnableMacWhitelist(otInstance *aInstance)
 {
-    sThreadNetif->GetMac().GetWhitelist().Enable();
+    aInstance->mThreadNetif.GetMac().GetWhitelist().Enable();
 }
 
-bool otIsMacWhitelistEnabled(otInstance *)
+bool otIsMacWhitelistEnabled(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().GetWhitelist().IsEnabled();
+    return aInstance->mThreadNetif.GetMac().GetWhitelist().IsEnabled();
 }
 
-ThreadError otBecomeDetached(otInstance *)
+ThreadError otBecomeDetached(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().BecomeDetached();
+    return aInstance->mThreadNetif.GetMle().BecomeDetached();
 }
 
-ThreadError otBecomeChild(otInstance *, otMleAttachFilter aFilter)
+ThreadError otBecomeChild(otInstance *aInstance, otMleAttachFilter aFilter)
 {
-    return sThreadNetif->GetMle().BecomeChild(aFilter);
+    return aInstance->mThreadNetif.GetMle().BecomeChild(aFilter);
 }
 
-ThreadError otBecomeRouter(otInstance *)
+ThreadError otBecomeRouter(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().BecomeRouter(ThreadStatusTlv::kTooFewRouters);
+    return aInstance->mThreadNetif.GetMle().BecomeRouter(ThreadStatusTlv::kTooFewRouters);
 }
 
-ThreadError otBecomeLeader(otInstance *)
+ThreadError otBecomeLeader(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().BecomeLeader();
+    return aInstance->mThreadNetif.GetMle().BecomeLeader();
 }
 
-ThreadError otAddMacBlacklist(otInstance *, const uint8_t *aExtAddr)
+ThreadError otAddMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr)
 {
     ThreadError error = kThreadError_None;
 
-    if (sThreadNetif->GetMac().GetBlacklist().Add(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr)) == NULL)
+    if (aInstance->mThreadNetif.GetMac().GetBlacklist().Add(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr)) == NULL)
     {
         error = kThreadError_NoBufs;
     }
@@ -613,60 +601,60 @@ ThreadError otAddMacBlacklist(otInstance *, const uint8_t *aExtAddr)
     return error;
 }
 
-void otRemoveMacBlacklist(otInstance *, const uint8_t *aExtAddr)
+void otRemoveMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr)
 {
-    sThreadNetif->GetMac().GetBlacklist().Remove(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr));
+    aInstance->mThreadNetif.GetMac().GetBlacklist().Remove(*reinterpret_cast<const Mac::ExtAddress *>(aExtAddr));
 }
 
-void otClearMacBlacklist(otInstance *)
+void otClearMacBlacklist(otInstance *aInstance)
 {
-    sThreadNetif->GetMac().GetBlacklist().Clear();
+    aInstance->mThreadNetif.GetMac().GetBlacklist().Clear();
 }
 
-ThreadError otGetMacBlacklistEntry(otInstance *, uint8_t aIndex, otMacBlacklistEntry *aEntry)
+ThreadError otGetMacBlacklistEntry(otInstance *aInstance, uint8_t aIndex, otMacBlacklistEntry *aEntry)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aEntry != NULL, error = kThreadError_InvalidArgs);
-    error = sThreadNetif->GetMac().GetBlacklist().GetEntry(aIndex, *aEntry);
+    error = aInstance->mThreadNetif.GetMac().GetBlacklist().GetEntry(aIndex, *aEntry);
 
 exit:
     return error;
 }
 
-void otDisableMacBlacklist(otInstance *)
+void otDisableMacBlacklist(otInstance *aInstance)
 {
-    sThreadNetif->GetMac().GetBlacklist().Disable();
+    aInstance->mThreadNetif.GetMac().GetBlacklist().Disable();
 }
 
-void otEnableMacBlacklist(otInstance *)
+void otEnableMacBlacklist(otInstance *aInstance)
 {
-    sThreadNetif->GetMac().GetBlacklist().Enable();
+    aInstance->mThreadNetif.GetMac().GetBlacklist().Enable();
 }
 
-bool otIsMacBlacklistEnabled(otInstance *)
+bool otIsMacBlacklistEnabled(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().GetBlacklist().IsEnabled();
+    return aInstance->mThreadNetif.GetMac().GetBlacklist().IsEnabled();
 }
 
-ThreadError otGetAssignLinkQuality(otInstance *, const uint8_t *aExtAddr, uint8_t *aLinkQuality)
+ThreadError otGetAssignLinkQuality(otInstance *aInstance, const uint8_t *aExtAddr, uint8_t *aLinkQuality)
 {
     Mac::ExtAddress extAddress;
 
     memset(&extAddress, 0, sizeof(extAddress));
     memcpy(extAddress.m8, aExtAddr, OT_EXT_ADDRESS_SIZE);
 
-    return sThreadNetif->GetMle().GetAssignLinkQuality(extAddress, *aLinkQuality);
+    return aInstance->mThreadNetif.GetMle().GetAssignLinkQuality(extAddress, *aLinkQuality);
 }
 
-void otSetAssignLinkQuality(otInstance *, const uint8_t *aExtAddr, uint8_t aLinkQuality)
+void otSetAssignLinkQuality(otInstance *aInstance, const uint8_t *aExtAddr, uint8_t aLinkQuality)
 {
     Mac::ExtAddress extAddress;
 
     memset(&extAddress, 0, sizeof(extAddress));
     memcpy(extAddress.m8, aExtAddr, OT_EXT_ADDRESS_SIZE);
 
-    sThreadNetif->GetMle().SetAssignLinkQuality(extAddress, aLinkQuality);
+    aInstance->mThreadNetif.GetMle().SetAssignLinkQuality(extAddress, aLinkQuality);
 }
 
 void otPlatformReset(otInstance *aInstance)
@@ -674,45 +662,45 @@ void otPlatformReset(otInstance *aInstance)
     otPlatReset(aInstance);
 }
 
-uint8_t otGetRouterDowngradeThreshold(void)
+uint8_t otGetRouterDowngradeThreshold(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetRouterDowngradeThreshold();
+    return aInstance->mThreadNetif.GetMle().GetRouterDowngradeThreshold();
 }
 
-void otSetRouterDowngradeThreshold(uint8_t aThreshold)
+void otSetRouterDowngradeThreshold(otInstance *aInstance, uint8_t aThreshold)
 {
-    sThreadNetif->GetMle().SetRouterDowngradeThreshold(aThreshold);
+    aInstance->mThreadNetif.GetMle().SetRouterDowngradeThreshold(aThreshold);
 }
 
-ThreadError otGetChildInfoById(otInstance *, uint16_t aChildId, otChildInfo *aChildInfo)
-{
-    ThreadError error = kThreadError_None;
-
-    VerifyOrExit(aChildInfo != NULL, error = kThreadError_InvalidArgs);
-
-    error = sThreadNetif->GetMle().GetChildInfoById(aChildId, *aChildInfo);
-
-exit:
-    return error;
-}
-
-ThreadError otGetChildInfoByIndex(otInstance *, uint8_t aChildIndex, otChildInfo *aChildInfo)
+ThreadError otGetChildInfoById(otInstance *aInstance, uint16_t aChildId, otChildInfo *aChildInfo)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aChildInfo != NULL, error = kThreadError_InvalidArgs);
 
-    error = sThreadNetif->GetMle().GetChildInfoByIndex(aChildIndex, *aChildInfo);
+    error = aInstance->mThreadNetif.GetMle().GetChildInfoById(aChildId, *aChildInfo);
 
 exit:
     return error;
 }
 
-otDeviceRole otGetDeviceRole(otInstance *)
+ThreadError otGetChildInfoByIndex(otInstance *aInstance, uint8_t aChildIndex, otChildInfo *aChildInfo)
+{
+    ThreadError error = kThreadError_None;
+
+    VerifyOrExit(aChildInfo != NULL, error = kThreadError_InvalidArgs);
+
+    error = aInstance->mThreadNetif.GetMle().GetChildInfoByIndex(aChildIndex, *aChildInfo);
+
+exit:
+    return error;
+}
+
+otDeviceRole otGetDeviceRole(otInstance *aInstance)
 {
     otDeviceRole rval = kDeviceRoleDisabled;
 
-    switch (sThreadNetif->GetMle().GetDeviceState())
+    switch (aInstance->mThreadNetif.GetMle().GetDeviceState())
     {
     case Mle::kDeviceStateDisabled:
         rval = kDeviceRoleDisabled;
@@ -738,79 +726,79 @@ otDeviceRole otGetDeviceRole(otInstance *)
     return rval;
 }
 
-ThreadError otGetEidCacheEntry(otInstance *, uint8_t aIndex, otEidCacheEntry *aEntry)
+ThreadError otGetEidCacheEntry(otInstance *aInstance, uint8_t aIndex, otEidCacheEntry *aEntry)
 {
     ThreadError error;
 
     VerifyOrExit(aEntry != NULL, error = kThreadError_InvalidArgs);
-    error = sThreadNetif->GetAddressResolver().GetEntry(aIndex, *aEntry);
+    error = aInstance->mThreadNetif.GetAddressResolver().GetEntry(aIndex, *aEntry);
 
 exit:
     return error;
 }
 
-ThreadError otGetLeaderData(otInstance *, otLeaderData *aLeaderData)
+ThreadError otGetLeaderData(otInstance *aInstance, otLeaderData *aLeaderData)
 {
     ThreadError error;
 
     VerifyOrExit(aLeaderData != NULL, error = kThreadError_InvalidArgs);
 
-    error = sThreadNetif->GetMle().GetLeaderData(*aLeaderData);
+    error = aInstance->mThreadNetif.GetMle().GetLeaderData(*aLeaderData);
 
 exit:
     return error;
 }
 
-uint8_t otGetLeaderRouterId(otInstance *)
+uint8_t otGetLeaderRouterId(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderDataTlv().GetLeaderRouterId();
+    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetLeaderRouterId();
 }
 
-uint8_t otGetLeaderWeight(otInstance *)
+uint8_t otGetLeaderWeight(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderDataTlv().GetWeighting();
+    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetWeighting();
 }
 
-uint8_t otGetNetworkDataVersion(otInstance *)
+uint8_t otGetNetworkDataVersion(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderDataTlv().GetDataVersion();
+    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetDataVersion();
 }
 
-uint32_t otGetPartitionId(otInstance *)
+uint32_t otGetPartitionId(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderDataTlv().GetPartitionId();
+    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetPartitionId();
 }
 
-uint16_t otGetRloc16(otInstance *)
+uint16_t otGetRloc16(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetRloc16();
+    return aInstance->mThreadNetif.GetMle().GetRloc16();
 }
 
-uint8_t otGetRouterIdSequence(otInstance *)
+uint8_t otGetRouterIdSequence(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetRouterIdSequence();
+    return aInstance->mThreadNetif.GetMle().GetRouterIdSequence();
 }
 
-ThreadError otGetRouterInfo(otInstance *, uint16_t aRouterId, otRouterInfo *aRouterInfo)
+ThreadError otGetRouterInfo(otInstance *aInstance, uint16_t aRouterId, otRouterInfo *aRouterInfo)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aRouterInfo != NULL, error = kThreadError_InvalidArgs);
 
-    error = sThreadNetif->GetMle().GetRouterInfo(aRouterId, *aRouterInfo);
+    error = aInstance->mThreadNetif.GetMle().GetRouterInfo(aRouterId, *aRouterInfo);
 
 exit:
     return error;
 }
 
-ThreadError otGetParentInfo(otInstance *, otRouterInfo *aParentInfo)
+ThreadError otGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo)
 {
     ThreadError error = kThreadError_None;
     Router *parent;
 
     VerifyOrExit(aParentInfo != NULL, error = kThreadError_InvalidArgs);
 
-    parent = sThreadNetif->GetMle().GetParent();
+    parent = aInstance->mThreadNetif.GetMle().GetParent();
     memcpy(aParentInfo->mExtAddress.m8, parent->mMacAddr.m8, OT_EXT_ADDRESS_SIZE);
     aParentInfo->mRloc16 = parent->mValid.mRloc16;
 
@@ -818,37 +806,37 @@ exit:
     return error;
 }
 
-uint8_t otGetStableNetworkDataVersion(otInstance *)
+uint8_t otGetStableNetworkDataVersion(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().GetLeaderDataTlv().GetStableDataVersion();
+    return aInstance->mThreadNetif.GetMle().GetLeaderDataTlv().GetStableDataVersion();
 }
 
-void otSetLinkPcapCallback(otInstance *, otLinkPcapCallback aPcapCallback, void *aCallbackContext)
+void otSetLinkPcapCallback(otInstance *aInstance, otLinkPcapCallback aPcapCallback, void *aCallbackContext)
 {
-    sThreadNetif->GetMac().SetPcapCallback(aPcapCallback, aCallbackContext);
+    aInstance->mThreadNetif.GetMac().SetPcapCallback(aPcapCallback, aCallbackContext);
 }
 
-bool otIsLinkPromiscuous(otInstance *)
+bool otIsLinkPromiscuous(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().IsPromiscuous();
+    return aInstance->mThreadNetif.GetMac().IsPromiscuous();
 }
 
-ThreadError otSetLinkPromiscuous(otInstance *, bool aPromiscuous)
+ThreadError otSetLinkPromiscuous(otInstance *aInstance, bool aPromiscuous)
 {
     ThreadError error = kThreadError_None;
 
     // cannot enable IEEE 802.15.4 promiscuous mode if the Thread interface is enabled
-    VerifyOrExit(sThreadNetif->IsUp() == false, error = kThreadError_Busy);
+    VerifyOrExit(aInstance->mThreadNetif.IsUp() == false, error = kThreadError_Busy);
 
-    sThreadNetif->GetMac().SetPromiscuous(aPromiscuous);
+    aInstance->mThreadNetif.GetMac().SetPromiscuous(aPromiscuous);
 
 exit:
     return error;
 }
 
-const otMacCounters *otGetMacCounters(otInstance *)
+const otMacCounters *otGetMacCounters(otInstance *aInstance)
 {
-    return &sThreadNetif->GetMac().GetCounters();
+    return &aInstance->mThreadNetif.GetMac().GetCounters();
 }
 
 bool otIsIp6AddressEqual(const otIp6Address *a, const otIp6Address *b)
@@ -861,25 +849,25 @@ ThreadError otIp6AddressFromString(const char *str, otIp6Address *address)
     return static_cast<Ip6::Address *>(address)->FromString(str);
 }
 
-const otNetifAddress *otGetUnicastAddresses(otInstance *)
+const otNetifAddress *otGetUnicastAddresses(otInstance *aInstance)
 {
-    return sThreadNetif->GetUnicastAddresses();
+    return aInstance->mThreadNetif.GetUnicastAddresses();
 }
 
-ThreadError otAddUnicastAddress(otInstance *, const otNetifAddress *address)
+ThreadError otAddUnicastAddress(otInstance *aInstance, const otNetifAddress *address)
 {
-    return sThreadNetif->AddExternalUnicastAddress(*static_cast<const Ip6::NetifUnicastAddress *>(address));
+    return aInstance->mThreadNetif.AddExternalUnicastAddress(*static_cast<const Ip6::NetifUnicastAddress *>(address));
 }
 
-ThreadError otRemoveUnicastAddress(otInstance *, const otIp6Address *address)
+ThreadError otRemoveUnicastAddress(otInstance *aInstance, const otIp6Address *address)
 {
-    return sThreadNetif->RemoveExternalUnicastAddress(*static_cast<const Ip6::Address *>(address));
+    return aInstance->mThreadNetif.RemoveExternalUnicastAddress(*static_cast<const Ip6::Address *>(address));
 }
 
-void otSetStateChangedCallback(otInstance *, otStateChangedCallback aCallback, void *aCallbackContext)
+void otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aCallbackContext)
 {
-    sNetifCallback.Set(aCallback, aCallbackContext);
-    sThreadNetif->RegisterCallback(sNetifCallback);
+    aInstance->mNetifCallback.Set(aCallback, aCallbackContext);
+    aInstance->mThreadNetif.RegisterCallback(aInstance->mNetifCallback);
 }
 
 const char *otGetVersionString(void)
@@ -898,14 +886,14 @@ const char *otGetVersionString(void)
     return sVersion;
 }
 
-uint32_t otGetPollPeriod(otInstance *)
+uint32_t otGetPollPeriod(otInstance *aInstance)
 {
-    return sThreadNetif->GetMeshForwarder().GetAssignPollPeriod();
+    return aInstance->mThreadNetif.GetMeshForwarder().GetAssignPollPeriod();
 }
 
-void otSetPollPeriod(otInstance *, uint32_t aPollPeriod)
+void otSetPollPeriod(otInstance *aInstance, uint32_t aPollPeriod)
 {
-    sThreadNetif->GetMeshForwarder().SetAssignPollPeriod(aPollPeriod);
+    aInstance->mThreadNetif.GetMeshForwarder().SetAssignPollPeriod(aPollPeriod);
 }
 
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
@@ -926,10 +914,6 @@ otInstance *otInstanceInit(void *aInstanceBuffer, uint64_t *aInstanceBufferSize)
     // Construct the context
     aInstance = new(aInstanceBuffer)otInstance();
 
-    new(&sMbedTlsRaw) Crypto::MbedTls;
-    sIp6 = new(&sIp6Raw) Ip6::Ip6;
-    sThreadNetif = new(&sThreadNetifRaw) ThreadNetif(*sIp6);
-
 exit:
 
     return aInstance;
@@ -946,10 +930,6 @@ otInstance *otInstanceInit()
     // Construct the context
     sInstance = new(&sInstanceRaw)otInstance();
 
-    new(&sMbedTlsRaw) Crypto::MbedTls;
-    sIp6 = new(&sIp6Raw) Ip6::Ip6;
-    sThreadNetif = new(&sThreadNetifRaw) ThreadNetif(*sIp6);
-
 exit:
 
     return sInstance;
@@ -964,69 +944,72 @@ void otInstanceFinalize(otInstance *aInstance)
     (void)otInterfaceDown(aInstance);
 
     // Nothing to actually free, since the caller supplied the buffer
-    sThreadNetif = NULL;
+
+#ifndef OPENTHREAD_MULTIPLE_INSTANCE
+    sInstance = NULL;
+#endif
 }
 
-ThreadError otInterfaceUp(otInstance *)
+ThreadError otInterfaceUp(otInstance *aInstance)
 {
     ThreadError error = kThreadError_None;
 
-    error = sThreadNetif->Up();
+    error = aInstance->mThreadNetif.Up();
 
     return error;
 }
 
-ThreadError otInterfaceDown(otInstance *)
+ThreadError otInterfaceDown(otInstance *aInstance)
 {
     ThreadError error = kThreadError_None;
 
-    error = sThreadNetif->Down();
+    error = aInstance->mThreadNetif.Down();
 
     return error;
 }
 
-bool otIsInterfaceUp(otInstance *)
+bool otIsInterfaceUp(otInstance *aInstance)
 {
-    return sThreadNetif->IsUp();
+    return aInstance->mThreadNetif.IsUp();
 }
 
-ThreadError otThreadStart(otInstance *)
+ThreadError otThreadStart(otInstance *aInstance)
 {
     ThreadError error = kThreadError_None;
 
-    VerifyOrExit(sThreadNetif->GetMac().GetPanId() != Mac::kPanIdBroadcast, error = kThreadError_InvalidState);
+    VerifyOrExit(aInstance->mThreadNetif.GetMac().GetPanId() != Mac::kPanIdBroadcast, error = kThreadError_InvalidState);
 
-    error = sThreadNetif->GetMle().Start();
+    error = aInstance->mThreadNetif.GetMle().Start();
 
 exit:
     return error;
 }
 
-ThreadError otThreadStop(otInstance *)
+ThreadError otThreadStop(otInstance *aInstance)
 {
     ThreadError error = kThreadError_None;
 
-    error = sThreadNetif->GetMle().Stop();
+    error = aInstance->mThreadNetif.GetMle().Stop();
 
     return error;
 }
 
-bool otIsSingleton(otInstance *)
+bool otIsSingleton(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().IsSingleton();
+    return aInstance->mThreadNetif.GetMle().IsSingleton();
 }
 
 ThreadError otActiveScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
                          otHandleActiveScanResult aCallback, void *aCallbackContext)
 {
-    sActiveScanCallback = aCallback;
-    sActiveScanCallbackContext = aCallbackContext;
-    return sThreadNetif->GetMac().ActiveScan(aScanChannels, aScanDuration, &HandleActiveScanResult, aInstance);
+    aInstance->mActiveScanCallback = aCallback;
+    aInstance->mActiveScanCallbackContext = aCallbackContext;
+    return aInstance->mThreadNetif.GetMac().ActiveScan(aScanChannels, aScanDuration, &HandleActiveScanResult, aInstance);
 }
 
-bool otIsActiveScanInProgress(otInstance *)
+bool otIsActiveScanInProgress(otInstance *aInstance)
 {
-    return sThreadNetif->GetMac().IsActiveScanInProgress();
+    return aInstance->mThreadNetif.GetMac().IsActiveScanInProgress();
 }
 
 void HandleActiveScanResult(void *aContext, Mac::Frame *aFrame)
@@ -1041,7 +1024,7 @@ void HandleActiveScanResult(void *aContext, Mac::Frame *aFrame)
 
     if (aFrame == NULL)
     {
-        sActiveScanCallback(NULL, sActiveScanCallbackContext);
+        aInstance->mActiveScanCallback(NULL, aInstance->mActiveScanCallbackContext);
         ExitNow();
     }
 
@@ -1066,86 +1049,81 @@ void HandleActiveScanResult(void *aContext, Mac::Frame *aFrame)
         memcpy(&result.mExtendedPanId, beacon->GetExtendedPanId(), sizeof(result.mExtendedPanId));
     }
 
-    sActiveScanCallback(&result, sActiveScanCallbackContext);
+    aInstance->mActiveScanCallback(&result, aInstance->mActiveScanCallbackContext);
 
 exit:
-    (void)aInstance;
     return;
 }
 
 ThreadError otEnergyScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
                          otHandleEnergyScanResult aCallback, void *aCallbackContext)
 {
-    sEnergyScanCallback = aCallback;
-    sEnergyScanCallbackContext = aCallbackContext;
-    return sThreadNetif->GetMac().EnergyScan(aScanChannels, aScanDuration, &HandleEnergyScanResult, aInstance);
+    aInstance->mEnergyScanCallback = aCallback;
+    aInstance->mEnergyScanCallbackContext = aCallbackContext;
+    return aInstance->mThreadNetif.GetMac().EnergyScan(aScanChannels, aScanDuration, &HandleEnergyScanResult, aInstance);
 }
 
 void HandleEnergyScanResult(void *aContext, otEnergyScanResult *aResult)
 {
     otInstance *aInstance = static_cast<otInstance *>(aContext);
 
-    sEnergyScanCallback(aResult, sEnergyScanCallbackContext);
-
-    (void)aInstance;
+    aInstance->mEnergyScanCallback(aResult, aInstance->mEnergyScanCallbackContext);
 }
-
 
 bool otIsEnergyScanInProgress(otInstance *aInstance)
 {
-    (void)aInstance;
-    return sThreadNetif->GetMac().IsEnergyScanInProgress();
+    return aInstance->mThreadNetif.GetMac().IsEnergyScanInProgress();
 }
 
 ThreadError otDiscover(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration, uint16_t aPanId,
                        otHandleActiveScanResult aCallback, void *aCallbackContext)
 {
-    sDiscoverCallback = aCallback;
-    sDiscoverCallbackContext = aCallbackContext;
-    return sThreadNetif->GetMle().Discover(aScanChannels, aScanDuration, aPanId, &HandleMleDiscover, aInstance);
+    aInstance->mDiscoverCallback = aCallback;
+    aInstance->mDiscoverCallbackContext = aCallbackContext;
+    return aInstance->mThreadNetif.GetMle().Discover(aScanChannels, aScanDuration, aPanId, &HandleMleDiscover, aInstance);
 }
 
-bool otIsDiscoverInProgress(otInstance *)
+bool otIsDiscoverInProgress(otInstance *aInstance)
 {
-    return sThreadNetif->GetMle().IsDiscoverInProgress();
+    return aInstance->mThreadNetif.GetMle().IsDiscoverInProgress();
 }
 
 void HandleMleDiscover(otActiveScanResult *aResult, void *aContext)
 {
     otInstance *aInstance = reinterpret_cast<otInstance *>(aContext);
-    (void)aInstance;
-    sDiscoverCallback(aResult, sDiscoverCallbackContext);
+    aInstance->mDiscoverCallback(aResult, aInstance->mDiscoverCallbackContext);
 }
 
-void otSetReceiveIp6DatagramCallback(otInstance *, otReceiveIp6DatagramCallback aCallback,
+void otSetReceiveIp6DatagramCallback(otInstance *aInstance, otReceiveIp6DatagramCallback aCallback,
                                      void *aCallbackContext)
 {
-    sIp6->SetReceiveDatagramCallback(aCallback, aCallbackContext);
+    aInstance->mIp6.SetReceiveDatagramCallback(aCallback, aCallbackContext);
 }
 
-bool otIsReceiveIp6DatagramFilterEnabled(otInstance *)
+bool otIsReceiveIp6DatagramFilterEnabled(otInstance *aInstance)
 {
-    return sIp6->IsReceiveIp6FilterEnabled();
+    return aInstance->mIp6.IsReceiveIp6FilterEnabled();
 }
 
-void otSetReceiveIp6DatagramFilterEnabled(otInstance *, bool aEnabled)
+void otSetReceiveIp6DatagramFilterEnabled(otInstance *aInstance, bool aEnabled)
 {
-    sIp6->SetReceiveIp6FilterEnabled(aEnabled);
+    aInstance->mIp6.SetReceiveIp6FilterEnabled(aEnabled);
 }
 
-ThreadError otSendIp6Datagram(otInstance *, otMessage aMessage)
+ThreadError otSendIp6Datagram(otInstance *aInstance, otMessage aMessage)
 {
-    return sIp6->HandleDatagram(*static_cast<Message *>(aMessage), NULL, sThreadNetif->GetInterfaceId(), NULL, true);
+    return aInstance->mIp6.HandleDatagram(*static_cast<Message *>(aMessage), NULL, aInstance->mThreadNetif.GetInterfaceId(),
+                                          NULL, true);
 }
 
-otMessage otNewUdpMessage(otInstance *)
+otMessage otNewUdpMessage(otInstance *aInstance)
 {
-    return sIp6->mUdp.NewMessage(0);
+    return aInstance->mIp6.mUdp.NewMessage(0);
 }
 
-otMessage otNewIp6Message(otInstance *, bool aLinkSecurityEnabled)
+otMessage otNewIp6Message(otInstance *aInstance, bool aLinkSecurityEnabled)
 {
-    Message *message = sIp6->mMessagePool.New(Message::kTypeIp6, 0);
+    Message *message = aInstance->mIp6.mMessagePool.New(Message::kTypeIp6, 0);
 
     if (message)
     {
@@ -1204,6 +1182,7 @@ int otWriteMessage(otMessage aMessage, uint16_t aOffset, const void *aBuf, uint1
 
 ThreadError otOpenUdpSocket(otInstance *, otUdpSocket *aSocket, otUdpReceive aCallback, void *aCallbackContext)
 {
+    // TODO - Do we not need otInstance?
     Ip6::UdpSocket *socket = reinterpret_cast<Ip6::UdpSocket *>(aSocket);
     return socket->Open(aCallback, aCallbackContext);
 }
@@ -1227,14 +1206,14 @@ ThreadError otSendUdp(otUdpSocket *aSocket, otMessage aMessage, const otMessageI
                           *reinterpret_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
-bool otIsIcmpEchoEnabled(otInstance *)
+bool otIsIcmpEchoEnabled(otInstance *aInstance)
 {
-    return sIp6->mIcmp.IsEchoEnabled();
+    return aInstance->mIp6.mIcmp.IsEchoEnabled();
 }
 
-void otSetIcmpEchoEnabled(otInstance *, bool aEnabled)
+void otSetIcmpEchoEnabled(otInstance *aInstance, bool aEnabled)
 {
-    sIp6->mIcmp.SetEchoEnabled(aEnabled);
+    aInstance->mIp6.mIcmp.SetEchoEnabled(aEnabled);
 }
 
 uint8_t otIp6PrefixMatch(const otIp6Address *aFirst, const otIp6Address *aSecond)
@@ -1249,114 +1228,115 @@ exit:
     return rval;
 }
 
-ThreadError otGetActiveDataset(otInstance *, otOperationalDataset *aDataset)
+ThreadError otGetActiveDataset(otInstance *aInstance, otOperationalDataset *aDataset)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aDataset != NULL, error = kThreadError_InvalidArgs);
 
-    sThreadNetif->GetActiveDataset().Get(*aDataset);
+    aInstance->mThreadNetif.GetActiveDataset().Get(*aDataset);
 
 exit:
     return error;
 }
 
-ThreadError otSetActiveDataset(otInstance *, otOperationalDataset *aDataset)
+ThreadError otSetActiveDataset(otInstance *aInstance, otOperationalDataset *aDataset)
 {
     ThreadError error;
 
     VerifyOrExit(aDataset != NULL, error = kThreadError_InvalidArgs);
 
-    error = sThreadNetif->GetActiveDataset().Set(*aDataset);
+    error = aInstance->mThreadNetif.GetActiveDataset().Set(*aDataset);
 
 exit:
     return error;
 }
 
-ThreadError otGetPendingDataset(otInstance *, otOperationalDataset *aDataset)
+ThreadError otGetPendingDataset(otInstance *aInstance, otOperationalDataset *aDataset)
 {
     ThreadError error = kThreadError_None;
 
     VerifyOrExit(aDataset != NULL, error = kThreadError_InvalidArgs);
 
-    sThreadNetif->GetPendingDataset().Get(*aDataset);
+    aInstance->mThreadNetif.GetPendingDataset().Get(*aDataset);
 
 exit:
     return error;
 }
 
-ThreadError otSetPendingDataset(otInstance *, otOperationalDataset *aDataset)
+ThreadError otSetPendingDataset(otInstance *aInstance, otOperationalDataset *aDataset)
 {
     ThreadError error;
 
     VerifyOrExit(aDataset != NULL, error = kThreadError_InvalidArgs);
 
-    error = sThreadNetif->GetPendingDataset().Set(*aDataset);
+    error = aInstance->mThreadNetif.GetPendingDataset().Set(*aDataset);
 
 exit:
     return error;
 }
 
-ThreadError otSendActiveGet(otInstance *, const uint8_t *aTlvTypes, uint8_t aLength)
+ThreadError otSendActiveGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength)
 {
-    return sThreadNetif->GetActiveDataset().SendGetRequest(aTlvTypes, aLength);
+    return aInstance->mThreadNetif.GetActiveDataset().SendGetRequest(aTlvTypes, aLength);
 }
 
-ThreadError otSendActiveSet(otInstance *, const otOperationalDataset *aDataset, const uint8_t *aTlvs, uint8_t aLength)
+ThreadError otSendActiveSet(otInstance *aInstance, const otOperationalDataset *aDataset, const uint8_t *aTlvs,
+                            uint8_t aLength)
 {
-    return sThreadNetif->GetActiveDataset().SendSetRequest(*aDataset, aTlvs, aLength);
+    return aInstance->mThreadNetif.GetActiveDataset().SendSetRequest(*aDataset, aTlvs, aLength);
 }
 
-ThreadError otSendPendingGet(otInstance *, const uint8_t *aTlvTypes, uint8_t aLength)
+ThreadError otSendPendingGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength)
 {
-    return sThreadNetif->GetPendingDataset().SendGetRequest(aTlvTypes, aLength);
+    return aInstance->mThreadNetif.GetPendingDataset().SendGetRequest(aTlvTypes, aLength);
 }
 
-ThreadError otSendPendingSet(otInstance *, const otOperationalDataset *aDataset, const uint8_t *aTlvs, uint8_t aLength)
+ThreadError otSendPendingSet(otInstance *aInstance, const otOperationalDataset *aDataset, const uint8_t *aTlvs,
+                             uint8_t aLength)
 {
-    return sThreadNetif->GetPendingDataset().SendSetRequest(*aDataset, aTlvs, aLength);
+    return aInstance->mThreadNetif.GetPendingDataset().SendSetRequest(*aDataset, aTlvs, aLength);
 }
 
 #if OPENTHREAD_ENABLE_COMMISSIONER
 #include <commissioning/commissioner.h>
-ThreadError otCommissionerStart(otInstance *, const char *aPSKd)
+ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd)
 {
-    return sThreadNetif->GetCommissioner().Start(aPSKd);
+    return aInstance->mThreadNetif.GetCommissioner().Start(aPSKd);
 }
 
-ThreadError otCommissionerStop(otInstance *)
+ThreadError otCommissionerStop(otInstance *aInstance)
 {
-    return sThreadNetif->GetCommissioner().Stop();
+    return aInstance->mThreadNetif.GetCommissioner().Stop();
 }
 
-ThreadError otCommissionerEnergyScan(otInstance *, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,
+ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,
                                      uint16_t aScanDuration, const otIp6Address *aAddress,
                                      otCommissionerEnergyReportCallback aCallback, void *aContext)
 {
-    return sThreadNetif->GetCommissioner().mEnergyScan.SendQuery(aChannelMask, aCount, aPeriod, aScanDuration,
-                                                                 *static_cast<const Ip6::Address *>(aAddress),
-                                                                 aCallback, aContext);
+    return aInstance->mThreadNetif.GetCommissioner().mEnergyScan.SendQuery(aChannelMask, aCount, aPeriod, aScanDuration,
+                                                                           *static_cast<const Ip6::Address *>(aAddress),
+                                                                           aCallback, aContext);
 }
 
-ThreadError otCommissionerPanIdQuery(otInstance *, uint16_t aPanId, uint32_t aChannelMask,
+ThreadError otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
                                      const otIp6Address *aAddress,
                                      otCommissionerPanIdConflictCallback aCallback, void *aContext)
 {
-    return sThreadNetif->GetCommissioner().mPanIdQuery.SendQuery(aPanId, aChannelMask,
-                                                                 *static_cast<const Ip6::Address *>(aAddress),
-                                                                 aCallback, aContext);
+    return aInstance->mThreadNetif.GetCommissioner().mPanIdQuery.SendQuery(
+               aPanId, aChannelMask, *static_cast<const Ip6::Address *>(aAddress), aCallback, aContext);
 }
 #endif  // OPENTHREAD_ENABLE_COMMISSIONER
 
 #if OPENTHREAD_ENABLE_JOINER
-ThreadError otJoinerStart(otInstance *, const char *aPSKd)
+ThreadError otJoinerStart(otInstance *aInstance, const char *aPSKd)
 {
-    return sThreadNetif->GetJoiner().Start(aPSKd);
+    return aInstance->mThreadNetif.GetJoiner().Start(aPSKd);
 }
 
-ThreadError otJoinerStop(otInstance *)
+ThreadError otJoinerStop(otInstance *aInstance)
 {
-    return sThreadNetif->GetJoiner().Stop();
+    return aInstance->mThreadNetif.GetJoiner().Stop();
 }
 #endif  // OPENTHREAD_ENABLE_JOINER
 
