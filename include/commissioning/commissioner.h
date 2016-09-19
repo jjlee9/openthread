@@ -39,8 +39,10 @@
 #ifndef OTAPI
 #define OTAPI __declspec(dllimport)
 #endif
+#define OTCALL WINAPI
 #else
 #define OTAPI
+#define OTCALL
 #endif
 
 #ifdef __cplusplus
@@ -64,7 +66,7 @@ extern "C" {
  * @retval kThreadError_InvalidArgs  @p aPSKd is invalid.
  *
  */
-OTAPI ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd);
+OTAPI ThreadError OTCALL otCommissionerStart(otInstance *aInstance, const char *aPSKd);
 
 /**
  * This function disables the Thread Commissioner role.
@@ -72,7 +74,7 @@ OTAPI ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd);
  * @param[in]  aInstance  A pointer to an OpenThread instance.
  *
  */
-OTAPI ThreadError otCommissionerStop(otInstance *aInstance);
+OTAPI ThreadError OTCALL otCommissionerStop(otInstance *aInstance);
 
 /**
  * This function pointer is called when the Commissioner receives an Energy Report.
@@ -83,8 +85,8 @@ OTAPI ThreadError otCommissionerStop(otInstance *aInstance);
  * @param[in]  aContext           A pointer to application-specific context.
  *
  */
-typedef void (*otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const uint8_t *aEnergyList,
-                                                   uint8_t aEnergyListLength, void *aContext);
+typedef void (OTCALL *otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const uint8_t *aEnergyList,
+                                                          uint8_t aEnergyListLength, void *aContext);
 
 /**
  * This function sends an Energy Scan Query message.
@@ -102,9 +104,9 @@ typedef void (*otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const 
  * @retval kThreadError_NoBufs  Insufficient buffers to generate an Energy Scan Query message.
  *
  */
-OTAPI ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
-                                           uint16_t aPeriod, uint16_t aScanDuration, const otIp6Address *aAddress,
-                                           otCommissionerEnergyReportCallback aCallback, void *aContext);
+OTAPI ThreadError OTCALL otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
+                                                  uint16_t aPeriod, uint16_t aScanDuration, const otIp6Address *aAddress,
+                                                  otCommissionerEnergyReportCallback aCallback, void *aContext);
 
 /**
  * This function pointer is called when the Commissioner receives a PAN ID Conflict message.
@@ -114,7 +116,7 @@ OTAPI ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChan
  * @param[in]  aContext           A pointer to application-specific context.
  *
  */
-typedef void (*otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
+typedef void (OTCALL *otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
 
 /**
  * This function sends a PAN ID Query message.
@@ -130,9 +132,9 @@ typedef void (*otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint32_t aC
  * @retval kThreadError_NoBufs  Insufficient buffers to generate a PAN ID Query message.
  *
  */
-OTAPI ThreadError otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
-                                           const otIp6Address *aAddress,
-                                           otCommissionerPanIdConflictCallback aCallback, void *aContext);
+OTAPI ThreadError OTCALL otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
+                                                  const otIp6Address *aAddress,
+                                                  otCommissionerPanIdConflictCallback aCallback, void *aContext);
 
 /**
  * @}

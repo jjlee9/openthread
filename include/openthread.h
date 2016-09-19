@@ -45,8 +45,10 @@
 #ifndef OTAPI
 #define OTAPI __declspec(dllimport)
 #endif
+#define OTCALL WINAPI
 #else
 #define OTAPI
+#define OTCALL
 #endif
 
 #ifdef __cplusplus
@@ -170,7 +172,7 @@ extern void otSignalTaskletPending(otInstance *aInstance);
  * @returns A pointer to the OpenThread version.
  *
  */
-OTAPI const char *otGetVersionString(void);
+OTAPI const char *OTCALL otGetVersionString(void);
 
 #ifdef OTDLL
 
@@ -182,7 +184,7 @@ OTAPI const char *otGetVersionString(void);
  * @sa otApiFinalize
  *
  */
-OTAPI otApiInstance *otApiInit();
+OTAPI otApiInstance *OTCALL otApiInit();
 
 /**
  * This function uninitializes the OpenThread library.
@@ -192,7 +194,7 @@ OTAPI otApiInstance *otApiInit();
  * @param[in]  aApiInstance  The OpenThread api instance.
  *
  */
-OTAPI void otApiFinalize(otApiInstance *aApiInstance);
+OTAPI void OTCALL otApiFinalize(otApiInstance *aApiInstance);
 
 /**
  * This function frees any memory returned/allocated by the library.
@@ -200,7 +202,7 @@ OTAPI void otApiFinalize(otApiInstance *aApiInstance);
  * @param[in] aMem  The memory to free.
  *
  */
-OTAPI void otFreeMemory(const void *aMem);
+OTAPI void OTCALL otFreeMemory(const void *aMem);
 
 /**
  * This function pointer is called to notify addition and removal of OpenThread devices.
@@ -210,7 +212,7 @@ OTAPI void otFreeMemory(const void *aMem);
  * @param[in]  aContext     A pointer to application-specific context.
  *
  */
-typedef void (*otDeviceAvailabilityChangedCallback)(bool aAdded, const GUID *aDeviceGuid, void *aContext);
+typedef void (OTCALL *otDeviceAvailabilityChangedCallback)(bool aAdded, const GUID *aDeviceGuid, void *aContext);
 
 /**
  * This function registers a callback to indicate OpenThread devices come and go.
@@ -220,8 +222,8 @@ typedef void (*otDeviceAvailabilityChangedCallback)(bool aAdded, const GUID *aDe
  * @param[in]  aContextContext  A pointer to application-specific context.
  *
  */
-OTAPI void otSetDeviceAvailabilityChangedCallback(otApiInstance *aApiInstance,
-                                                  otDeviceAvailabilityChangedCallback aCallback, void *aCallbackContext);
+OTAPI void OTCALL otSetDeviceAvailabilityChangedCallback(otApiInstance *aApiInstance,
+                                                         otDeviceAvailabilityChangedCallback aCallback, void *aCallbackContext);
 
 /**
  * This function querys the list of OpenThread device contexts on the system.
@@ -230,7 +232,7 @@ OTAPI void otSetDeviceAvailabilityChangedCallback(otApiInstance *aApiInstance,
  *
  * @sa otFreeMemory
  */
-OTAPI otDeviceList *otEnumerateDevices(otApiInstance *aApiInstance);
+OTAPI otDeviceList *OTCALL otEnumerateDevices(otApiInstance *aApiInstance);
 
 /**
  * This function initializes an OpenThread context for a device.
@@ -243,7 +245,7 @@ OTAPI otDeviceList *otEnumerateDevices(otApiInstance *aApiInstance);
  * @sa otFreeMemory
  *
  */
-OTAPI otInstance *otInstanceInit(otApiInstance *aApiInstance, const GUID *aDeviceGuid);
+OTAPI otInstance *OTCALL otInstanceInit(otApiInstance *aApiInstance, const GUID *aDeviceGuid);
 
 /**
  * This queries the Windows device/interface GUID for the otContext.
@@ -253,7 +255,7 @@ OTAPI otInstance *otInstanceInit(otApiInstance *aApiInstance, const GUID *aDevic
  * @retval GUID  The device GUID.
  *
  */
-OTAPI GUID otGetDeviceGuid(otInstance *aInstance);
+OTAPI GUID OTCALL otGetDeviceGuid(otInstance *aInstance);
 
 /**
  * This queries the Windows device/interface IfIndex for the otContext.
@@ -263,7 +265,7 @@ OTAPI GUID otGetDeviceGuid(otInstance *aInstance);
  * @retval uint32_t  The device IfIndex.
  *
  */
-OTAPI uint32_t otGetDeviceIfIndex(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetDeviceIfIndex(otInstance *aInstance);
 
 /**
  * This queries the Windows Compartment ID for the otContext.
@@ -273,7 +275,7 @@ OTAPI uint32_t otGetDeviceIfIndex(otInstance *aInstance);
  * @retval uint32_t  The compartment ID.
  *
  */
-OTAPI uint32_t otGetCompartmentId(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetCompartmentId(otInstance *aInstance);
 
 #else
 
@@ -293,7 +295,7 @@ OTAPI uint32_t otGetCompartmentId(otInstance *aInstance);
  * @sa otContextFinalize
  *
  */
-otInstance *otInstanceInit(void *aInstanceBuffer, uint64_t *aInstanceBufferSize);
+otInstance *otInstanceInit(void *aInstanceBuffer, size_t *aInstanceBufferSize);
 #else
 /**
  * This function initializes the static instance of the OpenThread library.
@@ -330,7 +332,7 @@ void otInstanceFinalize(otInstance *aInstance);
  * @retval kThreadError_InvalidState  OpenThread is not enabled or the IPv6 interface is already up.
  *
  */
-OTAPI ThreadError otInterfaceUp(otInstance *aInstance);
+OTAPI ThreadError OTCALL otInterfaceUp(otInstance *aInstance);
 
 /**
  * This function brings down the IPv6 interface.
@@ -343,7 +345,7 @@ OTAPI ThreadError otInterfaceUp(otInstance *aInstance);
  * @retval kThreadError_InvalidState  The interface was not up.
  *
  */
-OTAPI ThreadError otInterfaceDown(otInstance *aInstance);
+OTAPI ThreadError OTCALL otInterfaceDown(otInstance *aInstance);
 
 /**
  * This function indicates whether or not the IPv6 interface is up.
@@ -354,7 +356,7 @@ OTAPI ThreadError otInterfaceDown(otInstance *aInstance);
  * @retval FALSE  The IPv6 interface is down.
  *
  */
-OTAPI bool otIsInterfaceUp(otInstance *aInstance);
+OTAPI bool OTCALL otIsInterfaceUp(otInstance *aInstance);
 
 /**
  * This function starts Thread protocol operation.
@@ -367,7 +369,7 @@ OTAPI bool otIsInterfaceUp(otInstance *aInstance);
  * @retval kThreadError_InvalidState  Thread protocol operation is already started or the interface is not up.
  *
  */
-OTAPI ThreadError otThreadStart(otInstance *aInstance);
+OTAPI ThreadError OTCALL otThreadStart(otInstance *aInstance);
 
 /**
  * This function stops Thread protocol operation.
@@ -378,7 +380,7 @@ OTAPI ThreadError otThreadStart(otInstance *aInstance);
  * @retval kThreadError_InvalidState  The Thread protocol operation was not started.
  *
  */
-OTAPI ThreadError otThreadStop(otInstance *aInstance);
+OTAPI ThreadError OTCALL otThreadStop(otInstance *aInstance);
 
 /**
  * This function indicates whether a node is the only router on the network.
@@ -389,7 +391,7 @@ OTAPI ThreadError otThreadStop(otInstance *aInstance);
  * @retval FALSE  It is a child or is not a single router in the network.
  *
  */
-OTAPI bool otIsSingleton(otInstance *aInstance);
+OTAPI bool OTCALL otIsSingleton(otInstance *aInstance);
 
 /**
  * This function pointer is called during an IEEE 802.15.4 Active Scan when an IEEE 802.15.4 Beacon is received or
@@ -399,7 +401,7 @@ OTAPI bool otIsSingleton(otInstance *aInstance);
  * @param[in]  aContext  A pointer to application-specific context.
  *
  */
-typedef void (*otHandleActiveScanResult)(otActiveScanResult *aResult, void *aContext);
+typedef void (OTCALL *otHandleActiveScanResult)(otActiveScanResult *aResult, void *aContext);
 
 /**
  * This function starts an IEEE 802.15.4 Active Scan
@@ -414,8 +416,8 @@ typedef void (*otHandleActiveScanResult)(otActiveScanResult *aResult, void *aCon
  * @retval kThreadError_Busy  Already performing an Active Scan.
  *
  */
-OTAPI ThreadError otActiveScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
-                               otHandleActiveScanResult aCallback, void *aCallbackContext);
+OTAPI ThreadError OTCALL otActiveScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
+                                      otHandleActiveScanResult aCallback, void *aCallbackContext);
 
 /**
  * This function indicates whether or not an IEEE 802.15.4 Active Scan is currently in progress.
@@ -424,7 +426,7 @@ OTAPI ThreadError otActiveScan(otInstance *aInstance, uint32_t aScanChannels, ui
  *
  * @returns true if an IEEE 802.15.4 Active Scan is in progress, false otherwise.
  */
-OTAPI bool otIsActiveScanInProgress(otInstance *aInstance);
+OTAPI bool OTCALL otIsActiveScanInProgress(otInstance *aInstance);
 
 /**
  * This function pointer is called during an IEEE 802.15.4 Energy Scan when the result for a channel is ready or the
@@ -434,7 +436,7 @@ OTAPI bool otIsActiveScanInProgress(otInstance *aInstance);
  * @param[in]  aContext  A pointer to application-specific context.
  *
  */
-typedef void (*otHandleEnergyScanResult)(otEnergyScanResult *aResult, void *aContext);
+typedef void (OTCALL *otHandleEnergyScanResult)(otEnergyScanResult *aResult, void *aContext);
 
 /**
  * This function starts an IEEE 802.15.4 Energy Scan
@@ -449,8 +451,8 @@ typedef void (*otHandleEnergyScanResult)(otEnergyScanResult *aResult, void *aCon
  * @retval kThreadError_Busy  Could not start the energy scan.
  *
  */
-ThreadError otEnergyScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
-                         otHandleEnergyScanResult aCallback, void *aCallbackContext);
+OTAPI ThreadError OTCALL otEnergyScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
+                                      otHandleEnergyScanResult aCallback, void *aCallbackContext);
 
 /**
  * This function indicates whether or not an IEEE 802.15.4 Energy Scan is currently in progress.
@@ -460,7 +462,7 @@ ThreadError otEnergyScan(otInstance *aInstance, uint32_t aScanChannels, uint16_t
  * @returns true if an IEEE 802.15.4 Energy Scan is in progress, false otherwise.
  *
  */
-bool otIsEnergyScanInProgress(otInstance *aInstance);
+OTAPI bool OTCALL otIsEnergyScanInProgress(otInstance *aInstance);
 
 /**
  * This function starts a Thread Discovery scan.
@@ -476,8 +478,9 @@ bool otIsEnergyScanInProgress(otInstance *aInstance);
  * @retval kThreadError_Busy  Already performing an Thread Discovery.
  *
  */
-OTAPI ThreadError otDiscover(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration, uint16_t aPanid,
-                             otHandleActiveScanResult aCallback, void *aCallbackContext);
+OTAPI ThreadError OTCALL otDiscover(otInstance *aInstance, uint32_t aScanChannels, uint16_t aScanDuration,
+                                    uint16_t aPanid,
+                                    otHandleActiveScanResult aCallback, void *aCallbackContext);
 
 /**
  * This function determines if an MLE Thread Discovery is currently in progress.
@@ -485,7 +488,7 @@ OTAPI ThreadError otDiscover(otInstance *aInstance, uint32_t aScanChannels, uint
  * @param[in] aInstance A pointer to an OpenThread instance.
  *
  */
-OTAPI bool otIsDiscoverInProgress(otInstance *aInstance);
+OTAPI bool OTCALL otIsDiscoverInProgress(otInstance *aInstance);
 
 /**
  * @}
@@ -521,7 +524,7 @@ OTAPI bool otIsDiscoverInProgress(otInstance *aInstance);
  *
  * @sa otSetChannel
  */
-OTAPI uint8_t otGetChannel(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetChannel(otInstance *aInstance);
 
 /**
  * Set the IEEE 802.15.4 channel
@@ -534,7 +537,7 @@ OTAPI uint8_t otGetChannel(otInstance *aInstance);
  *
  * @sa otGetChannel
  */
-OTAPI ThreadError otSetChannel(otInstance *aInstance, uint8_t aChannel);
+OTAPI ThreadError OTCALL otSetChannel(otInstance *aInstance, uint8_t aChannel);
 
 /**
  * Get the maximum number of children currently allowed.
@@ -545,7 +548,7 @@ OTAPI ThreadError otSetChannel(otInstance *aInstance, uint8_t aChannel);
  *
  * @sa otSetMaxAllowedChildren
  */
-OTAPI uint8_t otGetMaxAllowedChildren(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetMaxAllowedChildren(otInstance *aInstance);
 
 /**
  * Set the maximum number of children currently allowed.
@@ -559,7 +562,7 @@ OTAPI uint8_t otGetMaxAllowedChildren(otInstance *aInstance);
  *
  * @sa otGetMaxAllowedChildren
  */
-OTAPI ThreadError otSetMaxAllowedChildren(otInstance *aInstance, uint8_t aMaxChildren);
+OTAPI ThreadError OTCALL otSetMaxAllowedChildren(otInstance *aInstance, uint8_t aMaxChildren);
 
 /**
  * Get the Thread Child Timeout used when operating in the Child role.
@@ -570,7 +573,7 @@ OTAPI ThreadError otSetMaxAllowedChildren(otInstance *aInstance, uint8_t aMaxChi
  *
  * @sa otSetChildTimeout
  */
-OTAPI uint32_t otGetChildTimeout(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetChildTimeout(otInstance *aInstance);
 
 /**
  * Set the Thread Child Timeout used when operating in the Child role.
@@ -579,7 +582,7 @@ OTAPI uint32_t otGetChildTimeout(otInstance *aInstance);
  *
  * @sa otSetChildTimeout
  */
-OTAPI void otSetChildTimeout(otInstance *aInstance, uint32_t aTimeout);
+OTAPI void OTCALL otSetChildTimeout(otInstance *aInstance, uint32_t aTimeout);
 
 /**
  * Get the IEEE 802.15.4 Extended Address.
@@ -588,7 +591,7 @@ OTAPI void otSetChildTimeout(otInstance *aInstance, uint32_t aTimeout);
  *
  * @returns A pointer to the IEEE 802.15.4 Extended Address.
  */
-OTAPI const uint8_t *otGetExtendedAddress(otInstance *aInstance);
+OTAPI const uint8_t *OTCALL otGetExtendedAddress(otInstance *aInstance);
 
 /**
  * This function sets the IEEE 802.15.4 Extended Address.
@@ -600,7 +603,7 @@ OTAPI const uint8_t *otGetExtendedAddress(otInstance *aInstance);
  * @retval kThreadError_InvalidArgs  @p aExtendedAddress was NULL.
  *
  */
-OTAPI ThreadError otSetExtendedAddress(otInstance *aInstance, const otExtAddress *aExtendedAddress);
+OTAPI ThreadError OTCALL otSetExtendedAddress(otInstance *aInstance, const otExtAddress *aExtendedAddress);
 
 /**
  * Get the IEEE 802.15.4 Extended PAN ID.
@@ -611,7 +614,7 @@ OTAPI ThreadError otSetExtendedAddress(otInstance *aInstance, const otExtAddress
  *
  * @sa otSetExtendedPanId
  */
-OTAPI const uint8_t *otGetExtendedPanId(otInstance *aInstance);
+OTAPI const uint8_t *OTCALL otGetExtendedPanId(otInstance *aInstance);
 
 /**
  * Set the IEEE 802.15.4 Extended PAN ID.
@@ -621,7 +624,7 @@ OTAPI const uint8_t *otGetExtendedPanId(otInstance *aInstance);
  *
  * @sa otGetExtendedPanId
  */
-OTAPI void otSetExtendedPanId(otInstance *aInstance, const uint8_t *aExtendedPanId);
+OTAPI void OTCALL otSetExtendedPanId(otInstance *aInstance, const uint8_t *aExtendedPanId);
 
 /**
  * Get the factory-assigned IEEE EUI-64.
@@ -630,7 +633,7 @@ OTAPI void otSetExtendedPanId(otInstance *aInstance, const uint8_t *aExtendedPan
  * @param[out]  aEui64     A pointer to where the factory-assigned IEEE EUI-64 is placed.
  *
  */
-OTAPI void otGetFactoryAssignedIeeeEui64(otInstance *aInstance, otExtAddress *aEui64);
+OTAPI void OTCALL otGetFactoryAssignedIeeeEui64(otInstance *aInstance, otExtAddress *aEui64);
 
 /**
  * Get the Hash Mac Address.
@@ -642,7 +645,7 @@ OTAPI void otGetFactoryAssignedIeeeEui64(otInstance *aInstance, otExtAddress *aE
  * @param[out]  aHashMacAddress    A pointer to where the Hash Mac Address is placed.
  *
  */
-OTAPI void otGetHashMacAddress(otInstance *aInstance, otExtAddress *aHashMacAddress);
+OTAPI void OTCALL otGetHashMacAddress(otInstance *aInstance, otExtAddress *aHashMacAddress);
 
 /**
  * This function returns a pointer to the Leader's RLOC.
@@ -655,7 +658,7 @@ OTAPI void otGetHashMacAddress(otInstance *aInstance, otExtAddress *aHashMacAddr
  * @retval kThreadError_Detached     Not currently attached to a Thread Partition.
  *
  */
-OTAPI ThreadError otGetLeaderRloc(otInstance *aInstance, otIp6Address *aLeaderRloc);
+OTAPI ThreadError OTCALL otGetLeaderRloc(otInstance *aInstance, otIp6Address *aLeaderRloc);
 
 /**
  * Get the MLE Link Mode configuration.
@@ -666,7 +669,7 @@ OTAPI ThreadError otGetLeaderRloc(otInstance *aInstance, otIp6Address *aLeaderRl
  *
  * @sa otSetLinkMode
  */
-OTAPI otLinkModeConfig otGetLinkMode(otInstance *aInstance);
+OTAPI otLinkModeConfig OTCALL otGetLinkMode(otInstance *aInstance);
 
 /**
  * Set the MLE Link Mode configuration.
@@ -678,7 +681,7 @@ OTAPI otLinkModeConfig otGetLinkMode(otInstance *aInstance);
  *
  * @sa otGetLinkMode
  */
-OTAPI ThreadError otSetLinkMode(otInstance *aInstance, otLinkModeConfig aConfig);
+OTAPI ThreadError OTCALL otSetLinkMode(otInstance *aInstance, otLinkModeConfig aConfig);
 
 /**
  * Get the thrMasterKey.
@@ -691,7 +694,7 @@ OTAPI ThreadError otSetLinkMode(otInstance *aInstance, otLinkModeConfig aConfig)
  *
  * @sa otSetMasterKey
  */
-OTAPI const uint8_t *otGetMasterKey(otInstance *aInstance, uint8_t *aKeyLength);
+OTAPI const uint8_t *OTCALL otGetMasterKey(otInstance *aInstance, uint8_t *aKeyLength);
 
 /**
  * Set the thrMasterKey.
@@ -705,7 +708,7 @@ OTAPI const uint8_t *otGetMasterKey(otInstance *aInstance, uint8_t *aKeyLength);
  *
  * @sa otGetMasterKey
  */
-OTAPI ThreadError otSetMasterKey(otInstance *aInstance, const uint8_t *aKey, uint8_t aKeyLength);
+OTAPI ThreadError OTCALL otSetMasterKey(otInstance *aInstance, const uint8_t *aKey, uint8_t aKeyLength);
 
 /**
  * This function returns the maximum transmit power setting in dBm.
@@ -715,7 +718,7 @@ OTAPI ThreadError otSetMasterKey(otInstance *aInstance, const uint8_t *aKey, uin
  * @returns  The maximum transmit power setting.
  *
  */
-OTAPI int8_t otGetMaxTransmitPower(otInstance *aInstance);
+OTAPI int8_t OTCALL otGetMaxTransmitPower(otInstance *aInstance);
 
 /**
  * This function sets the maximum transmit power in dBm.
@@ -724,7 +727,7 @@ OTAPI int8_t otGetMaxTransmitPower(otInstance *aInstance);
  * @param[in]  aPower    The maximum transmit power in dBm.
  *
  */
-OTAPI void otSetMaxTransmitPower(otInstance *aInstance, int8_t aPower);
+OTAPI void OTCALL otSetMaxTransmitPower(otInstance *aInstance, int8_t aPower);
 
 /**
  * This function returns a pointer to the Mesh Local EID.
@@ -734,7 +737,7 @@ OTAPI void otSetMaxTransmitPower(otInstance *aInstance, int8_t aPower);
  * @returns A pointer to the Mesh Local EID.
  *
  */
-OTAPI const otIp6Address *otGetMeshLocalEid(otInstance *aInstance);
+OTAPI const otIp6Address *OTCALL otGetMeshLocalEid(otInstance *aInstance);
 
 /**
  * This function returns a pointer to the Mesh Local Prefix.
@@ -744,7 +747,7 @@ OTAPI const otIp6Address *otGetMeshLocalEid(otInstance *aInstance);
  * @returns A pointer to the Mesh Local Prefix.
  *
  */
-OTAPI const uint8_t *otGetMeshLocalPrefix(otInstance *aInstance);
+OTAPI const uint8_t *OTCALL otGetMeshLocalPrefix(otInstance *aInstance);
 
 /**
  * This function sets the Mesh Local Prefix.
@@ -755,7 +758,7 @@ OTAPI const uint8_t *otGetMeshLocalPrefix(otInstance *aInstance);
  * @retval kThreadError_None  Successfully set the Mesh Local Prefix.
  *
  */
-OTAPI ThreadError otSetMeshLocalPrefix(otInstance *aInstance, const uint8_t *aMeshLocalPrefix);
+OTAPI ThreadError OTCALL otSetMeshLocalPrefix(otInstance *aInstance, const uint8_t *aMeshLocalPrefix);
 
 /**
  * This method provides a full or stable copy of the Leader's Thread Network Data.
@@ -766,7 +769,8 @@ OTAPI ThreadError otSetMeshLocalPrefix(otInstance *aInstance, const uint8_t *aMe
  * @param[inout]  aDataLength  On entry, size of the data buffer pointed to by @p aData.
  *                             On exit, number of copied bytes.
  */
-OTAPI ThreadError otGetNetworkDataLeader(otInstance *aInstance, bool aStable, uint8_t *aData, uint8_t *aDataLength);
+OTAPI ThreadError OTCALL otGetNetworkDataLeader(otInstance *aInstance, bool aStable, uint8_t *aData,
+                                                uint8_t *aDataLength);
 
 /**
  * This method provides a full or stable copy of the local Thread Network Data.
@@ -777,7 +781,8 @@ OTAPI ThreadError otGetNetworkDataLeader(otInstance *aInstance, bool aStable, ui
  * @param[inout]  aDataLength  On entry, size of the data buffer pointed to by @p aData.
  *                             On exit, number of copied bytes.
  */
-OTAPI ThreadError otGetNetworkDataLocal(otInstance *aInstance, bool aStable, uint8_t *aData, uint8_t *aDataLength);
+OTAPI ThreadError OTCALL otGetNetworkDataLocal(otInstance *aInstance, bool aStable, uint8_t *aData,
+                                               uint8_t *aDataLength);
 
 /**
  * Get the Thread Network Name.
@@ -788,7 +793,7 @@ OTAPI ThreadError otGetNetworkDataLocal(otInstance *aInstance, bool aStable, uin
  *
  * @sa otSetNetworkName
  */
-OTAPI const char *otGetNetworkName(otInstance *aInstance);
+OTAPI const char *OTCALL otGetNetworkName(otInstance *aInstance);
 
 /**
  * Set the Thread Network Name.
@@ -800,7 +805,7 @@ OTAPI const char *otGetNetworkName(otInstance *aInstance);
  *
  * @sa otGetNetworkName
  */
-OTAPI ThreadError otSetNetworkName(otInstance *aInstance, const char *aNetworkName);
+OTAPI ThreadError OTCALL otSetNetworkName(otInstance *aInstance, const char *aNetworkName);
 
 /**
  * This function gets the next On Mesh Prefix in the Network Data.
@@ -814,8 +819,8 @@ OTAPI ThreadError otSetNetworkName(otInstance *aInstance, const char *aNetworkNa
  * @retval kThreadError_NotFound  No subsequent On Mesh prefix exists in the Thread Network Data.
  *
  */
-OTAPI ThreadError otGetNextOnMeshPrefix(otInstance *aInstance, bool aLocal, otNetworkDataIterator *aIterator,
-                                        otBorderRouterConfig *aConfig);
+OTAPI ThreadError OTCALL otGetNextOnMeshPrefix(otInstance *aInstance, bool aLocal, otNetworkDataIterator *aIterator,
+                                               otBorderRouterConfig *aConfig);
 
 /**
  * Get the IEEE 802.15.4 PAN ID.
@@ -826,7 +831,7 @@ OTAPI ThreadError otGetNextOnMeshPrefix(otInstance *aInstance, bool aLocal, otNe
  *
  * @sa otSetPanId
  */
-OTAPI otPanId otGetPanId(otInstance *aInstance);
+OTAPI otPanId OTCALL otGetPanId(otInstance *aInstance);
 
 /**
  * Set the IEEE 802.15.4 PAN ID.
@@ -839,7 +844,7 @@ OTAPI otPanId otGetPanId(otInstance *aInstance);
  *
  * @sa otGetPanId
  */
-OTAPI ThreadError otSetPanId(otInstance *aInstance, otPanId aPanId);
+OTAPI ThreadError OTCALL otSetPanId(otInstance *aInstance, otPanId aPanId);
 
 /**
  * This function indicates whether or not the Router Role is enabled.
@@ -850,7 +855,7 @@ OTAPI ThreadError otSetPanId(otInstance *aInstance, otPanId aPanId);
  * @retval FALSE  If the Router Role is not enabled.
  *
  */
-OTAPI bool otIsRouterRoleEnabled(otInstance *aInstance);
+OTAPI bool OTCALL otIsRouterRoleEnabled(otInstance *aInstance);
 
 /**
  * This function sets whether or not the Router Role is enabled.
@@ -859,7 +864,7 @@ OTAPI bool otIsRouterRoleEnabled(otInstance *aInstance);
  * @param[in]  aEnabled  TRUE if the Router Role is enabled, FALSE otherwise.
  *
  */
-OTAPI void otSetRouterRoleEnabled(otInstance *aInstance, bool aEnabled);
+OTAPI void OTCALL otSetRouterRoleEnabled(otInstance *aInstance, bool aEnabled);
 
 /**
  * Get the IEEE 802.15.4 Short Address.
@@ -868,7 +873,7 @@ OTAPI void otSetRouterRoleEnabled(otInstance *aInstance, bool aEnabled);
  *
  * @returns A pointer to the IEEE 802.15.4 Short Address.
  */
-OTAPI otShortAddress otGetShortAddress(otInstance *aInstance);
+OTAPI otShortAddress OTCALL otGetShortAddress(otInstance *aInstance);
 
 /**
  * Get the list of IPv6 addresses assigned to the Thread interface.
@@ -877,7 +882,7 @@ OTAPI otShortAddress otGetShortAddress(otInstance *aInstance);
  *
  * @returns A pointer to the first Network Interface Address.
  */
-OTAPI const otNetifAddress *otGetUnicastAddresses(otInstance *aInstance);
+OTAPI const otNetifAddress *OTCALL otGetUnicastAddresses(otInstance *aInstance);
 
 /**
  * Add a Network Interface Address to the Thread interface.
@@ -892,7 +897,7 @@ OTAPI const otNetifAddress *otGetUnicastAddresses(otInstance *aInstance);
  * @retval kThreadError_InvalidArgs  The IP Address indicated by @p aAddress is an internal address.
  * @retval kThreadError_NoBufs       The Network Interface is already storing the maximum allowed external addresses.
  */
-OTAPI ThreadError otAddUnicastAddress(otInstance *aInstance, const otNetifAddress *aAddress);
+OTAPI ThreadError OTCALL otAddUnicastAddress(otInstance *aInstance, const otNetifAddress *aAddress);
 
 /**
  * Remove a Network Interface Address from the Thread interface.
@@ -904,7 +909,7 @@ OTAPI ThreadError otAddUnicastAddress(otInstance *aInstance, const otNetifAddres
  * @retval kThreadError_InvalidArgs  The IP Address indicated by @p aAddress is an internal address.
  * @retval kThreadError_NotFound     The IP Address indicated by @p aAddress was not found.
  */
-OTAPI ThreadError otRemoveUnicastAddress(otInstance *aInstance, const otIp6Address *aAddress);
+OTAPI ThreadError OTCALL otRemoveUnicastAddress(otInstance *aInstance, const otIp6Address *aAddress);
 
 /**
  * This function pointer is called to notify certain configuration or state changes within OpenThread.
@@ -913,7 +918,7 @@ OTAPI ThreadError otRemoveUnicastAddress(otInstance *aInstance, const otIp6Addre
  * @param[in]  aContext  A pointer to application-specific context.
  *
  */
-typedef void (*otStateChangedCallback)(uint32_t aFlags, void *aContext);
+typedef void (OTCALL *otStateChangedCallback)(uint32_t aFlags, void *aContext);
 
 /**
  * This function registers a callback to indicate when certain configuration or state changes within OpenThread.
@@ -923,7 +928,7 @@ typedef void (*otStateChangedCallback)(uint32_t aFlags, void *aContext);
  * @param[in]  aContext   A pointer to application-specific context.
  *
  */
-OTAPI void otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aContext);
+OTAPI void OTCALL otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aContext);
 
 /**
  * This function gets the Active Operational Dataset.
@@ -935,7 +940,7 @@ OTAPI void otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallba
  * @retval kThreadError_InvalidArgs  @p aDataset was NULL.
  *
  */
-OTAPI ThreadError otGetActiveDataset(otInstance *aInstance, otOperationalDataset *aDataset);
+OTAPI ThreadError OTCALL otGetActiveDataset(otInstance *aInstance, otOperationalDataset *aDataset);
 
 /**
  * This function sets the Active Operational Dataset.
@@ -948,7 +953,7 @@ OTAPI ThreadError otGetActiveDataset(otInstance *aInstance, otOperationalDataset
  * @retval kThreadError_InvalidArgs  @p aDataset was NULL.
  *
  */
-OTAPI ThreadError otSetActiveDataset(otInstance *aInstance, const otOperationalDataset *aDataset);
+OTAPI ThreadError OTCALL otSetActiveDataset(otInstance *aInstance, const otOperationalDataset *aDataset);
 
 /**
  * This function gets the Pending Operational Dataset.
@@ -960,7 +965,7 @@ OTAPI ThreadError otSetActiveDataset(otInstance *aInstance, const otOperationalD
  * @retval kThreadError_InvalidArgs  @p aDataset was NULL.
  *
  */
-OTAPI ThreadError otGetPendingDataset(otInstance *aInstance, otOperationalDataset *aDataset);
+OTAPI ThreadError OTCALL otGetPendingDataset(otInstance *aInstance, otOperationalDataset *aDataset);
 
 /**
  * This function sets the Pending Operational Dataset.
@@ -973,7 +978,7 @@ OTAPI ThreadError otGetPendingDataset(otInstance *aInstance, otOperationalDatase
  * @retval kThreadError_InvalidArgs  @p aDataset was NULL.
  *
  */
-OTAPI ThreadError otSetPendingDataset(otInstance *aInstance, const otOperationalDataset *aDataset);
+OTAPI ThreadError OTCALL otSetPendingDataset(otInstance *aInstance, const otOperationalDataset *aDataset);
 
 /**
  * This function sends MGMT_ACTIVE_GET.
@@ -986,7 +991,7 @@ OTAPI ThreadError otSetPendingDataset(otInstance *aInstance, const otOperational
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError otSendActiveGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength);
+OTAPI ThreadError OTCALL otSendActiveGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength);
 
 /**
  * This function sends MGMT_ACTIVE_SET.
@@ -1000,8 +1005,9 @@ OTAPI ThreadError otSendActiveGet(otInstance *aInstance, const uint8_t *aTlvType
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError otSendActiveSet(otInstance *aInstance, const otOperationalDataset *aDataset, const uint8_t *aTlvs,
-                                  uint8_t aLength);
+OTAPI ThreadError OTCALL otSendActiveSet(otInstance *aInstance, const otOperationalDataset *aDataset,
+                                         const uint8_t *aTlvs,
+                                         uint8_t aLength);
 
 /**
  * This function sends MGMT_PENDING_GET.
@@ -1014,7 +1020,7 @@ OTAPI ThreadError otSendActiveSet(otInstance *aInstance, const otOperationalData
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError otSendPendingGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength);
+OTAPI ThreadError OTCALL otSendPendingGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength);
 
 /**
  * This function sends MGMT_PENDING_SET.
@@ -1028,8 +1034,9 @@ OTAPI ThreadError otSendPendingGet(otInstance *aInstance, const uint8_t *aTlvTyp
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError otSendPendingSet(otInstance *aInstance, const otOperationalDataset *aDataset, const uint8_t *aTlvs,
-                                   uint8_t aLength);
+OTAPI ThreadError OTCALL otSendPendingSet(otInstance *aInstance, const otOperationalDataset *aDataset,
+                                          const uint8_t *aTlvs,
+                                          uint8_t aLength);
 
 /**
  * Get the data poll period of sleepy end device.
@@ -1040,7 +1047,7 @@ OTAPI ThreadError otSendPendingSet(otInstance *aInstance, const otOperationalDat
  *
  * @sa otSetPollPeriod
  */
-OTAPI uint32_t otGetPollPeriod(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetPollPeriod(otInstance *aInstance);
 
 /**
  * Set the data poll period for sleepy end device.
@@ -1050,7 +1057,7 @@ OTAPI uint32_t otGetPollPeriod(otInstance *aInstance);
  *
  * @sa otGetPollPeriod
  */
-OTAPI void otSetPollPeriod(otInstance *aInstance, uint32_t aPollPeriod);
+OTAPI void OTCALL otSetPollPeriod(otInstance *aInstance, uint32_t aPollPeriod);
 
 /**
  * @}
@@ -1075,7 +1082,7 @@ OTAPI void otSetPollPeriod(otInstance *aInstance, uint32_t aPollPeriod);
  *
  * @sa otSetLeaderWeight
  */
-OTAPI uint8_t otGetLocalLeaderWeight(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetLocalLeaderWeight(otInstance *aInstance);
 
 /**
  * Set the Thread Leader Weight used when operating in the Leader role.
@@ -1085,7 +1092,7 @@ OTAPI uint8_t otGetLocalLeaderWeight(otInstance *aInstance);
  *
  * @sa otGetLeaderWeight
  */
-OTAPI void otSetLocalLeaderWeight(otInstance *aInstance, uint8_t aWeight);
+OTAPI void OTCALL otSetLocalLeaderWeight(otInstance *aInstance, uint8_t aWeight);
 
 /**
  * Get the Thread Leader Partition Id used when operating in the Leader role.
@@ -1095,7 +1102,7 @@ OTAPI void otSetLocalLeaderWeight(otInstance *aInstance, uint8_t aWeight);
  * @returns The Thread Leader Partition Id value.
  *
  */
-OTAPI uint32_t otGetLocalLeaderPartitionId(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetLocalLeaderPartitionId(otInstance *aInstance);
 
 /**
  * Set the Thread Leader Partition Id used when operating in the Leader role.
@@ -1104,7 +1111,7 @@ OTAPI uint32_t otGetLocalLeaderPartitionId(otInstance *aInstance);
  * @param[in]  aPartitionId  The Thread Leader Partition Id value.
  *
  */
-OTAPI void otSetLocalLeaderPartitionId(otInstance *aInstance, uint32_t aPartitionId);
+OTAPI void OTCALL otSetLocalLeaderPartitionId(otInstance *aInstance, uint32_t aPartitionId);
 
 /**
  * @}
@@ -1133,7 +1140,7 @@ OTAPI void otSetLocalLeaderPartitionId(otInstance *aInstance, uint32_t aPartitio
  * @sa otRemoveBorderRouter
  * @sa otSendServerData
  */
-OTAPI ThreadError otAddBorderRouter(otInstance *aInstance, const otBorderRouterConfig *aConfig);
+OTAPI ThreadError OTCALL otAddBorderRouter(otInstance *aInstance, const otBorderRouterConfig *aConfig);
 
 /**
  * Remove a border router configuration from the local network data.
@@ -1146,7 +1153,7 @@ OTAPI ThreadError otAddBorderRouter(otInstance *aInstance, const otBorderRouterC
  * @sa otAddBorderRouter
  * @sa otSendServerData
  */
-OTAPI ThreadError otRemoveBorderRouter(otInstance *aInstance, const otIp6Prefix *aPrefix);
+OTAPI ThreadError OTCALL otRemoveBorderRouter(otInstance *aInstance, const otIp6Prefix *aPrefix);
 
 /**
  * Add an external route configuration to the local network data.
@@ -1161,7 +1168,7 @@ OTAPI ThreadError otRemoveBorderRouter(otInstance *aInstance, const otIp6Prefix 
  * @sa otRemoveExternalRoute
  * @sa otSendServerData
  */
-OTAPI ThreadError otAddExternalRoute(otInstance *aInstance, const otExternalRouteConfig *aConfig);
+OTAPI ThreadError OTCALL otAddExternalRoute(otInstance *aInstance, const otExternalRouteConfig *aConfig);
 
 /**
  * Remove an external route configuration from the local network data.
@@ -1174,7 +1181,7 @@ OTAPI ThreadError otAddExternalRoute(otInstance *aInstance, const otExternalRout
  * @sa otAddExternalRoute
  * @sa otSendServerData
  */
-OTAPI ThreadError otRemoveExternalRoute(otInstance *aInstance, const otIp6Prefix *aPrefix);
+OTAPI ThreadError OTCALL otRemoveExternalRoute(otInstance *aInstance, const otIp6Prefix *aPrefix);
 
 /**
  * Immediately register the local network data with the Leader.
@@ -1188,7 +1195,7 @@ OTAPI ThreadError otRemoveExternalRoute(otInstance *aInstance, const otIp6Prefix
  * @sa otAddExternalRoute
  * @sa otRemoveExternalRoute
  */
-OTAPI ThreadError otSendServerData(otInstance *aInstance);
+OTAPI ThreadError OTCALL otSendServerData(otInstance *aInstance);
 
 /**
  * This function adds a port to the allowed unsecured port list.
@@ -1251,7 +1258,7 @@ const uint16_t *otGetUnsecurePorts(otInstance *aInstance, uint8_t *aNumEntries);
  *
  * @sa otSetContextIdReuseDelay
  */
-OTAPI uint32_t otGetContextIdReuseDelay(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetContextIdReuseDelay(otInstance *aInstance);
 
 /**
  * Set the CONTEXT_ID_REUSE_DELAY parameter used in the Leader role.
@@ -1261,7 +1268,7 @@ OTAPI uint32_t otGetContextIdReuseDelay(otInstance *aInstance);
  *
  * @sa otGetContextIdReuseDelay
  */
-OTAPI void otSetContextIdReuseDelay(otInstance *aInstance, uint32_t aDelay);
+OTAPI void OTCALL otSetContextIdReuseDelay(otInstance *aInstance, uint32_t aDelay);
 
 /**
  * Get the thrKeySequenceCounter.
@@ -1272,7 +1279,7 @@ OTAPI void otSetContextIdReuseDelay(otInstance *aInstance, uint32_t aDelay);
  *
  * @sa otSetKeySequenceCounter
  */
-OTAPI uint32_t otGetKeySequenceCounter(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetKeySequenceCounter(otInstance *aInstance);
 
 /**
  * Set the thrKeySequenceCounter.
@@ -1282,7 +1289,7 @@ OTAPI uint32_t otGetKeySequenceCounter(otInstance *aInstance);
  *
  * @sa otGetKeySequenceCounter
  */
-OTAPI void otSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceCounter);
+OTAPI void OTCALL otSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceCounter);
 
 /**
  * Get the NETWORK_ID_TIMEOUT parameter used in the Router role.
@@ -1293,7 +1300,7 @@ OTAPI void otSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceC
  *
  * @sa otSetNetworkIdTimeout
  */
-OTAPI uint8_t otGetNetworkIdTimeout(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetNetworkIdTimeout(otInstance *aInstance);
 
 /**
  * Set the NETWORK_ID_TIMEOUT parameter used in the Leader role.
@@ -1303,7 +1310,7 @@ OTAPI uint8_t otGetNetworkIdTimeout(otInstance *aInstance);
  *
  * @sa otGetNetworkIdTimeout
  */
-OTAPI void otSetNetworkIdTimeout(otInstance *aInstance, uint8_t aTimeout);
+OTAPI void OTCALL otSetNetworkIdTimeout(otInstance *aInstance, uint8_t aTimeout);
 
 /**
  * Get the ROUTER_UPGRADE_THRESHOLD parameter used in the REED role.
@@ -1314,7 +1321,7 @@ OTAPI void otSetNetworkIdTimeout(otInstance *aInstance, uint8_t aTimeout);
  *
  * @sa otSetRouterUpgradeThreshold
  */
-OTAPI uint8_t otGetRouterUpgradeThreshold(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetRouterUpgradeThreshold(otInstance *aInstance);
 
 /**
  * Set the ROUTER_UPGRADE_THRESHOLD parameter used in the Leader role.
@@ -1324,7 +1331,7 @@ OTAPI uint8_t otGetRouterUpgradeThreshold(otInstance *aInstance);
  *
  * @sa otGetRouterUpgradeThreshold
  */
-OTAPI void otSetRouterUpgradeThreshold(otInstance *aInstance, uint8_t aThreshold);
+OTAPI void OTCALL otSetRouterUpgradeThreshold(otInstance *aInstance, uint8_t aThreshold);
 
 /**
  * Release a Router ID that has been allocated by the device in the Leader role.
@@ -1334,7 +1341,7 @@ OTAPI void otSetRouterUpgradeThreshold(otInstance *aInstance, uint8_t aThreshold
  *
  * @retval kThreadErrorNone  Successfully released the Router ID specified by aRouterId.
  */
-OTAPI ThreadError otReleaseRouterId(otInstance *aInstance, uint8_t aRouterId);
+OTAPI ThreadError OTCALL otReleaseRouterId(otInstance *aInstance, uint8_t aRouterId);
 
 /**
  * Add an IEEE 802.15.4 Extended Address to the MAC whitelist.
@@ -1352,7 +1359,7 @@ OTAPI ThreadError otReleaseRouterId(otInstance *aInstance, uint8_t aRouterId);
  * @sa otDisableMacWhitelist
  * @sa otEnableMacWhitelist
  */
-OTAPI ThreadError otAddMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr);
+OTAPI ThreadError OTCALL otAddMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr);
 
 /**
  * Add an IEEE 802.15.4 Extended Address to the MAC whitelist and fix the RSSI value.
@@ -1371,7 +1378,7 @@ OTAPI ThreadError otAddMacWhitelist(otInstance *aInstance, const uint8_t *aExtAd
  * @sa otDisableMacWhitelist
  * @sa otEnableMacWhitelist
  */
-OTAPI ThreadError otAddMacWhitelistRssi(otInstance *aInstance, const uint8_t *aExtAddr, int8_t aRssi);
+OTAPI ThreadError OTCALL otAddMacWhitelistRssi(otInstance *aInstance, const uint8_t *aExtAddr, int8_t aRssi);
 
 /**
  * Remove an IEEE 802.15.4 Extended Address from the MAC whitelist.
@@ -1386,7 +1393,7 @@ OTAPI ThreadError otAddMacWhitelistRssi(otInstance *aInstance, const uint8_t *aE
  * @sa otDisableMacWhitelist
  * @sa otEnableMacWhitelist
  */
-OTAPI void otRemoveMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr);
+OTAPI void OTCALL otRemoveMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr);
 
 /**
  * This function gets a MAC whitelist entry.
@@ -1399,7 +1406,7 @@ OTAPI void otRemoveMacWhitelist(otInstance *aInstance, const uint8_t *aExtAddr);
  * @retval kThreadError_InvalidArgs  @p aIndex is out of bounds or @p aEntry is NULL.
  *
  */
-OTAPI ThreadError otGetMacWhitelistEntry(otInstance *aInstance, uint8_t aIndex, otMacWhitelistEntry *aEntry);
+OTAPI ThreadError OTCALL otGetMacWhitelistEntry(otInstance *aInstance, uint8_t aIndex, otMacWhitelistEntry *aEntry);
 
 /**
  * Remove all entries from the MAC whitelist.
@@ -1413,7 +1420,7 @@ OTAPI ThreadError otGetMacWhitelistEntry(otInstance *aInstance, uint8_t aIndex, 
  * @sa otDisableMacWhitelist
  * @sa otEnableMacWhitelist
  */
-OTAPI void otClearMacWhitelist(otInstance *aInstance);
+OTAPI void OTCALL otClearMacWhitelist(otInstance *aInstance);
 
 /**
  * Disable MAC whitelist filtering.
@@ -1427,7 +1434,7 @@ OTAPI void otClearMacWhitelist(otInstance *aInstance);
  * @sa otGetMacWhitelistEntry
  * @sa otEnableMacWhitelist
  */
-OTAPI void otDisableMacWhitelist(otInstance *aInstance);
+OTAPI void OTCALL otDisableMacWhitelist(otInstance *aInstance);
 
 /**
  * Enable MAC whitelist filtering.
@@ -1441,7 +1448,7 @@ OTAPI void otDisableMacWhitelist(otInstance *aInstance);
  * @sa otGetMacWhitelistEntry
  * @sa otDisableMacWhitelist
  */
-OTAPI void otEnableMacWhitelist(otInstance *aInstance);
+OTAPI void OTCALL otEnableMacWhitelist(otInstance *aInstance);
 
 /**
  * This function indicates whether or not the MAC whitelist is enabled.
@@ -1459,7 +1466,7 @@ OTAPI void otEnableMacWhitelist(otInstance *aInstance);
  * @sa otEnableMacWhitelist
  *
  */
-OTAPI bool otIsMacWhitelistEnabled(otInstance *aInstance);
+OTAPI bool OTCALL otIsMacWhitelistEnabled(otInstance *aInstance);
 
 /**
  * Detach from the Thread network.
@@ -1469,7 +1476,7 @@ OTAPI bool otIsMacWhitelistEnabled(otInstance *aInstance);
  * @retval kThreadErrorNone    Successfully detached from the Thread network.
  * @retval kThreadErrorBusy    Thread is disabled.
  */
-OTAPI ThreadError otBecomeDetached(otInstance *aInstance);
+OTAPI ThreadError OTCALL otBecomeDetached(otInstance *aInstance);
 
 /**
  * Attempt to reattach as a child.
@@ -1480,7 +1487,7 @@ OTAPI ThreadError otBecomeDetached(otInstance *aInstance);
  * @retval kThreadErrorNone    Successfully begin attempt to become a child.
  * @retval kThreadErrorBusy    Thread is disabled or in the middle of an attach process.
  */
-OTAPI ThreadError otBecomeChild(otInstance *aInstance, otMleAttachFilter aFilter);
+OTAPI ThreadError OTCALL otBecomeChild(otInstance *aInstance, otMleAttachFilter aFilter);
 
 /**
  * Attempt to become a router.
@@ -1490,7 +1497,7 @@ OTAPI ThreadError otBecomeChild(otInstance *aInstance, otMleAttachFilter aFilter
  * @retval kThreadErrorNone    Successfully begin attempt to become a router.
  * @retval kThreadErrorBusy    Thread is disabled or already operating in a router or leader role.
  */
-OTAPI ThreadError otBecomeRouter(otInstance *aInstance);
+OTAPI ThreadError OTCALL otBecomeRouter(otInstance *aInstance);
 
 /**
  * Become a leader and start a new partition.
@@ -1499,7 +1506,7 @@ OTAPI ThreadError otBecomeRouter(otInstance *aInstance);
  *
  * @retval kThreadErrorNone  Successfully became a leader and started a new partition.
  */
-OTAPI ThreadError otBecomeLeader(otInstance *aInstance);
+OTAPI ThreadError OTCALL otBecomeLeader(otInstance *aInstance);
 
 /**
  * Add an IEEE 802.15.4 Extended Address to the MAC blacklist.
@@ -1516,7 +1523,7 @@ OTAPI ThreadError otBecomeLeader(otInstance *aInstance);
  * @sa otDisableMacBlacklist
  * @sa otEnableMacBlacklist
  */
-OTAPI ThreadError otAddMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr);
+OTAPI ThreadError OTCALL otAddMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr);
 
 /**
  * Remove an IEEE 802.15.4 Extended Address from the MAC blacklist.
@@ -1530,7 +1537,7 @@ OTAPI ThreadError otAddMacBlacklist(otInstance *aInstance, const uint8_t *aExtAd
  * @sa otDisableMacBlacklist
  * @sa otEnableMacBlacklist
  */
-OTAPI void otRemoveMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr);
+OTAPI void OTCALL otRemoveMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr);
 
 /**
  * This function gets a MAC Blacklist entry.
@@ -1543,7 +1550,7 @@ OTAPI void otRemoveMacBlacklist(otInstance *aInstance, const uint8_t *aExtAddr);
  * @retval kThreadError_InvalidArgs  @p aIndex is out of bounds or @p aEntry is NULL.
  *
  */
-OTAPI ThreadError otGetMacBlacklistEntry(otInstance *aInstance, uint8_t aIndex, otMacBlacklistEntry *aEntry);
+OTAPI ThreadError OTCALL otGetMacBlacklistEntry(otInstance *aInstance, uint8_t aIndex, otMacBlacklistEntry *aEntry);
 
 /**
  *  Remove all entries from the MAC Blacklist.
@@ -1556,7 +1563,7 @@ OTAPI ThreadError otGetMacBlacklistEntry(otInstance *aInstance, uint8_t aIndex, 
  * @sa otDisableMacBlacklist
  * @sa otEnableMacBlacklist
  */
-OTAPI void otClearMacBlacklist(otInstance *aInstance);
+OTAPI void OTCALL otClearMacBlacklist(otInstance *aInstance);
 
 /**
  * Disable MAC blacklist filtering.
@@ -1570,7 +1577,7 @@ OTAPI void otClearMacBlacklist(otInstance *aInstance);
  * @sa otGetMacBlacklistEntry
  * @sa otEnableMacBlacklist
  */
-OTAPI void otDisableMacBlacklist(otInstance *aInstance);
+OTAPI void OTCALL otDisableMacBlacklist(otInstance *aInstance);
 
 /**
  * Enable MAC Blacklist filtering.
@@ -1583,7 +1590,7 @@ OTAPI void otDisableMacBlacklist(otInstance *aInstance);
  * @sa otGetMacBlacklistEntry
  * @sa otDisableMacBlacklist
  */
-OTAPI void otEnableMacBlacklist(otInstance *aInstance);
+OTAPI void OTCALL otEnableMacBlacklist(otInstance *aInstance);
 
 /**
  * This function indicates whether or not the MAC Blacklist is enabled.
@@ -1600,7 +1607,7 @@ OTAPI void otEnableMacBlacklist(otInstance *aInstance);
  * @sa otEnableMacBlacklist
  *
  */
-OTAPI bool otIsMacBlacklistEnabled(otInstance *aInstance);
+OTAPI bool OTCALL otIsMacBlacklistEnabled(otInstance *aInstance);
 
 /**
  * Get the assigned link quality which is on the link to a given extended address.
@@ -1614,7 +1621,7 @@ OTAPI bool otIsMacBlacklistEnabled(otInstance *aInstance);
  *
  * @sa otSetAssignLinkQuality
  */
-OTAPI ThreadError otGetAssignLinkQuality(otInstance *aInstance, const uint8_t *aExtAddr, uint8_t *aLinkQuality);
+OTAPI ThreadError OTCALL otGetAssignLinkQuality(otInstance *aInstance, const uint8_t *aExtAddr, uint8_t *aLinkQuality);
 
 /**
  * Set the link quality which is on the link to a given extended address.
@@ -1625,14 +1632,14 @@ OTAPI ThreadError otGetAssignLinkQuality(otInstance *aInstance, const uint8_t *a
  *
  * @sa otGetAssignLinkQuality
  */
-OTAPI void otSetAssignLinkQuality(otInstance *aInstance, const uint8_t *aExtAddr, uint8_t aLinkQuality);
+OTAPI void OTCALL otSetAssignLinkQuality(otInstance *aInstance, const uint8_t *aExtAddr, uint8_t aLinkQuality);
 
 /**
  * This method triggers platform reset.
  *
  * @param[in]  aInstance A pointer to an OpenThread instance.
  */
-OTAPI void otPlatformReset(otInstance *aInstance);
+OTAPI void OTCALL otPlatformReset(otInstance *aInstance);
 
 /**
  * Get the ROUTER_DOWNGRADE_THRESHOLD parameter used in the Router role.
@@ -1643,7 +1650,7 @@ OTAPI void otPlatformReset(otInstance *aInstance);
  *
  * @sa otSetRouterDowngradeThreshold
  */
-OTAPI uint8_t otGetRouterDowngradeThreshold(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetRouterDowngradeThreshold(otInstance *aInstance);
 
 /**
  * Set the ROUTER_DOWNGRADE_THRESHOLD parameter used in the Leader role.
@@ -1653,7 +1660,7 @@ OTAPI uint8_t otGetRouterDowngradeThreshold(otInstance *aInstance);
  *
  * @sa otGetRouterDowngradeThreshold
  */
-OTAPI void otSetRouterDowngradeThreshold(otInstance *aInstance, uint8_t aThreshold);
+OTAPI void OTCALL otSetRouterDowngradeThreshold(otInstance *aInstance, uint8_t aThreshold);
 
 /**
  * @}
@@ -1683,7 +1690,7 @@ OTAPI void otSetRouterDowngradeThreshold(otInstance *aInstance, uint8_t aThresho
  * @param[out]  aChildInfo  A pointer to where the child information is placed.
  *
  */
-OTAPI ThreadError otGetChildInfoById(otInstance *aInstance, uint16_t aChildId, otChildInfo *aChildInfo);
+OTAPI ThreadError OTCALL otGetChildInfoById(otInstance *aInstance, uint16_t aChildId, otChildInfo *aChildInfo);
 
 /**
  * The function retains diagnostic information for an attached Child by the internal table index.
@@ -1693,7 +1700,7 @@ OTAPI ThreadError otGetChildInfoById(otInstance *aInstance, uint16_t aChildId, o
  * @param[out]  aChildInfo   A pointer to where the child information is placed.
  *
  */
-OTAPI ThreadError otGetChildInfoByIndex(otInstance *aInstance, uint8_t aChildIndex, otChildInfo *aChildInfo);
+OTAPI ThreadError OTCALL otGetChildInfoByIndex(otInstance *aInstance, uint8_t aChildIndex, otChildInfo *aChildInfo);
 
 /**
  * Get the device role.
@@ -1706,7 +1713,7 @@ OTAPI ThreadError otGetChildInfoByIndex(otInstance *aInstance, uint8_t aChildInd
  * @retval ::kDeviceRoleRouter    The device is currently operating as a Thread Router.
  * @retval ::kDeviceRoleLeader    The device is currently operating as a Thread Leader.
  */
-OTAPI otDeviceRole otGetDeviceRole(otInstance *aInstance);
+OTAPI otDeviceRole OTCALL otGetDeviceRole(otInstance *aInstance);
 
 /**
  * This function gets an EID cache entry.
@@ -1719,7 +1726,7 @@ OTAPI otDeviceRole otGetDeviceRole(otInstance *aInstance);
  * @retval kThreadError_InvalidArgs  @p aIndex was out of bounds or @p aEntry was NULL.
  *
  */
-OTAPI ThreadError otGetEidCacheEntry(otInstance *aInstance, uint8_t aIndex, otEidCacheEntry *aEntry);
+OTAPI ThreadError OTCALL otGetEidCacheEntry(otInstance *aInstance, uint8_t aIndex, otEidCacheEntry *aEntry);
 
 /**
  * This function get the Thread Leader Data.
@@ -1732,7 +1739,7 @@ OTAPI ThreadError otGetEidCacheEntry(otInstance *aInstance, uint8_t aIndex, otEi
  * @retval kThreadError_InvalidArgs  @p aLeaderData is NULL.
  *
  */
-OTAPI ThreadError otGetLeaderData(otInstance *aInstance, otLeaderData *aLeaderData);
+OTAPI ThreadError OTCALL otGetLeaderData(otInstance *aInstance, otLeaderData *aLeaderData);
 
 /**
  * Get the Leader's Router ID.
@@ -1741,7 +1748,7 @@ OTAPI ThreadError otGetLeaderData(otInstance *aInstance, otLeaderData *aLeaderDa
  *
  * @returns The Leader's Router ID.
  */
-OTAPI uint8_t otGetLeaderRouterId(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetLeaderRouterId(otInstance *aInstance);
 
 /**
  * Get the Leader's Weight.
@@ -1750,7 +1757,7 @@ OTAPI uint8_t otGetLeaderRouterId(otInstance *aInstance);
  *
  * @returns The Leader's Weight.
  */
-OTAPI uint8_t otGetLeaderWeight(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetLeaderWeight(otInstance *aInstance);
 
 /**
  * Get the Network Data Version.
@@ -1759,7 +1766,7 @@ OTAPI uint8_t otGetLeaderWeight(otInstance *aInstance);
  *
  * @returns The Network Data Version.
  */
-OTAPI uint8_t otGetNetworkDataVersion(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetNetworkDataVersion(otInstance *aInstance);
 
 /**
  * Get the Partition ID.
@@ -1768,7 +1775,7 @@ OTAPI uint8_t otGetNetworkDataVersion(otInstance *aInstance);
  *
  * @returns The Partition ID.
  */
-OTAPI uint32_t otGetPartitionId(otInstance *aInstance);
+OTAPI uint32_t OTCALL otGetPartitionId(otInstance *aInstance);
 
 /**
  * Get the RLOC16.
@@ -1777,7 +1784,7 @@ OTAPI uint32_t otGetPartitionId(otInstance *aInstance);
  *
  * @returns The RLOC16.
  */
-OTAPI uint16_t otGetRloc16(otInstance *aInstance);
+OTAPI uint16_t OTCALL otGetRloc16(otInstance *aInstance);
 
 /**
  * Get the current Router ID Sequence.
@@ -1786,7 +1793,7 @@ OTAPI uint16_t otGetRloc16(otInstance *aInstance);
  *
  * @returns The Router ID Sequence.
  */
-OTAPI uint8_t otGetRouterIdSequence(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetRouterIdSequence(otInstance *aInstance);
 
 /**
  * The function retains diagnostic information for a given Thread Router.
@@ -1796,7 +1803,7 @@ OTAPI uint8_t otGetRouterIdSequence(otInstance *aInstance);
  * @param[out]  aRouterInfo  A pointer to where the router information is placed.
  *
  */
-OTAPI ThreadError otGetRouterInfo(otInstance *aInstance, uint16_t aRouterId, otRouterInfo *aRouterInfo);
+OTAPI ThreadError OTCALL otGetRouterInfo(otInstance *aInstance, uint16_t aRouterId, otRouterInfo *aRouterInfo);
 
 /**
  * The function retains diagnostic information for a Thread Router as parent.
@@ -1805,7 +1812,7 @@ OTAPI ThreadError otGetRouterInfo(otInstance *aInstance, uint16_t aRouterId, otR
  * @param[out]  aParentInfo  A pointer to where the parent router information is placed.
  *
  */
-OTAPI ThreadError otGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo);
+OTAPI ThreadError OTCALL otGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo);
 
 /**
  * Get the Stable Network Data Version.
@@ -1814,7 +1821,7 @@ OTAPI ThreadError otGetParentInfo(otInstance *aInstance, otRouterInfo *aParentIn
  *
  * @returns The Stable Network Data Version.
  */
-OTAPI uint8_t otGetStableNetworkDataVersion(otInstance *aInstance);
+OTAPI uint8_t OTCALL otGetStableNetworkDataVersion(otInstance *aInstance);
 
 #ifndef OTDLL
 
@@ -1877,7 +1884,7 @@ ThreadError otSetLinkPromiscuous(otInstance *aInstance, bool aPromiscuous);
  *
  * @returns A pointer to the MAC layer counters.
  */
-OTAPI const otMacCounters *otGetMacCounters(otInstance *aInstance);
+OTAPI const otMacCounters *OTCALL otGetMacCounters(otInstance *aInstance);
 
 /**
  * @}
@@ -1893,7 +1900,7 @@ OTAPI const otMacCounters *otGetMacCounters(otInstance *aInstance);
  * @retval TRUE   The two IPv6 addresses are the same.
  * @retval FALSE  The two IPv6 addresses are not the same.
  */
-OTAPI bool otIsIp6AddressEqual(const otIp6Address *a, const otIp6Address *b);
+OTAPI bool OTCALL otIsIp6AddressEqual(const otIp6Address *a, const otIp6Address *b);
 
 /**
  * Convert a human-readable IPv6 address string into a binary representation.
@@ -1904,7 +1911,7 @@ OTAPI bool otIsIp6AddressEqual(const otIp6Address *a, const otIp6Address *b);
  * @retval kThreadErrorNone        Successfully parsed the string.
  * @retval kThreadErrorInvalidArg  Failed to parse the string.
  */
-OTAPI ThreadError otIp6AddressFromString(const char *aString, otIp6Address *aAddress);
+OTAPI ThreadError OTCALL otIp6AddressFromString(const char *aString, otIp6Address *aAddress);
 
 /**
  * This function returns the prefix match length (bits) for two IPv6 addresses.
@@ -1915,7 +1922,7 @@ OTAPI ThreadError otIp6AddressFromString(const char *aString, otIp6Address *aAdd
  * @returns  The prefix match length in bits.
  *
  */
-OTAPI uint8_t otIp6PrefixMatch(const otIp6Address *aFirst, const otIp6Address *aSecond);
+OTAPI uint8_t OTCALL otIp6PrefixMatch(const otIp6Address *aFirst, const otIp6Address *aSecond);
 
 #ifndef OTDLL
 

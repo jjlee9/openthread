@@ -39,8 +39,10 @@
 #ifndef OTAPI
 #define OTAPI __declspec(dllimport)
 #endif
+#define OTCALL WINAPI
 #else
 #define OTAPI
+#define OTCALL
 #endif
 
 #ifdef __cplusplus
@@ -64,7 +66,7 @@ extern "C" {
  * @retval kThreadError_InvalidArgs  @p aPSKd is invalid.
  *
  */
-OTAPI ThreadError otJoinerStart(otInstance *aInstance, const char *aPSKd);
+OTAPI ThreadError OTCALL otJoinerStart(otInstance *aInstance, const char *aPSKd);
 
 /**
  * This function disables the Thread Joiner role.
@@ -72,7 +74,7 @@ OTAPI ThreadError otJoinerStart(otInstance *aInstance, const char *aPSKd);
  * @param[in]  aInstance  A pointer to an OpenThread instance.
  *
  */
-OTAPI ThreadError otJoinerStop(otInstance *aInstance);
+OTAPI ThreadError OTCALL otJoinerStop(otInstance *aInstance);
 
 /**
  * @}

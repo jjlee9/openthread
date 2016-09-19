@@ -227,14 +227,14 @@ private:
     static void s_HandleEchoResponse(void *aContext, Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
     static void s_HandlePingTimer(void *aContext);
 #endif
-    static void s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext);
-    static void s_HandleNetifStateChanged(uint32_t aFlags, void *aContext);
+    static void OTCALL s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext);
+    static void OTCALL s_HandleNetifStateChanged(uint32_t aFlags, void *aContext);
 #ifndef OTDLL
     static void s_HandleLinkPcapReceive(const RadioPacket *aFrame, void *aContext);
 #endif
-    static void s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength,
+    static void OTCALL s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength,
                                      void *aContext);
-    static void s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
+    static void OTCALL s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
 
 #ifndef OTDLL
     void HandleEchoResponse(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);

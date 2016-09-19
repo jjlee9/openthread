@@ -904,7 +904,7 @@ void otSetPollPeriod(otInstance *aInstance, uint32_t aPollPeriod)
 
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
 
-otInstance *otInstanceInit(void *aInstanceBuffer, uint64_t *aInstanceBufferSize)
+otInstance *otInstanceInit(void *aInstanceBuffer, size_t *aInstanceBufferSize)
 {
     otInstance *aInstance = NULL;
 
