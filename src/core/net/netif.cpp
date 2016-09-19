@@ -33,9 +33,14 @@
 
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
+#include <common/logging.hpp>
 #include <common/message.hpp>
 #include <net/ip6.hpp>
 #include <net/netif.hpp>
+
+#ifdef WINDOWS_LOGGING
+#include "netif.tmh"
+#endif
 
 namespace Thread {
 namespace Ip6 {

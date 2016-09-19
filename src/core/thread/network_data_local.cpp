@@ -38,6 +38,10 @@
 #include <thread/network_data_local.hpp>
 #include <thread/thread_netif.hpp>
 
+#ifdef WINDOWS_LOGGING
+#include "network_data_local.tmh"
+#endif
+
 namespace Thread {
 namespace NetworkData {
 

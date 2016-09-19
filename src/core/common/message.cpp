@@ -37,10 +37,17 @@
 #include <common/message.hpp>
 #include <net/ip6.hpp>
 
+#ifdef WINDOWS_LOGGING
+#include "message.tmh"
+#endif
+
 namespace Thread {
 
 MessagePool::MessagePool(void)
 {
+    memset(mBuffers, 0, sizeof(mBuffers));
+    memset(&mAll, 0, sizeof(mAll));
+
     mFreeBuffers = mBuffers;
 
     for (int i = 0; i < kNumBuffers - 1; i++)
@@ -207,7 +214,7 @@ ThreadError Message::MoveOffset(int aDelta)
     assert(GetOffset() + aDelta <= GetLength());
     VerifyOrExit(GetOffset() + aDelta <= GetLength(), error = kThreadError_InvalidArgs);
 
-    mInfo.mOffset += static_cast<uint16_t>(aDelta);
+    mInfo.mOffset += static_cast<int16_t>(aDelta);
     assert(mInfo.mOffset <= GetLength());
 
 exit:

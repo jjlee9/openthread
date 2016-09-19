@@ -39,6 +39,10 @@
 #include <platform/alarm.h>
 #include <openthreadinstance.h>
 
+#ifdef WINDOWS_LOGGING
+#include <timer.tmh>
+#endif
+
 namespace Thread {
 
 TimerScheduler::TimerScheduler(void):
@@ -148,7 +152,9 @@ void TimerScheduler::SetAlarm(void)
 
 extern "C" void otPlatAlarmFired(otInstance *aInstance)
 {
+    otLogFuncEntry();
     aInstance->mIp6.mTimerScheduler.FireTimers();
+    otLogFuncExit();
 }
 
 void TimerScheduler::FireTimers()

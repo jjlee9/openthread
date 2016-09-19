@@ -31,10 +31,8 @@
  *   This file implements the necessary hooks for mbedTLS.
  */
 
-#include <assert.h>
-#include <stdio.h>
-
 #include <common/code_utils.hpp>
+#include <common/debug.hpp>
 #include <common/encoding.hpp>
 #include <common/logging.hpp>
 #include <common/timer.hpp>
@@ -43,6 +41,10 @@
 #include <thread/thread_netif.hpp>
 
 #include <mbedtls/debug.h>
+
+#ifdef WINDOWS_LOGGING
+#include "dtls.tmh"
+#endif
 
 namespace Thread {
 namespace MeshCoP {
@@ -87,7 +89,11 @@ ThreadError Dtls::Start(bool aClient, ReceiveHandler aReceiveHandler, SendHandle
     mbedtls_ssl_conf_ciphersuites(&mConf, ciphersuites);
     mbedtls_ssl_conf_export_keys_cb(&mConf, HandleMbedtlsExportKeys, this);
     mbedtls_ssl_conf_handshake_timeout(&mConf, 8000, 60000);
+#ifdef WINDOWS_KERNEL
+    mbedtls_ssl_conf_dbg(&mConf, HandleMbedtlsDebug, NULL);
+#else
     mbedtls_ssl_conf_dbg(&mConf, HandleMbedtlsDebug, stdout);
+#endif
 
     if (!mClient)
     {

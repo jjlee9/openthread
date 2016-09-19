@@ -35,6 +35,14 @@
 #ifndef OPENTHREAD_COMMISSIONER_H_
 #define OPENTHREAD_COMMISSIONER_H_
 
+#ifdef OTDLL
+#ifndef OTAPI
+#define OTAPI __declspec(dllimport)
+#endif
+#else
+#define OTAPI
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,7 +64,7 @@ extern "C" {
  * @retval kThreadError_InvalidArgs  @p aPSKd is invalid.
  *
  */
-ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd);
+OTAPI ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd);
 
 /**
  * This function disables the Thread Commissioner role.
@@ -64,7 +72,7 @@ ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd);
  * @param[in]  aInstance  A pointer to an OpenThread instance.
  *
  */
-ThreadError otCommissionerStop(otInstance *aInstance);
+OTAPI ThreadError otCommissionerStop(otInstance *aInstance);
 
 /**
  * This function pointer is called when the Commissioner receives an Energy Report.
@@ -94,9 +102,9 @@ typedef void (*otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const 
  * @retval kThreadError_NoBufs  Insufficient buffers to generate an Energy Scan Query message.
  *
  */
-ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,
-                                     uint16_t aScanDuration, const otIp6Address *aAddress,
-                                     otCommissionerEnergyReportCallback aCallback, void *aContext);
+OTAPI ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,
+                                           uint16_t aScanDuration, const otIp6Address *aAddress,
+                                           otCommissionerEnergyReportCallback aCallback, void *aContext);
 
 /**
  * This function pointer is called when the Commissioner receives a PAN ID Conflict message.
@@ -122,9 +130,9 @@ typedef void (*otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint32_t aC
  * @retval kThreadError_NoBufs  Insufficient buffers to generate a PAN ID Query message.
  *
  */
-ThreadError otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
-                                     const otIp6Address *aAddress,
-                                     otCommissionerPanIdConflictCallback aCallback, void *aContext);
+OTAPI ThreadError otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
+                                           const otIp6Address *aAddress,
+                                           otCommissionerPanIdConflictCallback aCallback, void *aContext);
 
 /**
  * @}

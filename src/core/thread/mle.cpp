@@ -48,6 +48,10 @@
 #include <thread/mle_router.hpp>
 #include <thread/thread_netif.hpp>
 
+#ifdef WINDOWS_LOGGING
+#include "mle.tmh"
+#endif
+
 using Thread::Encoding::BigEndian::HostSwap16;
 
 namespace Thread {
@@ -183,11 +187,14 @@ ThreadError Mle::Start(void)
 {
     ThreadError error = kThreadError_None;
 
+    otLogFuncEntry();
+
     // cannot bring up the interface if IEEE 802.15.4 promiscuous mode is enabled
     VerifyOrExit(otPlatRadioGetPromiscuous(mNetif.GetInstance()) == false, error = kThreadError_Busy);
     VerifyOrExit(mNetif.IsUp(), error = kThreadError_InvalidState);
 
     mDeviceState = kDeviceStateDetached;
+    mNetif.SetStateChangedFlags(OT_NET_ROLE);
     SetStateDetached();
 
     if (GetRloc16() == Mac::kShortAddrInvalid)
@@ -206,15 +213,18 @@ ThreadError Mle::Start(void)
     }
 
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 
 ThreadError Mle::Stop(void)
 {
+    otLogFuncEntry();
     SetStateDetached();
     mNetif.RemoveUnicastAddress(mLinkLocal16);
     mNetif.RemoveUnicastAddress(mMeshLocal16);
     mDeviceState = kDeviceStateDisabled;
+    otLogFuncExit();
     return kThreadError_None;
 }
 
@@ -288,6 +298,8 @@ ThreadError Mle::BecomeDetached(void)
 {
     ThreadError error = kThreadError_None;
 
+    otLogFuncEntry();
+
     VerifyOrExit(mDeviceState != kDeviceStateDisabled, error = kThreadError_Busy);
 
     SetStateDetached();
@@ -295,12 +307,15 @@ ThreadError Mle::BecomeDetached(void)
     BecomeChild(kMleAttachAnyPartition);
 
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 
 ThreadError Mle::BecomeChild(otMleAttachFilter aFilter)
 {
     ThreadError error = kThreadError_None;
+
+    otLogFuncEntry();
 
     VerifyOrExit(mDeviceState != kDeviceStateDisabled &&
                  mParentRequestState == kParentIdle, error = kThreadError_Busy);
@@ -317,6 +332,7 @@ ThreadError Mle::BecomeChild(otMleAttachFilter aFilter)
     mParentRequestTimer.Start(kParentRequestRouterTimeout);
 
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 
@@ -1496,11 +1512,20 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     {
         if (keySequence == neighbor->mKeySequence)
         {
-            VerifyOrExit(frameCounter >= neighbor->mValid.mMleFrameCounter, otLogDebgMle("mle frame reject 1\n"));
+            if (!(frameCounter >= neighbor->mValid.mMleFrameCounter))
+            {
+                otLogDebgMle("mle frame reject 1\n");
+                goto exit;
+            }
         }
         else
         {
-            VerifyOrExit(keySequence > neighbor->mKeySequence, otLogDebgMle("mle frame reject 2\n"));
+            if (!(keySequence > neighbor->mKeySequence))
+            {
+                otLogDebgMle("mle frame reject 2\n");
+                goto exit;
+            }
+
             neighbor->mKeySequence = keySequence;
             neighbor->mValid.mLinkFrameCounter = 0;
         }
@@ -1509,15 +1534,18 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     }
     else
     {
-        VerifyOrExit(command == Header::kCommandLinkRequest ||
-                     command == Header::kCommandLinkAccept ||
-                     command == Header::kCommandLinkAcceptAndRequest ||
-                     command == Header::kCommandAdvertisement ||
-                     command == Header::kCommandParentRequest ||
-                     command == Header::kCommandParentResponse ||
-                     command == Header::kCommandChildIdRequest ||
-                     command == Header::kCommandChildUpdateRequest,
-                     otLogDebgMle("mle sequence unknown! %d\n", command));
+        if (!(command == Header::kCommandLinkRequest ||
+              command == Header::kCommandLinkAccept ||
+              command == Header::kCommandLinkAcceptAndRequest ||
+              command == Header::kCommandAdvertisement ||
+              command == Header::kCommandParentRequest ||
+              command == Header::kCommandParentResponse ||
+              command == Header::kCommandChildIdRequest ||
+              command == Header::kCommandChildUpdateRequest))
+        {
+            otLogDebgMle("mle sequence unknown! %d\n", command);
+            goto exit;
+        }
     }
 
     switch (command)
@@ -1653,6 +1681,16 @@ ThreadError Mle::HandleAdvertisement(const Message &aMessage, const Ip6::Message
     }
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Advertisement, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Advertisement, 0x%x", error);
+#endif
+    }
+
     return error;
 }
 
@@ -1731,6 +1769,16 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
                                 networkData.GetNetworkData(), networkData.GetLength());
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Data Response, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Data Response, 0x%x", error);
+#endif
+    }
+
     (void)aMessageInfo;
     return error;
 }
@@ -1903,6 +1951,16 @@ ThreadError Mle::HandleParentResponse(const Message &aMessage, const Ip6::Messag
     mParentIsSingleton = connectivity.GetActiveRouters() <= 1;
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Parent Response, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Parent Response, 0x%x", error);
+#endif
+    }
+
     return error;
 }
 
@@ -2010,6 +2068,16 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
     }
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Child ID Response, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Child ID Response, 0x%x", error);
+#endif
+    }
+
     (void)aMessageInfo;
     return error;
 }
@@ -2098,6 +2166,16 @@ ThreadError Mle::HandleChildUpdateResponse(const Message &aMessage, const Ip6::M
     }
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Child Update Response, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Child Update Response, 0x%x", error);
+#endif
+    }
+
     return error;
 }
 
@@ -2165,6 +2243,16 @@ ThreadError Mle::HandleDiscoveryRequest(const Message &aMessage, const Ip6::Mess
     error = SendDiscoveryResponse(aMessageInfo.GetPeerAddr(), aMessage.GetPanId());
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Discovery Request, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Discovery Request, 0x%x", error);
+#endif
+    }
+
     return error;
 }
 
@@ -2304,6 +2392,16 @@ ThreadError Mle::HandleDiscoveryResponse(const Message &aMessage, const Ip6::Mes
     mDiscoverHandler(&result, mDiscoverContext);
 
 exit:
+
+    if (error != kThreadError_None)
+    {
+#ifdef WINDOWS_LOGGING
+        otLogWarnMle("Failed to process Discovery Response, %!otError!", error);
+#else
+        otLogWarnMle("Failed to process Discovery Response, 0x%x", error);
+#endif
+    }
+
     return error;
 }
 

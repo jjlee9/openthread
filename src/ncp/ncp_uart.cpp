@@ -239,7 +239,11 @@ void NcpUart::HandleError(ThreadError aError, uint8_t *aBuf, uint16_t aBufLength
 
     // We can get away with sprintf because we know
     // `hexbuf` is large enough.
+#ifdef _WIN32
+    sprintf_s(hexbuf, sizeof(hexbuf), "Framing error %d: [", aError);
+#else
     sprintf(hexbuf, "Framing error %d: [", aError);
+#endif
 
     // Write out the first part of our log message.
     otNcpStreamWrite(0, reinterpret_cast<uint8_t*>(hexbuf), static_cast<int>(strlen(hexbuf)));
@@ -251,12 +255,20 @@ void NcpUart::HandleError(ThreadError aError, uint8_t *aBuf, uint16_t aBufLength
         // We can get away with sprintf because we know
         // `hexbuf` is large enough, based on our calculations
         // above.
+#ifdef _WIN32
+        sprintf_s(&hexbuf[i*3], 4, " %02X", static_cast<uint8_t>(aBuf[i]));
+#else
         sprintf(&hexbuf[i*3], " %02X", static_cast<uint8_t>(aBuf[i]));
+#endif
     }
 
     // Append a final closing bracket and newline character
     // so our log line looks nice.
+#ifdef _WIN32
+    sprintf_s(&hexbuf[i*3], 4, "]\n");
+#else
     sprintf(&hexbuf[i*3], "]\n");
+#endif
 
     // Write out the second part of our log message.
     // We skip the first byte since it has a space in it.
