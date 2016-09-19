@@ -39,6 +39,7 @@
 #else
 #include <openthread-config.h>
 #endif
+#include <openthread.h>
 
 #include <stdarg.h>
 
@@ -233,7 +234,7 @@ private:
     static void s_HandleLinkPcapReceive(const RadioPacket *aFrame, void *aContext);
 #endif
     static void OTCALL s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength,
-                                     void *aContext);
+                                            void *aContext);
     static void OTCALL s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
 
 #ifndef OTDLL
