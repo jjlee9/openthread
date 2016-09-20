@@ -128,7 +128,8 @@ typedef struct otApiInstance
     otApiInstance() : 
         DeviceHandle(INVALID_HANDLE_VALUE),
         Overlapped({0}),
-        ThreadpoolWait(nullptr)
+        ThreadpoolWait(nullptr),
+        DeviceAvailabilityCallbacks(nullptr)
     { 
         InitializeCriticalSection(&CallbackLock);
     }
