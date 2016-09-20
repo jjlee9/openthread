@@ -867,7 +867,7 @@ otLwfEventWorkerThread(
                 // Process all tasklets that were indicated to us from OpenThread
                 otProcessNextTasklet(pFilter->otCtx);
 
-            } while (otAreTaskletsPending(pFilter->otCtx));
+            } while (otAreTaskletsPending(pFilter->otCtx) && !KeReadStateEvent(&pFilter->EventWorkerThreadStopEvent));
         }
         else if (status == STATUS_WAIT_0 + 4) // SendNetBufferListComplete fired
         {
