@@ -314,7 +314,7 @@ OTNODEAPI int32_t OTCALL otNodeStop(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
 {
-    printf("%d: clear whitelist\n", aNode->mId);
+    printf("%d: whitelist clear\n", aNode->mId);
 
     otClearMacWhitelist(aNode->mInstance);
     return 0;
@@ -322,7 +322,7 @@ OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
 {
-    printf("%d: enable whitelist\n", aNode->mId);
+    printf("%d: whitelist enable\n", aNode->mId);
 
     otEnableMacWhitelist(aNode->mInstance);
     return 0;
@@ -330,7 +330,7 @@ OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
 {
-    printf("%d: disable whitelist\n", aNode->mId);
+    printf("%d: whitelist disable\n", aNode->mId);
 
     otDisableMacWhitelist(aNode->mInstance);
     return 0;
@@ -338,7 +338,9 @@ OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi)
 {
-    printf("%d: add whitelist %s (%d rssi)\n", aNode->mId, aExtAddr, aRssi);
+    if (aRssi == 0)
+        printf("%d: whitelist add %s\n", aNode->mId, aExtAddr);
+    else printf("%d: whitelist add %s %d\n", aNode->mId, aExtAddr, aRssi);
 
     uint8_t extAddr[8];
     if (Hex2Bin(aExtAddr, extAddr, sizeof(extAddr)) != sizeof(extAddr))
@@ -356,7 +358,7 @@ OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr,
 
 OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr)
 {
-    printf("%d: remove whitelist %s\n", aNode->mId, aExtAddr);
+    printf("%d: whitelist remove %s\n", aNode->mId, aExtAddr);
 
     uint8_t extAddr[8];
     if (Hex2Bin(aExtAddr, extAddr, sizeof(extAddr)) != sizeof(extAddr))
@@ -754,10 +756,10 @@ OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode)
     return nullptr;
 }
 
-OTNODEAPI const char* OTCALL otNodePing(otNode* aNode, const char *aAddr, uint32_t aSize)
+OTNODEAPI int32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint32_t aSize)
 {
     UNREFERENCED_PARAMETER(aNode);
     UNREFERENCED_PARAMETER(aAddr);
     UNREFERENCED_PARAMETER(aSize);
-    return nullptr;
+    return FALSE;
 }

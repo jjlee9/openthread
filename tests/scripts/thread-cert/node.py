@@ -262,7 +262,7 @@ class Node:
 
     def set_network_id_timeout(self, network_id_timeout):
         if self.Api:
-            if self.Api.otNodeSetNetworkIdTimeout(self.otNode, ctypes.c_ubyte(key_sequence)) != 0:
+            if self.Api.otNodeSetNetworkIdTimeout(self.otNode, ctypes.c_ubyte(network_id_timeout)) != 0:
                 raise OSError("otNodeSetNetworkIdTimeout failed!");
         else:     
             cmd = 'networkidtimeout %d' % network_id_timeout
@@ -502,23 +502,29 @@ class Node:
         if self.Api:
             if size == None:
                 size = 100;
-            responders = str(self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_uint(size))).split("\n");
-            if len(responders) < num_responses:
-                raise OSError("Not enough responders to ping!");
-            return responders;
+            result = int(self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_uint(size))) != 0;
+            #if len(responders) < num_responses:
+            #    raise OSError("Not enough responders to ping!");
+            return result;
         else:
             cmd = 'ping ' + ipaddr
             if size != None:
                 cmd += ' ' + str(size)
 
             self.send_command(cmd)
-            responders = {}
-            while len(responders) < num_responses:
-                i = self.pexpect.expect(['from (\S+):'])
-                if i == 0:
-                    responders[self.pexpect.match.groups()[0]] = 1
-            self.pexpect.expect('\n')
-            return responders
+        
+            result = True
+            try:
+                responders = {}
+                while len(responders) < num_responses:
+                    i = self.pexpect.expect(['from (\S+):'])
+                    if i == 0:
+                        responders[self.pexpect.match.groups()[0]] = 1
+                self.pexpect.expect('\n')
+            except pexpect.TIMEOUT:
+                result = False
+
+            return result
 
     def __init_win_sim(self, nodeid):
         """ Initialize an Windows simulation node. """
@@ -649,7 +655,6 @@ class Node:
         self.Api.otNodePing.argtypes = [ctypes.c_void_p, 
                                         ctypes.c_char_p,
                                         ctypes.c_uint];
-        self.Api.otNodePing.restype = ctypes.c_char_p;
 
 
         # Initialize a new node

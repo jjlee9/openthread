@@ -85,7 +85,7 @@ void Mac::StartCsmaBackoff(void)
 
 Mac::Mac(ThreadNetif &aThreadNetif):
     mBeginTransmit(aThreadNetif.GetIp6().mTaskletScheduler, &Mac::HandleBeginTransmit, this),
-    mAckTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleAckTimer, this),
+    mMacTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleMacTimer, this),
     mBackoffTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleBeginTransmit, this),
     mReceiveTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleReceiveTimer, this),
     mKeyManager(aThreadNetif.GetKeyManager()),
@@ -222,7 +222,7 @@ void Mac::StartEnergyScan(void)
 {
     mState = kStateEnergyScan;
     mEnergyScanCurrentMaxRssi = kInvalidRssiValue;
-    mAckTimer.Start(mScanDuration);
+    mMacTimer.Start(mScanDuration);
     mEnergyScanSampleRssiTask.Post();
     NextOperation();
 }
@@ -622,6 +622,7 @@ void Mac::HandleBeginTransmit(void)
     switch (mState)
     {
     case kStateActiveScan:
+        otPlatRadioSetPanId(NULL, kPanIdBroadcast);
         sendFrame.SetChannel(mScanChannel);
         SendBeaconRequest(sendFrame);
         sendFrame.SetSequence(0);
@@ -656,7 +657,7 @@ void Mac::HandleBeginTransmit(void)
 
     if (sendFrame.GetAckRequest() && !(otPlatRadioGetCaps(mNetif.GetInstance()) & kRadioCapsAckTimeout))
     {
-        mAckTimer.Start(kAckTimeout);
+        mMacTimer.Start(kAckTimeout);
         otLogDebgMac("ack timer start\n");
     }
 
@@ -677,7 +678,7 @@ extern "C" void otPlatRadioTransmitDone(otInstance *aInstance, bool aRxPending, 
 
 void Mac::TransmitDoneTask(bool aRxPending, ThreadError aError)
 {
-    mAckTimer.Stop();
+    mMacTimer.Stop();
 
     mCounters.mTxTotal++;
 
@@ -722,13 +723,13 @@ exit:
     NextOperation();
 }
 
-void Mac::HandleAckTimer(void *aContext)
+void Mac::HandleMacTimer(void *aContext)
 {
     Mac *obj = reinterpret_cast<Mac *>(aContext);
-    obj->HandleAckTimer();
+    obj->HandleMacTimer();
 }
 
-void Mac::HandleAckTimer(void)
+void Mac::HandleMacTimer(void)
 {
     otPlatRadioReceive(mNetif.GetInstance(), mChannel);
 
@@ -742,6 +743,7 @@ void Mac::HandleAckTimer(void)
 
             if (mScanChannels == 0 || mScanChannel > kPhyMaxChannel)
             {
+                otPlatRadioSetPanId(NULL, mPanId);
                 mActiveScanHandler(mScanContext, NULL);
                 ScheduleNextTransmission();
                 ExitNow();
@@ -777,7 +779,7 @@ void Mac::HandleAckTimer(void)
         while ((mScanChannels & 1) == 0);
 
         mEnergyScanCurrentMaxRssi = kInvalidRssiValue;
-        mAckTimer.Start(mScanDuration);
+        mMacTimer.Start(mScanDuration);
         break;
 
     case kStateTransmitData:
@@ -851,7 +853,7 @@ void Mac::SentFrame(bool aAcked)
     {
     case kStateActiveScan:
         mCounters.mTxBeaconRequest++;
-        mAckTimer.Start(mScanDuration);
+        mMacTimer.Start(mScanDuration);
         break;
 
     case kStateTransmitBeacon:
