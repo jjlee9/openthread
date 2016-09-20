@@ -647,8 +647,7 @@ class Node:
         self.Api.otNodeScan.restype = ctypes.c_char_p;
 
         self.Api.otNodePing.argtypes = [ctypes.c_void_p, 
-                                        ctypes.c_char_p, 
-                                        ctypes.c_uint, 
+                                        ctypes.c_char_p,
                                         ctypes.c_uint];
         self.Api.otNodePing.restype = ctypes.c_char_p;
 

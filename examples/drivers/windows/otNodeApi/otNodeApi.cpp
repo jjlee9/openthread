@@ -376,8 +376,10 @@ OTNODEAPI const char* OTCALL otNodeGetAddr16(otNode* aNode)
 
 OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
 {
+    auto extAddr = otGetExtendedAddress(aNode->mInstance);
     char* str = (char*)malloc(18);
-    sprintf_s(str, 18, "%016llx", *(ULONGLONG*)otGetExtendedAddress(aNode->mInstance));
+    for (int i = 0; i < 8; i++)
+        sprintf_s(str + i * 2, 18 - (2 * i), "%02x", extAddr[i]);
     printf("%d: extaddr\n%s\n", aNode->mId, str);
     return str;
 }
