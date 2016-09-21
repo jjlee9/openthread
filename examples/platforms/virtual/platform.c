@@ -26,36 +26,92 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/time.h>
-
-#include <openthread-config.h>
-#include <openthread.h>
-
-#include <platform/alarm.h>
-#include "platform-posix.h"
-
 /**
- * diagnostics mode flag.
- *
+ * @file
+ * @brief
+ *   This file includes the platform-specific initializers.
  */
-static bool sDiagMode = false;
 
-void otPlatDiagProcess(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen)
+#include "platform-virtual.h"
+
+#include <assert.h>
+#include <errno.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <openthread.h>
+#include <platform/alarm.h>
+#include <platform/uart.h>
+
+uint32_t NODE_ID = 1;
+uint32_t WELLKNOWN_NODE_ID = 34;
+
+void PlatformInit(int argc, char *argv[])
 {
-    // no more diagnostics features for Posix platform
-    snprintf(aOutput, aOutputMaxLen, "diag feature '%s' is not supported\r\n", argv[0]);
-    (void)argc;
+    char *endptr;
+
+    if (argc != 2)
+    {
+        exit(EXIT_FAILURE);
+    }
+
+    NODE_ID = (uint32_t)strtol(argv[1], &endptr, 0);
+
+    if (*endptr != '\0')
+    {
+        fprintf(stderr, "Invalid NODE_ID: %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    platformAlarmInit();
+    platformRadioInit();
+    platformRandomInit();
 }
 
-void otPlatDiagModeSet(bool aMode)
+bool UartInitialized = false;
+
+void PlatformProcessDrivers(otInstance *aInstance)
 {
-    sDiagMode = aMode;
+    fd_set read_fds;
+    fd_set write_fds;
+    fd_set error_fds;
+    int max_fd = -1;
+    struct timeval timeout;
+    int rval;
+
+    if (!UartInitialized)
+    {
+        UartInitialized = true;
+        otPlatUartEnable();
+    }
+
+    FD_ZERO(&read_fds);
+    FD_ZERO(&write_fds);
+    FD_ZERO(&error_fds);
+
+#ifndef _WIN32
+    platformUartUpdateFdSet(&read_fds, &write_fds, &error_fds, &max_fd);
+#endif
+    platformRadioUpdateFdSet(&read_fds, &write_fds, &max_fd);
+    platformAlarmUpdateTimeout(&timeout);
+
+    if (!otAreTaskletsPending(aInstance))
+    {
+        rval = select(max_fd + 1, &read_fds, &write_fds, &error_fds, &timeout);
+
+        if ((rval < 0) && (errno != EINTR))
+        {
+            perror("select");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+#ifndef _WIN32
+    platformUartProcess();
+#endif
+    platformRadioProcess(aInstance);
+    platformAlarmProcess(aInstance);
 }
 
-bool otPlatDiagModeGet()
-{
-    return sDiagMode;
-}

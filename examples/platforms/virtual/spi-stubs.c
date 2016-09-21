@@ -26,62 +26,58 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file
- *   This file implements a pseudo-random number generator.
- *
- * @warning
- *   This implementation is not a true random number generator and does @em satisfy the Thread requirements.
- */
+#include "platform-virtual.h"
 
-#include <openthread-types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <platform/uart.h>
+#include <platform/spi-slave.h>
 
-#include <common/code_utils.hpp>
-#include <platform/random.h>
-#include "platform-posix.h"
+// Spi-slave stubs
 
-static uint32_t s_state = 1;
-
-void posixRandomInit(void)
+ThreadError otPlatSpiSlaveEnable(
+    otPlatSpiSlaveTransactionCompleteCallback aCallback,
+    void *aContext
+)
 {
-    s_state = NODE_ID;
+    (void)aCallback;
+    (void)aContext;
+
+    fprintf(stderr, "\nNo SPI support for posix platform.");
+    exit(0);
+
+    return kThreadError_NotImplemented;
 }
 
-uint32_t otPlatRandomGet(void)
+void otPlatSpiSlaveDisable(void)
 {
-    uint32_t mlcg, p, q;
-    uint64_t tmpstate;
-
-    tmpstate = (uint64_t)33614 * (uint64_t)s_state;
-    q = tmpstate & 0xffffffff;
-    q = q >> 1;
-    p = tmpstate >> 32;
-    mlcg = p + q;
-
-    if (mlcg & 0x80000000)
-    {
-        mlcg &= 0x7fffffff;
-        mlcg++;
-    }
-
-    s_state = mlcg;
-
-    return mlcg;
 }
 
-ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
+ThreadError otPlatSpiSlavePrepareTransaction(
+    uint8_t *anOutputBuf,
+    uint16_t anOutputBufLen,
+    uint8_t *anInputBuf,
+    uint16_t anInputBufLen,
+    bool aRequestTransactionFlag
+)
 {
-    ThreadError error = kThreadError_None;
+    (void)anOutputBuf;
+    (void)anOutputBufLen;
+    (void)anInputBuf;
+    (void)anInputBufLen;
+    (void)aRequestTransactionFlag;
 
-    VerifyOrExit(aOutput && aOutputLength, error = kThreadError_InvalidArgs);
+    return kThreadError_NotImplemented;
+}
 
-    for (uint16_t length = 0; length < aInputLength; length++)
-    {
-        aOutput[length] = (uint8_t)otPlatRandomGet();
-    }
+// Uart
 
-    *aOutputLength = aInputLength;
+void otPlatUartSendDone(void)
+{
+}
 
-exit:
-    return error;
+void otPlatUartReceived(const uint8_t *aBuf, uint16_t aBufLength)
+{
+    (void)aBuf;
+    (void)aBufLength;
 }

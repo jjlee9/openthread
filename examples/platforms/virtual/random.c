@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,23 +26,63 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <windows.h>
-#include <openthread.h>
+/**
+ * @file
+ *   This file implements a pseudo-random number generator.
+ *
+ * @warning
+ *   This implementation is not a true random number generator and does @em satisfy the Thread requirements.
+ */
 
-BOOL APIENTRY 
-DllMain( 
-    HMODULE hModule,
-    DWORD   reason,
-    LPVOID  lpReserved
-	)
+#include "platform-virtual.h"
+
+#include <openthread-types.h>
+
+#include <common/code_utils.hpp>
+#include <platform/random.h>
+
+static uint32_t s_state = 1;
+
+void platformRandomInit(void)
 {
-	switch (reason)
-	{
-	case DLL_PROCESS_ATTACH:
-	case DLL_THREAD_ATTACH:
-	case DLL_THREAD_DETACH:
-	case DLL_PROCESS_DETACH:
-		break;
-	}
-	return TRUE;
+    s_state = NODE_ID;
+}
+
+uint32_t otPlatRandomGet(void)
+{
+    uint32_t mlcg, p, q;
+    uint64_t tmpstate;
+
+    tmpstate = (uint64_t)33614 * (uint64_t)s_state;
+    q = tmpstate & 0xffffffff;
+    q = q >> 1;
+    p = tmpstate >> 32;
+    mlcg = p + q;
+
+    if (mlcg & 0x80000000)
+    {
+        mlcg &= 0x7fffffff;
+        mlcg++;
+    }
+
+    s_state = mlcg;
+
+    return mlcg;
+}
+
+ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
+{
+    ThreadError error = kThreadError_None;
+
+    VerifyOrExit(aOutput && aOutputLength, error = kThreadError_InvalidArgs);
+
+    for (uint16_t length = 0; length < aInputLength; length++)
+    {
+        aOutput[length] = (uint8_t)otPlatRandomGet();
+    }
+
+    *aOutputLength = aInputLength;
+
+exit:
+    return error;
 }

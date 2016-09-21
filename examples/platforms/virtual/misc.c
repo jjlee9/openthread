@@ -26,81 +26,19 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file
- * @brief
- *   This file includes the platform-specific initializers.
- */
+#include "platform-virtual.h"
 
-#include <assert.h>
-#include <errno.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
+#include <openthread-types.h>
+#include <platform/misc.h>
 
-#include <openthread.h>
-#include <platform/alarm.h>
-#include <platform/uart.h>
-#include "platform-posix.h"
-
-uint32_t NODE_ID = 1;
-uint32_t WELLKNOWN_NODE_ID = 34;
-
-void PlatformInit(int argc, char *argv[])
+void otPlatReset(otInstance *aInstance)
 {
-    char *endptr;
-
-    if (argc != 2)
-    {
-        exit(EXIT_FAILURE);
-    }
-
-    NODE_ID = (uint32_t)strtol(argv[1], &endptr, 0);
-
-    if (*endptr != '\0')
-    {
-        fprintf(stderr, "Invalid NODE_ID: %s\n", argv[1]);
-        exit(EXIT_FAILURE);
-    }
-
-    posixAlarmInit();
-    posixRadioInit();
-    posixRandomInit();
-    otPlatUartEnable();
+    // This function does nothing on the Posix platform.
+    (void)aInstance;
 }
 
-void PlatformProcessDrivers(otInstance *aInstance)
+otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
 {
-    fd_set read_fds;
-    fd_set write_fds;
-    fd_set error_fds;
-    int max_fd = -1;
-    struct timeval timeout;
-    int rval;
-
-    FD_ZERO(&read_fds);
-    FD_ZERO(&write_fds);
-    FD_ZERO(&error_fds);
-
-    posixUartUpdateFdSet(&read_fds, &write_fds, &error_fds, &max_fd);
-    posixRadioUpdateFdSet(&read_fds, &write_fds, &max_fd);
-    posixAlarmUpdateTimeout(&timeout);
-
-    if (!otAreTaskletsPending(aInstance))
-    {
-        rval = select(max_fd + 1, &read_fds, &write_fds, &error_fds, &timeout);
-
-        if ((rval < 0) && (errno != EINTR))
-        {
-            perror("select");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    posixUartProcess();
-    posixRadioProcess(aInstance);
-    posixAlarmProcess(aInstance);
+    (void)aInstance;
+    return kPlatResetReason_PowerOn;
 }
-

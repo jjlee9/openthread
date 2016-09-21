@@ -26,73 +26,37 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file
- * @brief
- *   This file includes the windows platform-specific initializers.
- */
+#include "platform-virtual.h"
 
-#ifndef PLATFORM_WINDOWS_H_
-#define PLATFORM_WINDOWS_H_
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
 
-/**
- * Unique node ID.
- *
- */
-extern uint32_t NODE_ID;
+#include <openthread-config.h>
+#include <openthread.h>
+
+#include <platform/alarm.h>
 
 /**
- * Well-known Unique ID used by a simulated radio that supports promiscuous mode.
+ * diagnostics mode flag.
  *
  */
-extern uint32_t WELLKNOWN_NODE_ID;
+static bool sDiagMode = false;
 
-/**
- * This function initializes the alarm service used by OpenThread.
- *
- */
-void windowsAlarmInit(void);
+void otPlatDiagProcess(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen)
+{
+    // no more diagnostics features for Posix platform
+    snprintf(aOutput, aOutputMaxLen, "diag feature '%s' is not supported\r\n", argv[0]);
+    (void)argc;
+}
 
-/**
- * This function retrieves the time remaining until the alarm fires.
- *
- * @param[out]  aTimeval  A pointer to the timeval struct.
- *
- */
-void windowsAlarmUpdateTimeout(struct timeval *tv);
+void otPlatDiagModeSet(bool aMode)
+{
+    sDiagMode = aMode;
+}
 
-/**
- * This function performs alarm driver processing.
- *
- */
-void windowsAlarmProcess(otInstance *aInstance);
-
-/**
- * This function initializes the radio service used by OpenThread.
- *
- */
-void windowsRadioInit(void);
-
-/**
- * This function updates the file descriptor sets with file descriptors used by the radio driver.
- *
- * @param[inout]  aReadFdSet   A pointer to the read file descriptors.
- * @param[inout]  aWriteFdSet  A pointer to the write file descriptors.
- * @param[inout]  aMaxFd       A pointer to the max file descriptor.
- *
- */
-void windowsRadioUpdateFdSet(fd_set *aReadFdSet, fd_set *aWriteFdSet, int *aMaxFd);
-
-/**
- * This function performs radio driver processing.
- *
- */
-void windowsRadioProcess(otInstance *aInstance);
-
-/**
- * This function initializes the random number service used by OpenThread.
- *
- */
-void windowsRandomInit(void);
-
-#endif  // PLATFORM_WINDOWS_H_
+bool otPlatDiagModeGet()
+{
+    return sDiagMode;
+}
