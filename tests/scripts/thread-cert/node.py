@@ -211,7 +211,7 @@ class Node:
 
     def get_addr16(self):
         if self.Api:
-            return str(self.Api.otNodeGetAddr16(self.otNode));
+            return self.Api.otNodeGetAddr16(self.otNode);
         else:
             self.send_command('rloc16')
             i = self.pexpect.expect('([0-9a-fA-F]{4})')
@@ -385,7 +385,7 @@ class Node:
 
     def get_addrs(self):
         if self.Api:
-            return str(self.Api.otNodeGetWeight(self.otNode)).split("\n");
+            return self.Api.otNodeGetAddrs(self.otNode).decode("utf-8").split("\n");
         else:
             addrs = []
             self.send_command('ipaddr')
@@ -474,8 +474,8 @@ class Node:
 
     def panid_query(self, panid, mask, ipaddr):
         if self.Api:
-            if self.Api.otNodeEnergyScan(self.otNode, ctypes.c_ushort(panid), ctypes.c_uint(mask), ipaddr.encode('utf-8')) != 0:
-                raise OSError("otNodeEnergyScan failed!");
+            if self.Api.otNodePanIdQuery(self.otNode, ctypes.c_ushort(panid), ctypes.c_uint(mask), ipaddr.encode('utf-8')) != 0:
+                raise OSError("otNodePanIdQuery failed!");
         else:  
             cmd = 'commissioner panid ' + str(panid) + ' ' + str(mask) + ' ' + ipaddr
             self.send_command(cmd)
@@ -483,7 +483,7 @@ class Node:
 
     def scan(self):
         if self.Api:
-            return str(self.Api.otNodeScan(self.otNode)).split("\n");
+            return self.Api.otNodeScan(self.otNode).decode("utf-8").split("\n");
         else:
             self.send_command('scan')
 
@@ -502,10 +502,8 @@ class Node:
         if self.Api:
             if size == None:
                 size = 100;
-            result = int(self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_uint(size))) != 0;
-            #if len(responders) < num_responses:
-            #    raise OSError("Not enough responders to ping!");
-            return result;
+            numberOfResponders = self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_ushort(size));
+            return numberOfResponders >= num_responses
         else:
             cmd = 'ping ' + ipaddr
             if size != None:
@@ -561,7 +559,7 @@ class Node:
                                                    ctypes.c_char_p];
         
         self.Api.otNodeGetAddr16.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetAddr16.restype = ctypes.c_char_p;
+        self.Api.otNodeGetAddr16.restype = ctypes.c_ushort;
         
         self.Api.otNodeGetAddr64.argtypes = [ctypes.c_void_p];
         self.Api.otNodeGetAddr64.restype = ctypes.c_char_p;
@@ -654,7 +652,8 @@ class Node:
 
         self.Api.otNodePing.argtypes = [ctypes.c_void_p, 
                                         ctypes.c_char_p,
-                                        ctypes.c_uint];
+                                        ctypes.c_ushort];
+        self.Api.otNodePing.restype = ctypes.c_uint;
 
 
         # Initialize a new node

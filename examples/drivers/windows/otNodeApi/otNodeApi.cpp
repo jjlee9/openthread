@@ -164,6 +164,8 @@ typedef struct otNode
     uint32_t    mId;
     DWORD       mBusIndex;
     otInstance* mInstance;
+    HANDLE      mEnergyScanEvent;
+    HANDLE      mPanIdConflictEvent;
 } otNode;
 
 const char* otDeviceRoleToString(otDeviceRole role)
@@ -247,6 +249,9 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     node->mBusIndex = newBusIndex;
     node->mInstance = instance;
 
+    node->mEnergyScanEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    node->mPanIdConflictEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+
     otSetStateChangedCallback(instance, otNodeStateChangedCallback, node);
 
     return node;
@@ -256,6 +261,8 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
 {
     if (aNode != nullptr)
     {
+        CloseHandle(aNode->mPanIdConflictEvent);
+        CloseHandle(aNode->mEnergyScanEvent);
         otSetStateChangedCallback(aNode->mInstance, nullptr, nullptr);
         otvmpRemoveVirtualBus(gVmpHandle, aNode->mBusIndex);
         delete aNode;
@@ -368,12 +375,11 @@ OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAd
     return 0;
 }
 
-OTNODEAPI const char* OTCALL otNodeGetAddr16(otNode* aNode)
+OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode)
 {
-    char* str = (char*)malloc(6);
-    sprintf_s(str, 6, "%04x", otGetRloc16(aNode->mInstance));
-    printf("%d: rloc16\n%s\n", aNode->mId, str);
-    return str;
+    auto result = otGetRloc16(aNode->mInstance);
+    printf("%d: rloc16\n%04x\n", aNode->mId, result);
+    return result;
 }
 
 OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
@@ -730,24 +736,71 @@ OTNODEAPI int32_t OTCALL otNodeRegisterNetdata(otNode* aNode)
     return otSendServerData(aNode->mInstance);
 }
 
+void OTCALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength, void *aContext)
+{
+    otNode* aNode = (otNode*)aContext;
+
+    printf("Energy: 0x%08x\n", aChannelMask);
+    for (uint8_t i = 0; i < aEnergyListLength; i++)
+        printf("%d ", aEnergyList[i]);
+    printf("\n");
+
+    SetEvent(aNode->mEnergyScanEvent);
+}
+
 OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr)
 {
-    UNREFERENCED_PARAMETER(aNode);
-    UNREFERENCED_PARAMETER(aMask);
-    UNREFERENCED_PARAMETER(aCount);
-    UNREFERENCED_PARAMETER(aPeriod);
-    UNREFERENCED_PARAMETER(aDuration);
-    UNREFERENCED_PARAMETER(aAddr);
-    return kThreadError_NotImplemented;
+    printf("%d: energy scan 0x%x %d %d %d %s\n", aNode->mId, aMask, aCount, aPeriod, aDuration, aAddr);
+
+    otIp6Address address = {0};
+    auto error = otIp6AddressFromString(aAddr, &address);
+    if (error != kThreadError_None)
+    {
+        printf("otIp6AddressFromString(%s) failed, 0x%x!\n", aAddr, error);
+        return error;
+    }
+    
+    ResetEvent(aNode->mEnergyScanEvent);
+
+    error = otCommissionerEnergyScan(aNode->mInstance, aMask, aCount, aPeriod, aDuration, &address, otNodeCommissionerEnergyReportCallback, aNode);
+    if (error != kThreadError_None)
+    {
+        printf("otCommissionerEnergyScan failed, 0x%x!\n", error);
+        return error;
+    }
+
+    return WaitForSingleObject(aNode->mEnergyScanEvent, 8000) == WAIT_OBJECT_0 ? kThreadError_None : kThreadError_NotFound;
+}
+
+void OTCALL otNodeCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
+{
+    otNode* aNode = (otNode*)aContext;
+    printf("Conflict: 0x%04x, 0x%08x\n", aPanId, aChannelMask);
+    SetEvent(aNode->mPanIdConflictEvent);
 }
 
 OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr)
 {
-    UNREFERENCED_PARAMETER(aNode);
-    UNREFERENCED_PARAMETER(aPanId);
-    UNREFERENCED_PARAMETER(aMask);
-    UNREFERENCED_PARAMETER(aAddr);
-    return kThreadError_NotImplemented;
+    printf("%d: panid query 0x%04x 0x%x %s\n", aNode->mId, aPanId, aMask, aAddr);
+
+    otIp6Address address = {0};
+    auto error = otIp6AddressFromString(aAddr, &address);
+    if (error != kThreadError_None)
+    {
+        printf("otIp6AddressFromString(%s) failed, 0x%x!\n", aAddr, error);
+        return error;
+    }
+    
+    ResetEvent(aNode->mPanIdConflictEvent);
+
+    error = otCommissionerPanIdQuery(aNode->mInstance, aPanId, aMask, &address, otNodeCommissionerPanIdConflictCallback, aNode);
+    if (error != kThreadError_None)
+    {
+        printf("otCommissionerPanIdQuery failed, 0x%x!\n", error);
+        return error;
+    }
+
+    return WaitForSingleObject(aNode->mPanIdConflictEvent, 8000) == WAIT_OBJECT_0 ? kThreadError_None : kThreadError_NotFound;
 }
 
 OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode)
@@ -756,10 +809,103 @@ OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode)
     return nullptr;
 }
 
-OTNODEAPI int32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint32_t aSize)
+OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize)
 {
-    UNREFERENCED_PARAMETER(aNode);
-    UNREFERENCED_PARAMETER(aAddr);
-    UNREFERENCED_PARAMETER(aSize);
-    return FALSE;
+    // Convert string to destination address
+    otIp6Address otDestinationAddress = {0};
+    auto error = otIp6AddressFromString(aAddr, &otDestinationAddress);
+    if (error != kThreadError_None)
+    {
+        printf("otIp6AddressFromString(%s) failed!\n", aAddr);
+        return 0;
+    }
+    
+    // Get ML-EID as source address for ping
+    auto otSourceAddress = otGetMeshLocalEid(aNode->mInstance);
+
+    sockaddr_in6 SourceAddress = { AF_INET6, 0 };
+    sockaddr_in6 DestinationAddress = { AF_INET6, 0 };
+
+    memcpy(&SourceAddress.sin6_addr, otSourceAddress, sizeof(IN6_ADDR));
+    memcpy(&DestinationAddress.sin6_addr, &otDestinationAddress, sizeof(IN6_ADDR));
+
+    otFreeMemory(otSourceAddress);
+    otSourceAddress = nullptr;
+    
+    // Put the current thead in the correct compartment
+    bool RevertCompartmentOnExit = false;
+    ULONG OriginalCompartmentID = GetCurrentThreadCompartmentId();
+    if (OriginalCompartmentID != otGetCompartmentId(aNode->mInstance))
+    {
+        DWORD dwError = ERROR_SUCCESS;
+        if ((dwError = SetCurrentThreadCompartmentId(otGetCompartmentId(aNode->mInstance))) != ERROR_SUCCESS)
+        {
+            printf("SetCurrentThreadCompartmentId failed, 0x%x\n", dwError);
+        }
+        RevertCompartmentOnExit = true;
+    }
+
+    auto SendBuffer = (PUCHAR)malloc(aSize);
+
+    uint32_t aRecvSize = sizeof(ICMP_ECHO_REPLY) + aSize + MAX_OPT_SIZE;
+    auto RecvBuffer = (PUCHAR)malloc(aRecvSize);
+
+    // Initialize the send buffer pattern.
+    for (uint32_t i = 0; i < aSize; i++)
+        SendBuffer[i] = (char)('a' + (i % 23));
+
+    DWORD numberOfReplies = 0;
+
+    printf("%d: ping %s\n", aNode->mId, aAddr);
+
+    // Get an ICMP handle
+    auto IcmpHandle = Icmp6CreateFile();
+    if (IcmpHandle == INVALID_HANDLE_VALUE)
+    {
+        printf("Icmp6CreateFile failed!\n");
+        goto exit;
+    }
+
+    // Send the Echo Request
+    numberOfReplies = 
+        Icmp6SendEcho2(
+            IcmpHandle,
+            nullptr,
+            nullptr,
+            nullptr,
+            &SourceAddress,
+            &DestinationAddress,
+            SendBuffer,
+            aSize,
+            nullptr,
+            RecvBuffer,
+            aRecvSize,
+            4000 // Timeout
+            );
+
+    if (numberOfReplies == 0)
+    {
+        printf("error: 0x%x\n", GetLastError());
+    }
+    else
+    {    
+        printf("%d reply(s)\n", numberOfReplies);
+
+        //ICMPV6_ECHO_REPLY* Reply = (ICMPV6_ECHO_REPLY*)RecvBuffer;
+    }
+
+exit:
+    
+    // Revert the comparment if necessary
+    if (RevertCompartmentOnExit)
+    {
+        (VOID)SetCurrentThreadCompartmentId(OriginalCompartmentID);
+    }
+
+    free(RecvBuffer);
+    free(SendBuffer);
+
+    IcmpCloseHandle(IcmpHandle);
+
+    return numberOfReplies;
 }

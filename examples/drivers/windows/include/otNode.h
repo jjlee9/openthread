@@ -103,7 +103,7 @@ OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAd
 /**
  * Gets the node's short mac address (Rloc16)
  */
-OTNODEAPI const char* OTCALL otNodeGetAddr16(otNode* aNode);
+OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode);
 
 /**
  * Gets the node's extended mac address
@@ -248,7 +248,7 @@ OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode);
 /**
  * Performs an scan for the node
  */
-OTNODEAPI int32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint32_t aSize);
+OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize);
 
 #ifdef __cplusplus
 }  // extern "C"

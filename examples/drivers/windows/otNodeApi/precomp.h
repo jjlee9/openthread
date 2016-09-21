@@ -11,6 +11,7 @@
 #include <ws2ipdef.h>
 #include <IPHlpApi.h>
 #include <mstcpip.h>
+#include <IcmpAPI.h>
 #include <new>
 #include <vector>
 #include <tuple>
