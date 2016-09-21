@@ -104,7 +104,7 @@ void TestToolchain(void)
     test_packed_enum();
 }
 
-#ifndef _WIN32
+#ifdef ENABLE_TEST_MAIN
 int main(void)
 {
     TestToolchain();

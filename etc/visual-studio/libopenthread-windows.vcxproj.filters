@@ -10,36 +10,33 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\examples\platforms\windows\dllmain.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\alarm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\alarm.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\logging.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\platform.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\misc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\random.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\platform.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\logging.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\random.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\radio.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\radio.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\uart.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\spi-stubs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\misc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\examples\platforms\windows\spi-stubs.cpp">
+    <ClCompile Include="..\..\examples\platforms\virtual\uart-windows.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\examples\platforms\windows\platform-windows.h">
+    <ClInclude Include="..\..\examples\platforms\virtual\platform-virtual.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

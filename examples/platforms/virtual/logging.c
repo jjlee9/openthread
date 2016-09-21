@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,94 +26,135 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <windows.h>
-#include <openthread.h>
+#include "platform-virtual.h"
+
+#include <ctype.h>
+#include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
 #include <time.h>
 
 #include <platform/logging.h>
 
-EXTERN_C void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, ...)
+// Macro to append content to end of the log string.
+
+#define LOG_PRINTF(...)                                                                     \
+    charsWritten = snprintf(&logString[offset], sizeof(logString) - offset , __VA_ARGS__);    \
+    VerifyOrExit(charsWritten >= 0, logString[offset] = 0);                                  \
+    offset += (unsigned int)charsWritten;                                    \
+    VerifyOrExit(offset < sizeof(logString), logString[sizeof(logString) -1 ] = 0)
+
+#ifdef _WIN32
+void GetTimeString(char *timeString, size_t length)
 {
-    char timeString[40];
+    struct tm tmLocalTime;
+    time_t now = time(NULL);
+    (void)localtime_s(&tmLocalTime, &now);
+
+    strftime(timeString, length, "%Y-%m-%d %H:%M:%S ", &tmLocalTime);
+}
+#else
+void GetTimeString(char *timeString, size_t length)
+{
+    struct timeval tv;
+    size_t offset;
+
+    gettimeofday(&tv, NULL);
+
+    offset = strftime(timeString, length, "%Y-%m-%d %H:%M:%S", localtime(&tv.tv_sec));
+    snprintf(&timeString[offset], length - offset, ".%06d", (uint32_t)tv.tv_usec);
+}
+#endif
+
+void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, ...)
+{
+    char timeString[50];
+    char logString[512];
+    unsigned int offset;
+    int charsWritten;
     va_list args;
 
-    time_t now = time(NULL);
-    tm tmLocalTime;
-    (void)localtime_s(&tmLocalTime, &now); 
+    offset = 0;
 
-    strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S ", &tmLocalTime);
-    fprintf(stderr, "%s ", timeString);
+    GetTimeString(timeString, sizeof(timeString));
+
+    LOG_PRINTF("%s ", timeString);
 
     switch (aLogLevel)
     {
     case kLogLevelNone:
-        fprintf(stderr, "NONE ");
+        LOG_PRINTF("NONE ");
         break;
 
     case kLogLevelCrit:
-        fprintf(stderr, "CRIT ");
+        LOG_PRINTF("CRIT ");
         break;
 
     case kLogLevelWarn:
-        fprintf(stderr, "WARN ");
+        LOG_PRINTF("WARN ");
         break;
 
     case kLogLevelInfo:
-        fprintf(stderr, "INFO ");
+        LOG_PRINTF("INFO ");
         break;
 
     case kLogLevelDebg:
-        fprintf(stderr, "DEBG ");
+        LOG_PRINTF("DEBG ");
         break;
     }
 
     switch (aLogRegion)
     {
     case kLogRegionApi:
-        fprintf(stderr, "API  ");
+        LOG_PRINTF("API  ");
         break;
 
     case kLogRegionMle:
-        fprintf(stderr, "MLE  ");
+        LOG_PRINTF("MLE  ");
         break;
 
     case kLogRegionArp:
-        fprintf(stderr, "ARP  ");
+        LOG_PRINTF("ARP  ");
         break;
 
     case kLogRegionNetData:
-        fprintf(stderr, "NETD ");
+        LOG_PRINTF("NETD ");
         break;
 
     case kLogRegionIp6:
-        fprintf(stderr, "IPV6 ");
+        LOG_PRINTF("IPV6 ");
         break;
 
     case kLogRegionIcmp:
-        fprintf(stderr, "ICMP ");
+        LOG_PRINTF("ICMP ");
         break;
 
     case kLogRegionMac:
-        fprintf(stderr, "MAC  ");
+        LOG_PRINTF("MAC  ");
         break;
 
     case kLogRegionMem:
-        fprintf(stderr, "MEM  ");
+        LOG_PRINTF("MEM  ");
         break;
 
     case kLogRegionNcp:
-        fprintf(stderr, "NCP  ");
+        LOG_PRINTF("NCP  ");
         break;
 
     case kLogRegionMeshCoP:
-        fprintf(stderr, "MCOP ");
+        LOG_PRINTF("MCOP ");
         break;
     }
 
     va_start(args, aFormat);
-    vfprintf(stderr, aFormat, args);
-    fprintf(stderr, "\r");
+    charsWritten = vsnprintf(&logString[offset], sizeof(logString) - offset, aFormat, args);
     va_end(args);
+
+    VerifyOrExit(charsWritten >= 0, logString[offset] = 0);
+
+exit:
+    fprintf(stderr, "%s\r", logString);
 }
 

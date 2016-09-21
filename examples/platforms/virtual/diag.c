@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,20 +26,37 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <windows.h>
+#include "platform-virtual.h"
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+
+#include <openthread-config.h>
 #include <openthread.h>
 
-#include <platform/misc.h>
-#include "platform-windows.h"
+#include <platform/alarm.h>
 
-EXTERN_C void otPlatReset(otInstance *aInstance)
+/**
+ * diagnostics mode flag.
+ *
+ */
+static bool sDiagMode = false;
+
+void otPlatDiagProcess(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen)
 {
-    // This function does nothing on the Posix platform.
-    (void)aInstance;
+    // no more diagnostics features for Posix platform
+    snprintf(aOutput, aOutputMaxLen, "diag feature '%s' is not supported\r\n", argv[0]);
+    (void)argc;
 }
 
-EXTERN_C otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
+void otPlatDiagModeSet(bool aMode)
 {
-    (void)aInstance;
-    return kPlatResetReason_PowerOn;
+    sDiagMode = aMode;
+}
+
+bool otPlatDiagModeGet()
+{
+    return sDiagMode;
 }
