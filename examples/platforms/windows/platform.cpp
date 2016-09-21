@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,6 @@ EXTERN_C void PlatformInit(int argc, char *argv[])
     windowsAlarmInit();
     windowsRadioInit();
     windowsRandomInit();
-    otPlatUartEnable();
 }
 
 EXTERN_C void PlatformProcessDrivers(otInstance *aInstance)
@@ -61,6 +60,13 @@ EXTERN_C void PlatformProcessDrivers(otInstance *aInstance)
 
     FD_ZERO(&read_fds);
     FD_ZERO(&write_fds);
+
+    static bool UartInitialized = false;
+    if (!UartInitialized)
+    {
+        UartInitialized = true;
+        otPlatUartEnable();
+    }
 
     windowsRadioUpdateFdSet(&read_fds, &write_fds, &max_fd);
     windowsAlarmUpdateTimeout(&timeout);

@@ -132,13 +132,11 @@ ThreadError Commissioner::SendPetition(void)
     }
 
     header.Init();
-    header.SetVersion(1);
     header.SetType(Coap::Header::kTypeConfirmable);
     header.SetCode(Coap::Header::kCodePost);
     header.SetMessageId(++mCoapMessageId);
     header.SetToken(mCoapToken, sizeof(mCoapToken));
     header.AppendUriPathOptions(OPENTHREAD_URI_LEADER_PETITION);
-    header.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
     header.Finalize();
 
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
@@ -181,13 +179,11 @@ ThreadError Commissioner::SendKeepAlive(void)
     }
 
     header.Init();
-    header.SetVersion(1);
     header.SetType(Coap::Header::kTypeConfirmable);
     header.SetCode(Coap::Header::kCodePost);
     header.SetMessageId(++mCoapMessageId);
     header.SetToken(mCoapToken, sizeof(mCoapToken));
     header.AppendUriPathOptions(OPENTHREAD_URI_LEADER_KEEP_ALIVE);
-    header.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
     header.Finalize();
 
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
@@ -329,13 +325,11 @@ ThreadError Commissioner::HandleDtlsSend(const unsigned char *aBuf, uint16_t aLe
         VerifyOrExit((mTransmitMessage = mSocket.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
 
         header.Init();
-        header.SetVersion(1);
         header.SetType(Coap::Header::kTypeNonConfirmable);
         header.SetCode(Coap::Header::kCodePost);
         header.SetMessageId(0);
         header.SetToken(NULL, 0);
         header.AppendUriPathOptions(OPENTHREAD_URI_RELAY_TX);
-        header.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
         header.Finalize();
         SuccessOrExit(error = mTransmitMessage->Append(header.GetBytes(), header.GetLength()));
 
@@ -476,12 +470,10 @@ void Commissioner::SendJoinFinalizeResponse(const Coap::Header &aRequestHeader)
     uint8_t *cur = buf;
 
     responseHeader.Init();
-    responseHeader.SetVersion(1);
     responseHeader.SetType(Coap::Header::kTypeAcknowledgment);
     responseHeader.SetCode(Coap::Header::kCodeChanged);
     responseHeader.SetMessageId(aRequestHeader.GetMessageId());
     responseHeader.SetToken(aRequestHeader.GetToken(), aRequestHeader.GetTokenLength());
-    responseHeader.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
     responseHeader.Finalize();
     memcpy(cur, responseHeader.GetBytes(), responseHeader.GetLength());
     cur += responseHeader.GetLength();

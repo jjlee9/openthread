@@ -220,13 +220,11 @@ void Joiner::SendJoinerFinalize(void)
     uint8_t *cur = buf;
 
     header.Init();
-    header.SetVersion(1);
     header.SetType(Coap::Header::kTypeConfirmable);
     header.SetCode(Coap::Header::kCodePost);
     header.SetMessageId(0);
     header.SetToken(NULL, 0);
     header.AppendUriPathOptions(OPENTHREAD_URI_JOINER_FINALIZE);
-    header.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
     header.Finalize();
     memcpy(cur, header.GetBytes(), header.GetLength());
     cur += header.GetLength();

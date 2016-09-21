@@ -176,13 +176,11 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
 
     header.Init();
-    header.SetVersion(1);
     header.SetType(Coap::Header::kTypeNonConfirmable);
     header.SetCode(Coap::Header::kCodePost);
     header.SetMessageId(0);
     header.SetToken(NULL, 0);
     header.AppendUriPathOptions(OPENTHREAD_URI_RELAY_RX);
-    header.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
     header.Finalize();
     SuccessOrExit(error = message->Append(header.GetBytes(), header.GetLength()));
 
@@ -326,13 +324,11 @@ ThreadError JoinerRouter::SendJoinerEntrust(const Ip6::MessageInfo &aMessageInfo
     message->SetJoinerEntrust(true);
 
     header.Init();
-    header.SetVersion(1);
     header.SetType(Coap::Header::kTypeConfirmable);
     header.SetCode(Coap::Header::kCodePost);
     header.SetMessageId(0);
     header.SetToken(NULL, 0);
     header.AppendUriPathOptions(OPENTHREAD_URI_JOINER_ENTRUST);
-    header.AppendContentFormatOption(Coap::Header::kApplicationOctetStream);
     header.Finalize();
     SuccessOrExit(error = message->Append(header.GetBytes(), header.GetLength()));
 

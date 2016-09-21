@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,10 @@ windowsUartWorkerThread(
     // Cache the original console mode
     DWORD originalConsoleMode;
     GetConsoleMode(waitHandles[1], &originalConsoleMode);
+
+    // Fake the first new line
+    uint8_t ch = '\n';
+    otPlatUartReceived(&ch, 1);
 
     // Wait for console events
     while (WaitForMultipleObjects(ARRAYSIZE(waitHandles), waitHandles, FALSE, INFINITE) == WAIT_OBJECT_0 + 1)
