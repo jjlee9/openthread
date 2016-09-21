@@ -1223,7 +1223,7 @@ ThreadError otOpenUdpSocket(otInstance *aInstance, otUdpSocket *aSocket, otUdpRe
 
     if (socket->mTransport == NULL)
     {
-        socket->mTransport = aInstance->mIp6.mUdp;
+        socket->mTransport = &aInstance->mIp6.mUdp;
         error = socket->Open(aCallback, aCallbackContext);
     }
 

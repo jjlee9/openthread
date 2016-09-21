@@ -2807,8 +2807,8 @@ otCommissionerEnergyScan(
     uint16_t aPeriod,
     uint16_t aScanDuration, 
     const otIp6Address *aAddress,
-     _In_ otCommissionerEnergyReportCallback aCallback, 
-     _In_ void *aContext
+    _In_ otCommissionerEnergyReportCallback aCallback, 
+    _In_ void *aContext
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
