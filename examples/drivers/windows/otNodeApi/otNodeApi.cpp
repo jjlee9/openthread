@@ -29,41 +29,28 @@
 #include "precomp.h"
 #include "otNodeApi.tmh"
 
+#define GUID_FORMAT "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}"
+#define GUID_ARG(guid) guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]
+
 typedef DWORD (*fp_otvmpOpenHandle)(HANDLE* phandle);
 typedef VOID  (*fp_otvmpCloseHandle)(HANDLE handle);
 typedef DWORD (*fp_otvmpAddVirtualBus)(HANDLE handle, ULONG* pBusNumber, ULONG* pIfIndex);
 typedef DWORD (*fp_otvmpRemoveVirtualBus)(HANDLE handle, ULONG BusNumber);
+typedef DWORD (*fp_otvmpSetAdapterTopologyGuid)(HANDLE handle, DWORD BusNumber, const GUID* pTopologyGuid);
 
-fp_otvmpOpenHandle          otvmpOpenHandle = nullptr;
-fp_otvmpCloseHandle         otvmpCloseHandle = nullptr;
-fp_otvmpAddVirtualBus       otvmpAddVirtualBus = nullptr;
-fp_otvmpRemoveVirtualBus    otvmpRemoveVirtualBus = nullptr;
+fp_otvmpOpenHandle              otvmpOpenHandle = nullptr;
+fp_otvmpCloseHandle             otvmpCloseHandle = nullptr;
+fp_otvmpAddVirtualBus           otvmpAddVirtualBus = nullptr;
+fp_otvmpRemoveVirtualBus        otvmpRemoveVirtualBus = nullptr;
+fp_otvmpSetAdapterTopologyGuid  otvmpSetAdapterTopologyGuid = nullptr;
 
 HMODULE gVmpModule = nullptr;
 HANDLE  gVmpHandle = nullptr;
 
 ULONG gNextBusNumber = 1;
+GUID gTopologyGuid = {0};
 
 otApiInstance *gApiInstance = nullptr;
-
-uint16_t GetCountOfInstances()
-{
-    auto aDeviceList = otEnumerateDevices(gApiInstance);
-    uint16_t DeviceCount = aDeviceList == nullptr ? 0 : aDeviceList->aDevicesLength;
-    otFreeMemory(aDeviceList);
-    return DeviceCount;
-}
-
-void TryRemoveAllInstances()
-{
-    uint8_t tries = 0;
-    while (GetCountOfInstances() != 0 && ++tries <= 3)
-    {
-        if (ERROR_SUCCESS == otvmpRemoveVirtualBus(gVmpHandle, 0))
-            Sleep(1000);
-        else Sleep(250);
-    }
-}
 
 otApiInstance* GetApiInstance()
 {
@@ -83,10 +70,17 @@ otApiInstance* GetApiInstance()
             return nullptr;
         }
 
-        otvmpOpenHandle       = (fp_otvmpOpenHandle)GetProcAddress(gVmpModule, "otvmpOpenHandle");
-        otvmpCloseHandle      = (fp_otvmpCloseHandle)GetProcAddress(gVmpModule, "otvmpCloseHandle");
-        otvmpAddVirtualBus    = (fp_otvmpAddVirtualBus)GetProcAddress(gVmpModule, "otvmpAddVirtualBus");
-        otvmpRemoveVirtualBus = (fp_otvmpRemoveVirtualBus)GetProcAddress(gVmpModule, "otvmpRemoveVirtualBus");
+        otvmpOpenHandle             = (fp_otvmpOpenHandle)GetProcAddress(gVmpModule, "otvmpOpenHandle");
+        otvmpCloseHandle            = (fp_otvmpCloseHandle)GetProcAddress(gVmpModule, "otvmpCloseHandle");
+        otvmpAddVirtualBus          = (fp_otvmpAddVirtualBus)GetProcAddress(gVmpModule, "otvmpAddVirtualBus");
+        otvmpRemoveVirtualBus       = (fp_otvmpRemoveVirtualBus)GetProcAddress(gVmpModule, "otvmpRemoveVirtualBus");
+        otvmpSetAdapterTopologyGuid = (fp_otvmpSetAdapterTopologyGuid)GetProcAddress(gVmpModule, "otvmpSetAdapterTopologyGuid");
+
+        if (otvmpOpenHandle == nullptr) printf("otvmpOpenHandle is null!\n");
+        if (otvmpCloseHandle == nullptr) printf("otvmpCloseHandle is null!\n");
+        if (otvmpAddVirtualBus == nullptr) printf("otvmpAddVirtualBus is null!\n");
+        if (otvmpRemoveVirtualBus == nullptr) printf("otvmpRemoveVirtualBus is null!\n");
+        if (otvmpSetAdapterTopologyGuid == nullptr) printf("otvmpSetAdapterTopologyGuid is null!\n");
 
         (VOID)otvmpOpenHandle(&gVmpHandle);
         if (gVmpHandle == nullptr)
@@ -95,8 +89,14 @@ otApiInstance* GetApiInstance()
             return nullptr;
         }
 
-        // Make sure there aren't any interfaces left over
-        TryRemoveAllInstances();
+        auto status = UuidCreate(&gTopologyGuid);
+        if (status != NO_ERROR)
+        {
+            printf("UuidCreate failed, 0x%x!\n", status);
+            return nullptr;
+        }
+
+        printf("New topology created\n" GUID_FORMAT "\n\n", GUID_ARG(gTopologyGuid));
     }
 
     return gApiInstance;
@@ -104,9 +104,9 @@ otApiInstance* GetApiInstance()
 
 void Unload()
 {
-    TryRemoveAllInstances();
     otvmpCloseHandle(gVmpHandle);
     otApiFinalize(gApiInstance);
+    printf("Topology destroyed\n");
 }
 
 int Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
@@ -192,8 +192,6 @@ void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
     }
 }
 
-#define NUMBER_OF_TRIES 10
-
 OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
 {
     auto ApiInstance = GetApiInstance();
@@ -203,28 +201,51 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
         return nullptr;
     }
 
-    DWORD newBusIndex = gNextBusNumber;
+    DWORD newBusIndex;
     NET_IFINDEX ifIndex = {};
-    int tries = 0;
-
+    
     DWORD dwError;
-    while ((dwError = otvmpAddVirtualBus(gVmpHandle, &newBusIndex, &ifIndex)) != ERROR_SUCCESS && ++tries <= NUMBER_OF_TRIES)
+    DWORD tries = 0;
+    while (tries < 1000)
     {
-        Sleep(500);
+        newBusIndex = (gNextBusNumber + tries) % 1000;
+        if (newBusIndex == 0) newBusIndex++;
+
+        dwError = otvmpAddVirtualBus(gVmpHandle, &newBusIndex, &ifIndex);
+        if (dwError == ERROR_SUCCESS)
+        {
+            gNextBusNumber = newBusIndex + 1;
+            break;
+        }
+        else if (dwError == ERROR_INVALID_PARAMETER)
+        {
+            tries++;
+        }
+        else
+        {
+            printf("otvmpAddVirtualBus failed, 0x%x!\n", dwError);
+            return nullptr;
+        }
     }
 
-    if (tries > NUMBER_OF_TRIES)
+    if (tries == 1000)
     {
-        printf("otvmpAddVirtualBus failed, 0x%x!\n", dwError);
+        printf("otvmpAddVirtualBus failed to find an empty bus!\n");
         return nullptr;
     }
 
-    gNextBusNumber++;
+    /*if ((dwError = otvmpSetAdapterTopologyGuid(gVmpHandle, newBusIndex, &gTopologyGuid)) != ERROR_SUCCESS)
+    {
+        printf("otvmpSetAdapterTopologyGuid failed, 0x%x!\n", dwError);
+        otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
+        return nullptr;
+    }*/
 
     NET_LUID ifLuid = {};
     if (ERROR_SUCCESS != ConvertInterfaceIndexToLuid(ifIndex, &ifLuid))
     {
         printf("ConvertInterfaceIndexToLuid(%u) failed!\n", ifIndex);
+        otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
 
@@ -232,6 +253,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     if (ERROR_SUCCESS != ConvertInterfaceLuidToGuid(&ifLuid, &ifGuid))
     {
         printf("ConvertInterfaceLuidToGuid failed!\n");
+        otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
     
@@ -239,11 +261,15 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     if (instance == nullptr)
     {
         printf("otInstanceInit failed!\n");
+        otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
 
+    GUID DeviceGuid = otGetDeviceGuid(instance);
+    uint32_t Compartment = otGetCompartmentId(instance);
+
     otNode *node = new otNode();
-    printf("%d: node created\n", id);
+    printf("%d: New Device " GUID_FORMAT " in compartment %d\n", id, GUID_ARG(DeviceGuid), Compartment);
 
     node->mId = id;
     node->mBusIndex = newBusIndex;
@@ -261,6 +287,8 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
 {
     if (aNode != nullptr)
     {
+        printf("%d: Removing Device\n", aNode->mId);
+
         CloseHandle(aNode->mPanIdConflictEvent);
         CloseHandle(aNode->mEnergyScanEvent);
         otSetStateChangedCallback(aNode->mInstance, nullptr, nullptr);
