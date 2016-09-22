@@ -61,24 +61,6 @@ test_script:
     Sleep 5
 
     sc query otlwf
-
-    cd ..\..\..\..\..\..\test_release
-
-    7z e ..\etc\windows\test_binaries.zip
-
-    certutil -addstore root MSTRCA2010.cer
-
-    certutil -addstore TrustedPublisher MSTRCA2010.cer
-
-    netcfg.exe -v -l vmpbus.inf -c s -i vmpbus
-
-    Sleep 5
-
-    sc query vmpbus
-
-    pnputil.exe /add-driver otvmp.inf /install
-
-    otTestRunner.exe ..\tests\scripts\thread-cert Cert_5_1_* 4
 artifacts:
 - path: release
   name: release
