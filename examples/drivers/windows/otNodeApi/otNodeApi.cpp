@@ -226,6 +226,12 @@ void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
     }
 }
 
+OTNODEAPI int32_t OTCALL otNodeLog(const char *aMessage)
+{
+    LogInfo(OT_API, "%s", aMessage);
+    return 0;
+}
+
 OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
 {
     auto ApiInstance = GetApiInstance();

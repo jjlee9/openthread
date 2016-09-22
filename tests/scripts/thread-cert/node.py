@@ -107,7 +107,7 @@ class Node:
 
     def __del__(self):
         if self.Api:
-            self.Api.otNodeFinalize(self.otNode);
+            self.Api.otNodeFinalize(self.otNode)
         else:
             if self.pexpect.isalive():
                 self.send_command('exit')
@@ -134,7 +134,7 @@ class Node:
     def set_mode(self, mode):   
         if self.Api:
             if self.Api.otNodeSetMode(self.otNode, mode.encode('utf-8')) != 0:
-                raise OSError("otNodeSetMode failed!");
+                raise OSError("otNodeSetMode failed!")
         else:     
             cmd = 'mode ' + mode
             self.send_command(cmd)
@@ -146,7 +146,7 @@ class Node:
     def start(self):
         if self.Api:
             if self.Api.otNodeStart(self.otNode) != 0:
-                raise OSError("otNodeStart failed!");
+                raise OSError("otNodeStart failed!")
         else:     
             self.send_command('ifconfig up')
             self.pexpect.expect('Done')
@@ -156,7 +156,7 @@ class Node:
     def stop(self):
         if self.Api:
             if self.Api.otNodeStop(self.otNode) != 0:
-                raise OSError("otNodeStop failed!");
+                raise OSError("otNodeStop failed!")
         else:     
             self.send_command('thread stop')
             self.pexpect.expect('Done')
@@ -166,7 +166,7 @@ class Node:
     def clear_whitelist(self):
         if self.Api:
             if self.Api.otNodeClearWhitelist(self.otNode) != 0:
-                raise OSError("otNodeClearWhitelist failed!");
+                raise OSError("otNodeClearWhitelist failed!")
         else:     
             self.send_command('whitelist clear')
             self.pexpect.expect('Done')
@@ -174,7 +174,7 @@ class Node:
     def enable_whitelist(self):
         if self.Api:
             if self.Api.otNodeEnableWhitelist(self.otNode) != 0:
-                raise OSError("otNodeEnableWhitelist failed!");
+                raise OSError("otNodeEnableWhitelist failed!")
         else:     
             self.send_command('whitelist enable')
             self.pexpect.expect('Done')
@@ -182,7 +182,7 @@ class Node:
     def disable_whitelist(self):
         if self.Api:
             if self.Api.otNodeDisableWhitelist(self.otNode) != 0:
-                raise OSError("otNodeDisableWhitelist failed!");
+                raise OSError("otNodeDisableWhitelist failed!")
         else:     
             self.send_command('whitelist disable')
             self.pexpect.expect('Done')
@@ -190,9 +190,9 @@ class Node:
     def add_whitelist(self, addr, rssi=None):
         if self.Api:
             if rssi == None:
-                rssi = 0;
+                rssi = 0
             if self.Api.otNodeAddWhitelist(self.otNode, addr.encode('utf-8'), ctypes.c_byte(rssi)) != 0:
-                raise OSError("otNodeAddWhitelist failed!");
+                raise OSError("otNodeAddWhitelist failed!")
         else:     
             cmd = 'whitelist add ' + addr
             if rssi != None:
@@ -203,7 +203,7 @@ class Node:
     def remove_whitelist(self, addr):
         if self.Api:
             if self.Api.otNodeRemoveWhitelist(self.otNode, addr.encode('utf-8')) != 0:
-                raise OSError("otNodeRemoveWhitelist failed!");
+                raise OSError("otNodeRemoveWhitelist failed!")
         else:     
             cmd = 'whitelist remove ' + addr
             self.send_command(cmd)
@@ -211,7 +211,7 @@ class Node:
 
     def get_addr16(self):
         if self.Api:
-            return self.Api.otNodeGetAddr16(self.otNode);
+            return self.Api.otNodeGetAddr16(self.otNode)
         else:
             self.send_command('rloc16')
             i = self.pexpect.expect('([0-9a-fA-F]{4})')
@@ -222,7 +222,7 @@ class Node:
 
     def get_addr64(self):
         if self.Api:
-            return self.Api.otNodeGetAddr64(self.otNode).decode('utf-8');
+            return self.Api.otNodeGetAddr64(self.otNode).decode('utf-8')
         else:
             self.send_command('extaddr')
             i = self.pexpect.expect('([0-9a-fA-F]{16})')
@@ -234,7 +234,7 @@ class Node:
     def set_channel(self, channel):
         if self.Api:
             if self.Api.otNodeSetChannel(self.otNode, ctypes.c_ubyte(channel)) != 0:
-                raise OSError("otNodeSetChannel failed!");
+                raise OSError("otNodeSetChannel failed!")
         else:     
             cmd = 'channel %d' % channel
             self.send_command(cmd)
@@ -242,7 +242,7 @@ class Node:
 
     def get_key_sequence(self):
         if self.Api:
-            return self.Api.otNodeGetKeySequence(self.otNode);
+            return self.Api.otNodeGetKeySequence(self.otNode)
         else:
             self.send_command('keysequence')
             i = self.pexpect.expect('(\d+)\r\n')
@@ -254,7 +254,7 @@ class Node:
     def set_key_sequence(self, key_sequence):
         if self.Api:
             if self.Api.otNodeSetKeySequence(self.otNode, ctypes.c_uint(key_sequence)) != 0:
-                raise OSError("otNodeSetKeySequence failed!");
+                raise OSError("otNodeSetKeySequence failed!")
         else:     
             cmd = 'keysequence %d' % key_sequence
             self.send_command(cmd)
@@ -263,7 +263,7 @@ class Node:
     def set_network_id_timeout(self, network_id_timeout):
         if self.Api:
             if self.Api.otNodeSetNetworkIdTimeout(self.otNode, ctypes.c_ubyte(network_id_timeout)) != 0:
-                raise OSError("otNodeSetNetworkIdTimeout failed!");
+                raise OSError("otNodeSetNetworkIdTimeout failed!")
         else:     
             cmd = 'networkidtimeout %d' % network_id_timeout
             self.send_command(cmd)
@@ -272,7 +272,7 @@ class Node:
     def set_network_name(self, network_name):
         if self.Api:
             if self.Api.otNodeSetNetworkName(self.otNode, network_name.encode('utf-8')) != 0:
-                raise OSError("otNodeSetNetworkName failed!");
+                raise OSError("otNodeSetNetworkName failed!")
         else:     
             cmd = 'networkname ' + network_name
             self.send_command(cmd)
@@ -280,7 +280,7 @@ class Node:
 
     def get_panid(self):
         if self.Api:
-            return int(self.Api.otNodeGetPanId(self.otNode));
+            return int(self.Api.otNodeGetPanId(self.otNode))
         else:
             self.send_command('panid')
             i = self.pexpect.expect('([0-9a-fA-F]{16})')
@@ -291,7 +291,7 @@ class Node:
     def set_panid(self, panid):
         if self.Api:
             if self.Api.otNodeSetPanId(self.otNode, ctypes.c_ushort(panid)) != 0:
-                raise OSError("otNodeSetPanId failed!");
+                raise OSError("otNodeSetPanId failed!")
         else:  
             cmd = 'panid %d' % panid
             self.send_command(cmd)
@@ -300,7 +300,7 @@ class Node:
     def set_router_upgrade_threshold(self, threshold):
         if self.Api:
             if self.Api.otNodeSetRouterUpgradeThreshold(self.otNode, ctypes.c_ubyte(threshold)) != 0:
-                raise OSError("otNodeSetRouterUpgradeThreshold failed!");
+                raise OSError("otNodeSetRouterUpgradeThreshold failed!")
         else:  
             cmd = 'routerupgradethreshold %d' % threshold
             self.send_command(cmd)
@@ -309,7 +309,7 @@ class Node:
     def release_router_id(self, router_id):
         if self.Api:
             if self.Api.otNodeReleaseRouterId(self.otNode, ctypes.c_ubyte(router_id)) != 0:
-                raise OSError("otNodeReleaseRouterId failed!");
+                raise OSError("otNodeReleaseRouterId failed!")
         else:  
             cmd = 'releaserouterid %d' % router_id
             self.send_command(cmd)
@@ -317,7 +317,7 @@ class Node:
 
     def get_state(self):
         if self.Api:
-            return self.Api.otNodeGetState(self.otNode).decode('utf-8');
+            return self.Api.otNodeGetState(self.otNode).decode('utf-8')
         else:
             states = ['detached', 'child', 'router', 'leader']
             self.send_command('state')
@@ -328,7 +328,7 @@ class Node:
     def set_state(self, state):
         if self.Api:
             if self.Api.otNodeSetState(self.otNode, state.encode('utf-8')) != 0:
-                raise OSError("otNodeSetState failed!");
+                raise OSError("otNodeSetState failed!")
         else:  
             cmd = 'state ' + state
             self.send_command(cmd)
@@ -336,7 +336,7 @@ class Node:
 
     def get_timeout(self):
         if self.Api:
-            return int(self.Api.otNodeGetTimeout(self.otNode));
+            return int(self.Api.otNodeGetTimeout(self.otNode))
         else:
             self.send_command('childtimeout')
             i = self.pexpect.expect('(\d+)\r\n')
@@ -348,7 +348,7 @@ class Node:
     def set_timeout(self, timeout):
         if self.Api:
             if self.Api.otNodeSetTimeout(self.otNode, ctypes.c_uint(timeout)) != 0:
-                raise OSError("otNodeSetTimeout failed!");
+                raise OSError("otNodeSetTimeout failed!")
         else:  
             cmd = 'childtimeout %d' % timeout
             self.send_command(cmd)
@@ -356,7 +356,7 @@ class Node:
 
     def get_weight(self):
         if self.Api:
-            return int(self.Api.otNodeGetWeight(self.otNode));
+            return int(self.Api.otNodeGetWeight(self.otNode))
         else:
             self.send_command('leaderweight')
             i = self.pexpect.expect('(\d+)\r\n')
@@ -368,7 +368,7 @@ class Node:
     def set_weight(self, weight):
         if self.Api:
             if self.Api.otNodeSetWeight(self.otNode, ctypes.c_ubyte(weight)) != 0:
-                raise OSError("otNodeSetWeight failed!");
+                raise OSError("otNodeSetWeight failed!")
         else:  
             cmd = 'leaderweight %d' % weight
             self.send_command(cmd)
@@ -377,7 +377,7 @@ class Node:
     def add_ipaddr(self, ipaddr):
         if self.Api:
             if self.Api.otNodeAddIpAddr(self.otNode, ipaddr.encode('utf-8')) != 0:
-                raise OSError("otNodeAddIpAddr failed!");
+                raise OSError("otNodeAddIpAddr failed!")
         else:  
             cmd = 'ipaddr add ' + ipaddr
             self.send_command(cmd)
@@ -385,7 +385,7 @@ class Node:
 
     def get_addrs(self):
         if self.Api:
-            return self.Api.otNodeGetAddrs(self.otNode).decode("utf-8").split("\n");
+            return self.Api.otNodeGetAddrs(self.otNode).decode("utf-8").split("\n")
         else:
             addrs = []
             self.send_command('ipaddr')
@@ -401,7 +401,7 @@ class Node:
 
     def get_context_reuse_delay(self):
         if self.Api:
-            return int(self.Api.otNodeGetContextReuseDelay(self.otNode));
+            return int(self.Api.otNodeGetContextReuseDelay(self.otNode))
         else:
             self.send_command('contextreusedelay')
             i = self.pexpect.expect('(\d+)\r\n')
@@ -413,7 +413,7 @@ class Node:
     def set_context_reuse_delay(self, delay):
         if self.Api:
             if self.Api.otNodeSetContextReuseDelay(self.otNode, ctypes.c_uint(delay)) != 0:
-                raise OSError("otNodeSetContextReuseDelay failed!");
+                raise OSError("otNodeSetContextReuseDelay failed!")
         else:  
             cmd = 'contextreusedelay %d' % delay
             self.send_command(cmd)
@@ -422,7 +422,7 @@ class Node:
     def add_prefix(self, prefix, flags, prf = 'med'):
         if self.Api:
             if self.Api.otNodeAddPrefix(self.otNode, prefix.encode('utf-8'), flags.encode('utf-8'), prf.encode('utf-8')) != 0:
-                raise OSError("otNodeAddPrefix failed!");
+                raise OSError("otNodeAddPrefix failed!")
         else:  
             cmd = 'prefix add ' + prefix + ' ' + flags + ' ' + prf
             self.send_command(cmd)
@@ -431,7 +431,7 @@ class Node:
     def remove_prefix(self, prefix):
         if self.Api:
             if self.Api.otNodeRemovePrefix(self.otNode, prefix.encode('utf-8')) != 0:
-                raise OSError("otNodeRemovePrefix failed!");
+                raise OSError("otNodeRemovePrefix failed!")
         else:  
             cmd = ' prefix remove ' + prefix
             self.send_command(cmd)
@@ -440,7 +440,7 @@ class Node:
     def add_route(self, prefix, prf = 'med'):
         if self.Api:
             if self.Api.otNodeAddRoute(self.otNode, prefix.encode('utf-8'), prf.encode('utf-8')) != 0:
-                raise OSError("otNodeAddRoute failed!");
+                raise OSError("otNodeAddRoute failed!")
         else:  
             cmd = 'route add ' + prefix + ' ' + prf
             self.send_command(cmd)
@@ -449,7 +449,7 @@ class Node:
     def remove_route(self, prefix):
         if self.Api:
             if self.Api.otNodeRemoveRoute(self.otNode, prefix.encode('utf-8')) != 0:
-                raise OSError("otNodeRemovePrefix failed!");
+                raise OSError("otNodeRemovePrefix failed!")
         else:  
             cmd = 'route remove ' + prefix
             self.send_command(cmd)
@@ -458,7 +458,7 @@ class Node:
     def register_netdata(self):
         if self.Api:
             if self.Api.otNodeRegisterNetdata(self.otNode) != 0:
-                raise OSError("otNodeRegisterNetdata failed!");
+                raise OSError("otNodeRegisterNetdata failed!")
         else:  
             self.send_command('netdataregister')
             self.pexpect.expect('Done')
@@ -466,7 +466,7 @@ class Node:
     def energy_scan(self, mask, count, period, scan_duration, ipaddr):
         if self.Api:
             if self.Api.otNodeEnergyScan(self.otNode, ctypes.c_uint(mask), ctypes.c_ubyte(count), ctypes.c_ushort(period), ctypes.c_ushort(scan_duration), ctypes.cast(ipaddr, ctypes.c_char_p)) != 0:
-                raise OSError("otNodeEnergyScan failed!");
+                raise OSError("otNodeEnergyScan failed!")
         else:  
             cmd = 'commissioner energy ' + str(mask) + ' ' + str(count) + ' ' + str(period) + ' ' + str(scan_duration) + ' ' + ipaddr
             self.send_command(cmd)
@@ -475,7 +475,7 @@ class Node:
     def panid_query(self, panid, mask, ipaddr):
         if self.Api:
             if self.Api.otNodePanIdQuery(self.otNode, ctypes.c_ushort(panid), ctypes.c_uint(mask), ipaddr.encode('utf-8')) != 0:
-                raise OSError("otNodePanIdQuery failed!");
+                raise OSError("otNodePanIdQuery failed!")
         else:  
             cmd = 'commissioner panid ' + str(panid) + ' ' + str(mask) + ' ' + ipaddr
             self.send_command(cmd)
@@ -483,7 +483,7 @@ class Node:
 
     def scan(self):
         if self.Api:
-            return self.Api.otNodeScan(self.otNode).decode("utf-8").split("\n");
+            return self.Api.otNodeScan(self.otNode).decode("utf-8").split("\n")
         else:
             self.send_command('scan')
 
@@ -501,8 +501,8 @@ class Node:
     def ping(self, ipaddr, num_responses=1, size=None):
         if self.Api:
             if size == None:
-                size = 100;
-            numberOfResponders = self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_ushort(size));
+                size = 100
+            numberOfResponders = self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_ushort(size))
             return numberOfResponders >= num_responses
         else:
             cmd = 'ping ' + ipaddr
@@ -524,142 +524,148 @@ class Node:
 
             return result
 
+    def log(self, message):
+        if self.Api:
+            self.Api.otNodeLog(message)
+
     def __init_win_sim(self, nodeid):
         """ Initialize an Windows simulation node. """
 
         # Load the DLL
-        self.Api = ctypes.WinDLL("otnodeapi.dll");
+        self.Api = ctypes.WinDLL("otnodeapi.dll")
         if self.Api == None:
-            raise OSError("Failed to load otnodeapi.dll!");
+            raise OSError("Failed to load otnodeapi.dll!")
         
         # Define the functions
-        self.Api.otNodeInit.argtypes = [ctypes.c_uint];
-        self.Api.otNodeInit.restype = ctypes.c_void_p;
+        self.Api.otNodeLog.argtypes = [ctypes.c_char_p]
 
-        self.Api.otNodeFinalize.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeInit.argtypes = [ctypes.c_uint]
+        self.Api.otNodeInit.restype = ctypes.c_void_p
+
+        self.Api.otNodeFinalize.argtypes = [ctypes.c_void_p]
 
         self.Api.otNodeSetMode.argtypes = [ctypes.c_void_p, 
-                                           ctypes.c_char_p];
+                                           ctypes.c_char_p]
 
-        self.Api.otNodeStart.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeStart.argtypes = [ctypes.c_void_p]
 
-        self.Api.otNodeStop.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeStop.argtypes = [ctypes.c_void_p]
 
-        self.Api.otNodeClearWhitelist.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeClearWhitelist.argtypes = [ctypes.c_void_p]
 
-        self.Api.otNodeEnableWhitelist.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeEnableWhitelist.argtypes = [ctypes.c_void_p]
 
-        self.Api.otNodeDisableWhitelist.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeDisableWhitelist.argtypes = [ctypes.c_void_p]
 
         self.Api.otNodeAddWhitelist.argtypes = [ctypes.c_void_p, 
                                                 ctypes.c_char_p, 
-                                                ctypes.c_byte];
+                                                ctypes.c_byte]
 
         self.Api.otNodeRemoveWhitelist.argtypes = [ctypes.c_void_p, 
-                                                   ctypes.c_char_p];
+                                                   ctypes.c_char_p]
         
-        self.Api.otNodeGetAddr16.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetAddr16.restype = ctypes.c_ushort;
+        self.Api.otNodeGetAddr16.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetAddr16.restype = ctypes.c_ushort
         
-        self.Api.otNodeGetAddr64.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetAddr64.restype = ctypes.c_char_p;
+        self.Api.otNodeGetAddr64.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetAddr64.restype = ctypes.c_char_p
 
         self.Api.otNodeSetChannel.argtypes = [ctypes.c_void_p, 
-                                              ctypes.c_ubyte];
+                                              ctypes.c_ubyte]
         
-        self.Api.otNodeGetKeySequence.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetKeySequence.restype = ctypes.c_uint;
+        self.Api.otNodeGetKeySequence.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetKeySequence.restype = ctypes.c_uint
 
         self.Api.otNodeSetNetworkIdTimeout.argtypes = [ctypes.c_void_p, 
-                                                       ctypes.c_ubyte];
+                                                       ctypes.c_ubyte]
 
         self.Api.otNodeSetNetworkName.argtypes = [ctypes.c_void_p, 
-                                                  ctypes.c_char_p];
+                                                  ctypes.c_char_p]
         
-        self.Api.otNodeGetPanId.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetPanId.restype = ctypes.c_ushort;
+        self.Api.otNodeGetPanId.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetPanId.restype = ctypes.c_ushort
 
         self.Api.otNodeSetPanId.argtypes = [ctypes.c_void_p, 
-                                            ctypes.c_ushort];
+                                            ctypes.c_ushort]
 
         self.Api.otNodeSetRouterUpgradeThreshold.argtypes = [ctypes.c_void_p, 
-                                                             ctypes.c_ubyte];
+                                                             ctypes.c_ubyte]
 
         self.Api.otNodeReleaseRouterId.argtypes = [ctypes.c_void_p, 
-                                                   ctypes.c_ubyte];
+                                                   ctypes.c_ubyte]
         
-        self.Api.otNodeGetState.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetState.restype = ctypes.c_char_p;
+        self.Api.otNodeGetState.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetState.restype = ctypes.c_char_p
 
         self.Api.otNodeSetState.argtypes = [ctypes.c_void_p, 
-                                            ctypes.c_char_p];
+                                            ctypes.c_char_p]
         
-        self.Api.otNodeGetTimeout.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetTimeout.restype = ctypes.c_uint;
+        self.Api.otNodeGetTimeout.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetTimeout.restype = ctypes.c_uint
 
         self.Api.otNodeSetTimeout.argtypes = [ctypes.c_void_p, 
-                                            ctypes.c_uint];
+                                            ctypes.c_uint]
         
-        self.Api.otNodeGetWeight.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetWeight.restype = ctypes.c_ubyte;
+        self.Api.otNodeGetWeight.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetWeight.restype = ctypes.c_ubyte
 
         self.Api.otNodeSetWeight.argtypes = [ctypes.c_void_p, 
-                                             ctypes.c_ubyte];
+                                             ctypes.c_ubyte]
 
         self.Api.otNodeAddIpAddr.argtypes = [ctypes.c_void_p, 
-                                             ctypes.c_char_p];
+                                             ctypes.c_char_p]
         
-        self.Api.otNodeGetAddrs.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetAddrs.restype = ctypes.c_char_p;
+        self.Api.otNodeGetAddrs.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetAddrs.restype = ctypes.c_char_p
         
-        self.Api.otNodeGetContextReuseDelay.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeGetContextReuseDelay.restype = ctypes.c_uint;
+        self.Api.otNodeGetContextReuseDelay.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetContextReuseDelay.restype = ctypes.c_uint
 
         self.Api.otNodeSetContextReuseDelay.argtypes = [ctypes.c_void_p, 
-                                                        ctypes.c_uint];
+                                                        ctypes.c_uint]
 
         self.Api.otNodeAddPrefix.argtypes = [ctypes.c_void_p, 
                                              ctypes.c_char_p, 
                                              ctypes.c_char_p, 
-                                             ctypes.c_char_p];
+                                             ctypes.c_char_p]
 
         self.Api.otNodeRemovePrefix.argtypes = [ctypes.c_void_p, 
-                                                ctypes.c_char_p];
+                                                ctypes.c_char_p]
 
         self.Api.otNodeAddRoute.argtypes = [ctypes.c_void_p, 
                                             ctypes.c_char_p, 
-                                            ctypes.c_char_p];
+                                            ctypes.c_char_p]
 
         self.Api.otNodeRemoveRoute.argtypes = [ctypes.c_void_p, 
-                                               ctypes.c_char_p];
+                                               ctypes.c_char_p]
 
-        self.Api.otNodeRegisterNetdata.argtypes = [ctypes.c_void_p];
+        self.Api.otNodeRegisterNetdata.argtypes = [ctypes.c_void_p]
 
         self.Api.otNodeEnergyScan.argtypes = [ctypes.c_void_p, 
                                               ctypes.c_uint, 
                                               ctypes.c_ubyte, 
                                               ctypes.c_ushort, 
                                               ctypes.c_ushort, 
-                                              ctypes.c_char_p];
+                                              ctypes.c_char_p]
 
         self.Api.otNodePanIdQuery.argtypes = [ctypes.c_void_p, 
                                               ctypes.c_ushort, 
                                               ctypes.c_uint, 
-                                              ctypes.c_char_p];
+                                              ctypes.c_char_p]
 
-        self.Api.otNodeScan.argtypes = [ctypes.c_void_p];
-        self.Api.otNodeScan.restype = ctypes.c_char_p;
+        self.Api.otNodeScan.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeScan.restype = ctypes.c_char_p
 
         self.Api.otNodePing.argtypes = [ctypes.c_void_p, 
                                         ctypes.c_char_p,
-                                        ctypes.c_ushort];
-        self.Api.otNodePing.restype = ctypes.c_uint;
+                                        ctypes.c_ushort]
+        self.Api.otNodePing.restype = ctypes.c_uint
 
 
         # Initialize a new node
-        self.otNode = self.Api.otNodeInit(ctypes.c_uint(nodeid));
+        self.otNode = self.Api.otNodeInit(ctypes.c_uint(nodeid))
         if self.otNode == None:
-            raise OSError("otNodeInit failed!");
+            raise OSError("otNodeInit failed!")
 
 if __name__ == '__main__':
     unittest.main()

@@ -51,6 +51,11 @@ extern "C" {
 typedef struct otNode otNode;
 
 /**
+ * Logs a WPP message
+ */
+OTNODEAPI int32_t OTCALL otNodeLog(const char *aMessage);
+
+/**
  * Allocates a new virtual node
  */
 OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id);
