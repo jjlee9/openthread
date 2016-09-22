@@ -20,4 +20,6 @@ test_script:
 
     certutil -addstore root build\bin\%Platform2%\%Configuration%\sys\otLwf.cer
 
-    netcfg.exe -v -l build\bin\%Platform2%\%Configuration%\sys\otlwf.inf -c s -i otLwf
+    pushd build\bin\%Platform2%\%Configuration%\sys\otlwf
+
+    netcfg.exe -v -l otlwf.inf -c s -i otLwf
