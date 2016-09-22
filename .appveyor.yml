@@ -37,13 +37,12 @@ after_build:
 
     copy build\bin\%Platform2%\%Configuration%\exe\otCli.pdb release
 
-    mkdir test_release
-
-    copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
-
-    copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
-
-    copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
+    if not %Platform2%==x86 (
+        mkdir test_release
+        copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
+        copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
+        copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
+    )
 test_script:
 - cmd: >-
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
