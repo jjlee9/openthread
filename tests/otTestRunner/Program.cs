@@ -90,6 +90,8 @@ namespace otTestRunner
                     process.BeginErrorReadLine();
                     process.BeginOutputReadLine();
 
+                    Console.WriteLine("Starting {0} {1}", name, args);
+
                     // Wait for process to complete
                     await Task.Run(
                         () => {
@@ -111,6 +113,11 @@ namespace otTestRunner
                     Results.Output.Add("");
                     Results.Output.Add(string.Format("EXIT: {0}", process.ExitCode));
                     Results.Pass = process.ExitCode == 0;
+
+                    // Make sure the process is killed
+                    try { process.Kill(); } catch (Exception) { }
+
+                    Console.WriteLine("Completed {0} {1}", name, args);
                 }
             }
             catch (Exception e)
@@ -132,7 +139,8 @@ namespace otTestRunner
             TestResults Results = await ExecuteAsync("python.exe", file, 30 * 60 * 1000, index);
 
             // Write the output to a file
-            var outputFilePath = Path.Combine(ResultsFolder, Path.GetFileNameWithoutExtension(file) + ".txt");
+            var filePrefix = Results.Pass ? "P_" : "F_";
+            var outputFilePath = Path.Combine(ResultsFolder, filePrefix + Path.GetFileNameWithoutExtension(file) + ".txt");
             try {
                 File.WriteAllLines(outputFilePath, Results.Output);
             } catch (Exception e) { 
@@ -164,7 +172,7 @@ namespace otTestRunner
             if (args.Length > 2) NumberOfTestsToRunInParallel = int.Parse(args[2]);
 
             var CurNumTestsRunning = 0;
-            var ReadyToRunEvent = new AutoResetEvent(false);
+            var ReadyToRunEvent = new ManualResetEvent(true);
 
             var TestPassCount = 0;
             Stopwatch Timer = new Stopwatch();
@@ -180,9 +188,19 @@ namespace otTestRunner
             Timer.Start();
             for (var i = 0; i < files.Length; i++)
             {
+                // Wait for the event to be set, if not already
+                ReadyToRunEvent.WaitOne();
+
+                if (i != 0)
+                {
+                    // Wait a bit to stagger the starts
+                    Task.Delay(1000).Wait();
+                }
+
                 lock (ReadyToRunEvent)
                 {
-                    ++CurNumTestsRunning;
+                    if (++CurNumTestsRunning == NumberOfTestsToRunInParallel)
+                        ReadyToRunEvent.Reset();
                 }
 
                 var index = i;
@@ -214,17 +232,6 @@ namespace otTestRunner
                             ReadyToRunEvent.Set();
                         }
                     });
-
-                if (CurNumTestsRunning == NumberOfTestsToRunInParallel)
-                {
-                    // Wait for a test to complete
-                    ReadyToRunEvent.WaitOne();
-                }
-                else
-                {
-                    // Wait a bit to stagger the starts
-                    Task.Delay(1000).Wait();
-                }
             }
 
             // Wait for all the tests to complete
@@ -238,7 +245,7 @@ namespace otTestRunner
                               ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
 
             Console.WriteLine("{0} tests run in {1}", files.Length, elapsedTime);
-            Console.WriteLine("{0} passed and {1} failures", TestPassCount, files.Length - TestPassCount);
+            Console.WriteLine("{0} passed and {1} failed", TestPassCount, files.Length - TestPassCount);
 
             Environment.ExitCode = files.Length == TestPassCount ? 0 : 1;
         }

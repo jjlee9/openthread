@@ -50,6 +50,8 @@ HANDLE  gVmpHandle = nullptr;
 ULONG gNextBusNumber = 1;
 GUID gTopologyGuid = {0};
 
+volatile LONG gNumberOfInterfaces = 0;
+
 otApiInstance *gApiInstance = nullptr;
 
 otApiInstance* GetApiInstance()
@@ -115,9 +117,30 @@ otApiInstance* GetApiInstance()
 
 void Unload()
 {
-    otvmpCloseHandle(gVmpHandle);
-    otApiFinalize(gApiInstance);
-    printf("Topology destroyed\r\n");
+    if (gNumberOfInterfaces != 0)
+    {
+        printf("Unloaded with %d outstanding nodes!\r\n", gNumberOfInterfaces);
+    }
+
+    if (gApiInstance)
+    {
+        if (gVmpHandle != nullptr)
+        {
+            otvmpCloseHandle(gVmpHandle);
+            gVmpHandle = nullptr;
+        }
+
+        if (gVmpModule != nullptr)
+        {
+            CloseHandle(gVmpModule);
+            gVmpModule = nullptr;
+        }
+
+        otApiFinalize(gApiInstance);
+        gApiInstance = nullptr;
+
+        printf("Topology destroyed\r\n");
+    }
 }
 
 int Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
@@ -228,7 +251,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
             gNextBusNumber = newBusIndex + 1;
             break;
         }
-        else if (dwError == ERROR_INVALID_PARAMETER)
+        else if (dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_FILE_NOT_FOUND)
         {
             tries++;
         }
@@ -245,12 +268,12 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
         return nullptr;
     }
 
-    /*if ((dwError = otvmpSetAdapterTopologyGuid(gVmpHandle, newBusIndex, &gTopologyGuid)) != ERROR_SUCCESS)
+    if ((dwError = otvmpSetAdapterTopologyGuid(gVmpHandle, newBusIndex, &gTopologyGuid)) != ERROR_SUCCESS)
     {
         printf("otvmpSetAdapterTopologyGuid failed, 0x%x!\r\n", dwError);
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
-    }*/
+    }
 
     NET_LUID ifLuid = {};
     if (ERROR_SUCCESS != ConvertInterfaceIndexToLuid(ifIndex, &ifLuid))
@@ -275,6 +298,8 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
+
+    InterlockedIncrement(&gNumberOfInterfaces);
 
     GUID DeviceGuid = otGetDeviceGuid(instance);
     uint32_t Compartment = otGetCompartmentId(instance);
@@ -305,6 +330,11 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
         otSetStateChangedCallback(aNode->mInstance, nullptr, nullptr);
         otvmpRemoveVirtualBus(gVmpHandle, aNode->mBusIndex);
         delete aNode;
+        
+        if (0 == InterlockedDecrement(&gNumberOfInterfaces))
+        {
+            Unload();
+        }
     }
     return 0;
 }
