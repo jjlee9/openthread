@@ -242,7 +242,7 @@ class Node:
 
     def get_key_sequence(self):
         if self.Api:
-            return int(self.Api.otNodeGetKeySequence(self.otNode));
+            return self.Api.otNodeGetKeySequence(self.otNode);
         else:
             self.send_command('keysequence')
             i = self.pexpect.expect('(\d+)\r\n')

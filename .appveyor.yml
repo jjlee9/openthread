@@ -7,6 +7,13 @@ platform:
 - x64
 - x86
 clone_depth: 10
+install:
+- ps: >-
+    Bcdedit.exe -set TESTSIGNING ON
+
+    Restart-Computer -Force
+
+    Start-Sleep -s 10
 build:
   project: etc/visual-studio/openthread.sln
   verbosity: minimal
@@ -20,10 +27,12 @@ test_script:
 
     pushd build\bin\%Platform2%\%Configuration%\sys
 
-    certmgr.exe -add otLwf.cer -c -s -r localMachine Root
+    certutil -addstore root otLwf.cer
 
-    certmgr.exe -add otLwf.cer -c -s -r localMachine TrustedPublisher
+    certutil -addstore TrustedPublisher otLwf.cer
 
     pushd build\bin\%Platform2%\%Configuration%\sys\otlwf
 
     netcfg.exe -v -l otlwf.inf -c s -i otLwf
+
+    net start otlwf
