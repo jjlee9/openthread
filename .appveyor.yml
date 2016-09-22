@@ -17,12 +17,35 @@ install:
 build:
   project: etc/visual-studio/openthread.sln
   verbosity: minimal
-test_script:
+after_build:
 - cmd: >-
     set Platform2=%Platform%
 
     if %Platform2%==x86 set Platform2=Win32
 
+    mkdir release
+
+    copy build\bin\%Platform2%\%Configuration%\sys\otlwf* release
+
+    copy build\bin\%Platform2%\%Configuration%\sys\otlwf.cer release
+
+    copy build\bin\%Platform2%\%Configuration%\dll\otApi.dll release
+
+    copy build\bin\%Platform2%\%Configuration%\dll\otApi.pdb release
+
+    copy build\bin\%Platform2%\%Configuration%\exe\otCli.exe release
+
+    copy build\bin\%Platform2%\%Configuration%\exe\otCli.pdb release
+
+    mkdir test_release
+
+    copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
+
+    copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
+
+    copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
+test_script:
+- cmd: >-
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
 
     pushd build\bin\%Platform2%\%Configuration%\sys
@@ -38,3 +61,6 @@ test_script:
     Sleep 5
 
     sc query otlwf
+artifacts:
+- path: release
+  name: release
