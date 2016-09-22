@@ -548,8 +548,7 @@ void Mac::SendBeacon(Frame &aFrame)
 
 void Mac::HandleBeginTransmit(void *aContext)
 {
-    Mac *obj = reinterpret_cast<Mac *>(aContext);
-    obj->HandleBeginTransmit();
+    static_cast<Mac *>(aContext)->HandleBeginTransmit();
 }
 
 void Mac::ProcessTransmitSecurity(Frame &aFrame)
@@ -725,8 +724,7 @@ exit:
 
 void Mac::HandleMacTimer(void *aContext)
 {
-    Mac *obj = reinterpret_cast<Mac *>(aContext);
-    obj->HandleMacTimer();
+    static_cast<Mac *>(aContext)->HandleMacTimer();
 }
 
 void Mac::HandleMacTimer(void)
@@ -799,8 +797,7 @@ exit:
 
 void Mac::HandleReceiveTimer(void *aContext)
 {
-    Mac *obj = reinterpret_cast<Mac *>(aContext);
-    obj->HandleReceiveTimer();
+    static_cast<Mac *>(aContext)->HandleReceiveTimer();
 }
 
 void Mac::HandleReceiveTimer(void)
@@ -1066,6 +1063,10 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
     default:
         ExitNow(error = kThreadError_InvalidSourceAddress);
     }
+
+    // Duplicate Address Protection
+    VerifyOrExit(memcmp(&srcaddr.mExtAddress, &mExtAddress, sizeof(srcaddr.mExtAddress)) != 0,
+                 error = kThreadError_InvalidSourceAddress; otLogDebgMac("duplicate address received\n"));
 
     // Source Whitelist Processing
     if (srcaddr.mLength != 0 && mWhitelist.IsEnabled())

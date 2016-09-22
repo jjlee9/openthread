@@ -321,7 +321,7 @@ void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength)
 
 void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength, PrefixTlv &aPrefix)
 {
-    NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs());
+    NetworkDataTlv *cur = aPrefix.GetSubTlvs();
     NetworkDataTlv *end;
     BorderRouterTlv *borderRouter;
     HasRouteTlv *hasRoute;
@@ -335,7 +335,7 @@ void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength, Pref
 
     while (1)
     {
-        end = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs() + aPrefix.GetSubTlvsLength());
+        end = aPrefix.GetNext();
 
         if (cur >= end)
         {
@@ -414,8 +414,8 @@ void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength, Pref
 BorderRouterTlv *NetworkData::FindBorderRouter(PrefixTlv &aPrefix)
 {
     BorderRouterTlv *rval = NULL;
-    NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs());
-    NetworkDataTlv *end = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs() + aPrefix.GetSubTlvsLength());
+    NetworkDataTlv *cur = aPrefix.GetSubTlvs();
+    NetworkDataTlv *end = aPrefix.GetNext();
 
     while (cur < end)
     {
@@ -434,8 +434,8 @@ exit:
 BorderRouterTlv *NetworkData::FindBorderRouter(PrefixTlv &aPrefix, bool aStable)
 {
     BorderRouterTlv *rval = NULL;
-    NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs());
-    NetworkDataTlv *end = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs() + aPrefix.GetSubTlvsLength());
+    NetworkDataTlv *cur = aPrefix.GetSubTlvs();
+    NetworkDataTlv *end = aPrefix.GetNext();
 
     while (cur < end)
     {
@@ -455,8 +455,8 @@ exit:
 HasRouteTlv *NetworkData::FindHasRoute(PrefixTlv &aPrefix)
 {
     HasRouteTlv *rval = NULL;
-    NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs());
-    NetworkDataTlv *end = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs() + aPrefix.GetSubTlvsLength());
+    NetworkDataTlv *cur = aPrefix.GetSubTlvs();
+    NetworkDataTlv *end = aPrefix.GetNext();
 
     while (cur < end)
     {
@@ -475,8 +475,8 @@ exit:
 HasRouteTlv *NetworkData::FindHasRoute(PrefixTlv &aPrefix, bool aStable)
 {
     HasRouteTlv *rval = NULL;
-    NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs());
-    NetworkDataTlv *end = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs() + aPrefix.GetSubTlvsLength());
+    NetworkDataTlv *cur = aPrefix.GetSubTlvs();
+    NetworkDataTlv *end = aPrefix.GetNext();
 
     while (cur < end)
     {
@@ -496,8 +496,8 @@ exit:
 ContextTlv *NetworkData::FindContext(PrefixTlv &aPrefix)
 {
     ContextTlv *rval = NULL;
-    NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs());
-    NetworkDataTlv *end = reinterpret_cast<NetworkDataTlv *>(aPrefix.GetSubTlvs() + aPrefix.GetSubTlvsLength());
+    NetworkDataTlv *cur = aPrefix.GetSubTlvs();
+    NetworkDataTlv *end = aPrefix.GetNext();
 
     while (cur < end)
     {
