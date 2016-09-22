@@ -35,6 +35,6 @@ test_script:
 
     netcfg.exe -v -l otlwf.inf -c s -i otLwf
 
-    Sleep 5000
+    Sleep 5
 
     sc query otlwf

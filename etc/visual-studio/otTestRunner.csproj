@@ -18,9 +18,9 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <IntermediateOutputPath>..\..\build\obj\AnyCPU\Debug\otTestRunner\</IntermediateOutputPath>
-    <BaseIntermediateOutputPath>..\..\build\obj\AnyCPU\Debug\otTestRunner\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\build\bin\AnyCPU\Debug\exe\</OutputPath>
+    <IntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -29,12 +29,36 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <IntermediateOutputPath>..\..\build\obj\AnyCPU\Release\otTestRunner\</IntermediateOutputPath>
-    <BaseIntermediateOutputPath>..\..\build\obj\AnyCPU\Release\otTestRunner\</BaseIntermediateOutputPath>
-    <OutputPath>..\..\build\bin\AnyCPU\Release\exe\</OutputPath>
+    <IntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <IntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <IntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutputPath>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
