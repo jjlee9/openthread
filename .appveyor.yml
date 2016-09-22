@@ -37,29 +37,46 @@ after_build:
 
     copy build\bin\%Platform2%\%Configuration%\exe\otCli.pdb release
 
-    if not %Platform2%==x86 (
-        mkdir test_release
-        copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
-        copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
-        copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
-    )
+    mkdir test_release
+
+    copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
+
+    copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
+
+    copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
 test_script:
 - cmd: >-
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
 
-    pushd build\bin\%Platform2%\%Configuration%\sys
+    cd release
 
     certutil -addstore root otLwf.cer
 
     certutil -addstore TrustedPublisher otLwf.cer
-
-    cd otlwf
 
     netcfg.exe -v -l otlwf.inf -c s -i otLwf
 
     Sleep 5
 
     sc query otlwf
+
+    cd ..\test_release
+
+    7z e ..\etc\windows\test_binaries.zip
+
+    certutil -addstore root MSTRCA2010.cer
+
+    certutil -addstore TrustedPublisher MSTRCA2010.cer
+
+    netcfg.exe -v -l vmpbus.inf -c s -i vmpbus
+
+    Sleep 5
+
+    sc query vmpbus
+
+    pnputil.exe /add-driver otvmp.inf /install
+
+    otTestRunner.exe ..\tests\scripts\thread-cert Cert_5_1_* 4
 artifacts:
 - path: release
   name: release

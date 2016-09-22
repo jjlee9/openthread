@@ -60,6 +60,30 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|Win32'">
+    <DebugSymbols>true</DebugSymbols>
+    <IntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|Win32'">
+    <IntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\..\build\obj\$(Platform)\$(Configuration)\otTestRunner\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
