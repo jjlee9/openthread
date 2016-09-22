@@ -31,7 +31,7 @@ test_script:
 
     certutil -addstore TrustedPublisher otLwf.cer
 
-    pushd build\bin\%Platform2%\%Configuration%\sys\otlwf
+    cd otlwf
 
     netcfg.exe -v -l otlwf.inf -c s -i otLwf
 
