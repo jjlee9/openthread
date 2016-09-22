@@ -924,7 +924,12 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
 
     if (numberOfReplies == 0)
     {
-        printf("error: 0x%x\r\n", GetLastError());
+        auto LastError = GetLastError();
+        if (LastError == IP_REQ_TIMED_OUT)
+        {
+            printf("no reply(s)\r\n");
+        }
+        else printf("error: 0x%x\r\n", LastError);
     }
     else
     {    

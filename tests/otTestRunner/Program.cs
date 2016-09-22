@@ -124,6 +124,9 @@ namespace otTestRunner
 
         static string ResultsFolder = "Results_" + DateTime.Now.ToString("yyyyMMdd_HH.mm.ss");
 
+        /// <summary>
+        /// Runs a python test file and returns success/failure
+        /// </summary>
         static async Task<bool> RunTest(string file, int index)
         {
             TestResults Results = await ExecuteAsync("python.exe", file, 30 * 60 * 1000, index);
@@ -139,6 +142,9 @@ namespace otTestRunner
             return Results.Pass;
         }
 
+        /// <summary>
+        /// Runs all the tests as indicated by input arguments
+        /// </summary>
         static void Main(string[] args)
         {
             if (args.Length < 2)
@@ -158,7 +164,7 @@ namespace otTestRunner
             if (args.Length > 2) NumberOfTestsToRunInParallel = int.Parse(args[2]);
 
             var CurNumTestsRunning = 0;
-            var ReadyToRunEvent = new ManualResetEvent(true);
+            var ReadyToRunEvent = new AutoResetEvent(false);
 
             var TestPassCount = 0;
             Stopwatch Timer = new Stopwatch();
@@ -169,19 +175,20 @@ namespace otTestRunner
             Console.WriteLine("Running the following tests:");
             for (var i = 0; i < files.Length; i++)
                 Console.WriteLine(Path.GetFileName(files[i]));
+            Console.WriteLine("");
 
             Timer.Start();
             for (var i = 0; i < files.Length; i++)
             {
                 lock (ReadyToRunEvent)
                 {
-                    if (++CurNumTestsRunning == NumberOfTestsToRunInParallel)
-                        ReadyToRunEvent.Reset();
+                    ++CurNumTestsRunning;
                 }
 
                 var index = i;
                 var fileName = files[i];
 
+                // Start the test, but don't wait for it
                 Task.Run(
                     async () =>
                     {
@@ -208,9 +215,19 @@ namespace otTestRunner
                         }
                     });
 
-                ReadyToRunEvent.WaitOne();
+                if (CurNumTestsRunning == NumberOfTestsToRunInParallel)
+                {
+                    // Wait for a test to complete
+                    ReadyToRunEvent.WaitOne();
+                }
+                else
+                {
+                    // Wait a bit to stagger the starts
+                    Task.Delay(1000).Wait();
+                }
             }
 
+            // Wait for all the tests to complete
             while (CurNumTestsRunning != 0)
                 ReadyToRunEvent.WaitOne();
 
@@ -221,8 +238,7 @@ namespace otTestRunner
                               ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
 
             Console.WriteLine("{0} tests run in {1}", files.Length, elapsedTime);
-            Console.WriteLine("{0} tests passed", TestPassCount);
-            Console.WriteLine("{0} tests failed", files.Length - TestPassCount);
+            Console.WriteLine("{0} passed and {1} failures", TestPassCount, files.Length - TestPassCount);
 
             Environment.ExitCode = files.Length == TestPassCount ? 0 : 1;
         }

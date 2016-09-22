@@ -239,7 +239,7 @@ void Mac::HandleEnergyScanSampleRssi(void)
 
     VerifyOrExit(mState == kStateEnergyScan, ;);
 
-    rssi = otPlatRadioGetRssi(NULL);
+    rssi = otPlatRadioGetRssi(mNetif.GetInstance());
 
     if (rssi != kInvalidRssiValue)
     {
@@ -313,7 +313,7 @@ void Mac::GetHashMacAddress(ExtAddress *aHashMacAddress)
     Crypto::Sha256 sha256;
     uint8_t buf[Crypto::Sha256::kHashSize];
 
-    otPlatRadioGetIeeeEui64(NULL, buf);
+    otPlatRadioGetIeeeEui64(mNetif.GetInstance(), buf);
     sha256.Start();
     sha256.Update(buf, OT_EXT_ADDRESS_SIZE);
     sha256.Finish(buf);
@@ -622,7 +622,7 @@ void Mac::HandleBeginTransmit(void)
     switch (mState)
     {
     case kStateActiveScan:
-        otPlatRadioSetPanId(NULL, kPanIdBroadcast);
+        otPlatRadioSetPanId(mNetif.GetInstance(), kPanIdBroadcast);
         sendFrame.SetChannel(mScanChannel);
         SendBeaconRequest(sendFrame);
         sendFrame.SetSequence(0);
@@ -743,7 +743,7 @@ void Mac::HandleMacTimer(void)
 
             if (mScanChannels == 0 || mScanChannel > kPhyMaxChannel)
             {
-                otPlatRadioSetPanId(NULL, mPanId);
+                otPlatRadioSetPanId(mNetif.GetInstance(), mPanId);
                 mActiveScanHandler(mScanContext, NULL);
                 ScheduleNextTransmission();
                 ExitNow();

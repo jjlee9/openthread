@@ -2867,16 +2867,6 @@ otCommissionerEnergyScan(
     memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t), aAddress, sizeof(otIp6Address));
     
     return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN, Buffer, sizeof(Buffer), nullptr, 0));
-
-    UNREFERENCED_PARAMETER(aChannelMask);
-    UNREFERENCED_PARAMETER(aCount);
-    UNREFERENCED_PARAMETER(aPeriod);
-    UNREFERENCED_PARAMETER(aScanDuration);
-    UNREFERENCED_PARAMETER(aAddress);
-    UNREFERENCED_PARAMETER(aCallback);
-    UNREFERENCED_PARAMETER(aContext);
-    
-    return kThreadError_NotImplemented;
 }
 
 OTAPI

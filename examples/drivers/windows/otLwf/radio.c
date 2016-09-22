@@ -40,6 +40,7 @@ otPlatReset(
     _In_ otInstance *otCtx
     )
 {
+    NT_ASSERT(otCtx);
     // This function does nothing currently.
     UNREFERENCED_PARAMETER(otCtx);
 }
@@ -49,6 +50,7 @@ otPlatGetResetReason(
     _In_ otInstance *otCtx
     )
 {
+    NT_ASSERT(otCtx);
     UNREFERENCED_PARAMETER(otCtx);
     return kPlatResetReason_PowerOn;
 }
@@ -80,6 +82,7 @@ otLwfRadioInit(
 
 void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
@@ -120,6 +123,7 @@ void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
 
 ThreadError otPlatRadioSetPanId(_In_ otInstance *otCtx, uint16_t panid)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
@@ -152,6 +156,7 @@ ThreadError otPlatRadioSetPanId(_In_ otInstance *otCtx, uint16_t panid)
 
 ThreadError otPlatRadioSetExtendedAddress(_In_ otInstance *otCtx, uint8_t *address)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
@@ -185,6 +190,7 @@ ThreadError otPlatRadioSetExtendedAddress(_In_ otInstance *otCtx, uint8_t *addre
 
 ThreadError otPlatRadioSetShortAddress(_In_ otInstance *otCtx, uint16_t address)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
@@ -217,6 +223,7 @@ ThreadError otPlatRadioSetShortAddress(_In_ otInstance *otCtx, uint16_t address)
 
 void otPlatRadioSetPromiscuous(_In_ otInstance *otCtx, int aEnable)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
@@ -242,6 +249,7 @@ void otPlatRadioSetPromiscuous(_In_ otInstance *otCtx, int aEnable)
 
 ThreadError otPlatRadioEnable(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     
     NT_ASSERT(pFilter->otPhyState <= kStateSleep);
@@ -256,6 +264,7 @@ ThreadError otPlatRadioEnable(_In_ otInstance *otCtx)
 
 ThreadError otPlatRadioDisable(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     
     NT_ASSERT(pFilter->otPhyState <= kStateSleep);
@@ -270,6 +279,7 @@ ThreadError otPlatRadioDisable(_In_ otInstance *otCtx)
 
 ThreadError otPlatRadioSleep(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     
     NT_ASSERT(pFilter->otPhyState != kStateDisabled);
@@ -310,6 +320,7 @@ ThreadError otPlatRadioSleep(_In_ otInstance *otCtx)
 
 ThreadError otPlatRadioReceive(_In_ otInstance *otCtx, uint8_t aChannel)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     
     NT_ASSERT(pFilter->otPhyState != kStateDisabled);
@@ -388,12 +399,14 @@ ThreadError otPlatRadioReceive(_In_ otInstance *otCtx, uint8_t aChannel)
 
 RadioPacket *otPlatRadioGetTransmitBuffer(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     return &pFilter->otTransmitFrame;
 }
 
 int8_t otPlatRadioGetRssi(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     UNREFERENCED_PARAMETER(pFilter);
     return 0;
@@ -401,6 +414,7 @@ int8_t otPlatRadioGetRssi(_In_ otInstance *otCtx)
 
 otRadioCaps otPlatRadioGetCaps(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     return 
         ((otCtxToFilter(otCtx)->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0) ? 
             kRadioCapsAckTimeout : 
@@ -409,6 +423,7 @@ otRadioCaps otPlatRadioGetCaps(_In_ otInstance *otCtx)
 
 int otPlatRadioGetPromiscuous(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     return pFilter->otPromiscuous;
 }
@@ -437,6 +452,7 @@ otLwfRadioReceiveFrame(
 
 ThreadError otPlatRadioTransmit(_In_ otInstance *otCtx)
 {
+    NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     ThreadError error = kThreadError_Busy;
     
