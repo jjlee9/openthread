@@ -64,7 +64,7 @@ test_script:
 
     popd
 
-    cd ..\test_release
+    cd test_release
 
     7z e ..\etc\windows\test_binaries.zip
 
