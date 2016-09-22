@@ -59,14 +59,14 @@ otApiInstance* GetApiInstance()
         gApiInstance = otApiInit();
         if (gApiInstance == nullptr)
         {
-            printf("otApiInit failed!\n");
+            printf("otApiInit failed!\r\n");
             return nullptr;
         }
 
         gVmpModule = LoadLibrary(TEXT("otvmpapi.dll"));
         if (gVmpModule == nullptr)
         {
-            printf("LoadLibrary(\"otvmpapi\") failed!\n");
+            printf("LoadLibrary(\"otvmpapi\") failed!\r\n");
             return nullptr;
         }
 
@@ -76,27 +76,30 @@ otApiInstance* GetApiInstance()
         otvmpRemoveVirtualBus       = (fp_otvmpRemoveVirtualBus)GetProcAddress(gVmpModule, "otvmpRemoveVirtualBus");
         otvmpSetAdapterTopologyGuid = (fp_otvmpSetAdapterTopologyGuid)GetProcAddress(gVmpModule, "otvmpSetAdapterTopologyGuid");
 
-        if (otvmpOpenHandle == nullptr) printf("otvmpOpenHandle is null!\n");
-        if (otvmpCloseHandle == nullptr) printf("otvmpCloseHandle is null!\n");
-        if (otvmpAddVirtualBus == nullptr) printf("otvmpAddVirtualBus is null!\n");
-        if (otvmpRemoveVirtualBus == nullptr) printf("otvmpRemoveVirtualBus is null!\n");
-        if (otvmpSetAdapterTopologyGuid == nullptr) printf("otvmpSetAdapterTopologyGuid is null!\n");
+        if (otvmpOpenHandle == nullptr) printf("otvmpOpenHandle is null!\r\n");
+        if (otvmpCloseHandle == nullptr) printf("otvmpCloseHandle is null!\r\n");
+        if (otvmpAddVirtualBus == nullptr) printf("otvmpAddVirtualBus is null!\r\n");
+        if (otvmpRemoveVirtualBus == nullptr) printf("otvmpRemoveVirtualBus is null!\r\n");
+        if (otvmpSetAdapterTopologyGuid == nullptr) printf("otvmpSetAdapterTopologyGuid is null!\r\n");
 
         (VOID)otvmpOpenHandle(&gVmpHandle);
         if (gVmpHandle == nullptr)
         {
-            printf("otvmpOpenHandle failed!\n");
+            printf("otvmpOpenHandle failed!\r\n");
             return nullptr;
         }
 
         auto status = UuidCreate(&gTopologyGuid);
         if (status != NO_ERROR)
         {
-            printf("UuidCreate failed, 0x%x!\n", status);
+            printf("UuidCreate failed, 0x%x!\r\n", status);
             return nullptr;
         }
 
-        printf("New topology created\n" GUID_FORMAT "\n\n", GUID_ARG(gTopologyGuid));
+        srand(gTopologyGuid.Data1);
+        gNextBusNumber = rand() % 1000 + 1;
+
+        printf("New topology created\r\n" GUID_FORMAT " [%d]\r\n\r\n", GUID_ARG(gTopologyGuid), gNextBusNumber);
     }
 
     return gApiInstance;
@@ -106,7 +109,7 @@ void Unload()
 {
     otvmpCloseHandle(gVmpHandle);
     otApiFinalize(gApiInstance);
-    printf("Topology destroyed\n");
+    printf("Topology destroyed\r\n");
 }
 
 int Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
@@ -188,7 +191,7 @@ void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
 
     if ((aFlags & OT_NET_ROLE) != 0)
     {
-        printf("%d: new role: %s\n", aNode->mId, otDeviceRoleToString(otGetDeviceRole(aNode->mInstance)));
+        printf("%d: new role: %s\r\n", aNode->mId, otDeviceRoleToString(otGetDeviceRole(aNode->mInstance)));
     }
 }
 
@@ -197,7 +200,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     auto ApiInstance = GetApiInstance();
     if (ApiInstance == nullptr)
     {
-        printf("GetApiInstance failed!\n");
+        printf("GetApiInstance failed!\r\n");
         return nullptr;
     }
 
@@ -223,20 +226,20 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
         }
         else
         {
-            printf("otvmpAddVirtualBus failed, 0x%x!\n", dwError);
+            printf("otvmpAddVirtualBus failed, 0x%x!\r\n", dwError);
             return nullptr;
         }
     }
 
     if (tries == 1000)
     {
-        printf("otvmpAddVirtualBus failed to find an empty bus!\n");
+        printf("otvmpAddVirtualBus failed to find an empty bus!\r\n");
         return nullptr;
     }
 
     /*if ((dwError = otvmpSetAdapterTopologyGuid(gVmpHandle, newBusIndex, &gTopologyGuid)) != ERROR_SUCCESS)
     {
-        printf("otvmpSetAdapterTopologyGuid failed, 0x%x!\n", dwError);
+        printf("otvmpSetAdapterTopologyGuid failed, 0x%x!\r\n", dwError);
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }*/
@@ -244,7 +247,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     NET_LUID ifLuid = {};
     if (ERROR_SUCCESS != ConvertInterfaceIndexToLuid(ifIndex, &ifLuid))
     {
-        printf("ConvertInterfaceIndexToLuid(%u) failed!\n", ifIndex);
+        printf("ConvertInterfaceIndexToLuid(%u) failed!\r\n", ifIndex);
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -252,7 +255,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     GUID ifGuid = {};
     if (ERROR_SUCCESS != ConvertInterfaceLuidToGuid(&ifLuid, &ifGuid))
     {
-        printf("ConvertInterfaceLuidToGuid failed!\n");
+        printf("ConvertInterfaceLuidToGuid failed!\r\n");
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -260,7 +263,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     auto instance = otInstanceInit(ApiInstance, &ifGuid);
     if (instance == nullptr)
     {
-        printf("otInstanceInit failed!\n");
+        printf("otInstanceInit failed!\r\n");
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -269,7 +272,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     uint32_t Compartment = otGetCompartmentId(instance);
 
     otNode *node = new otNode();
-    printf("%d: New Device " GUID_FORMAT " in compartment %d\n", id, GUID_ARG(DeviceGuid), Compartment);
+    printf("%d: New Device " GUID_FORMAT " in compartment %d\r\n", id, GUID_ARG(DeviceGuid), Compartment);
 
     node->mId = id;
     node->mBusIndex = newBusIndex;
@@ -287,7 +290,7 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
 {
     if (aNode != nullptr)
     {
-        printf("%d: Removing Device\n", aNode->mId);
+        printf("%d: Removing Device\r\n", aNode->mId);
 
         CloseHandle(aNode->mPanIdConflictEvent);
         CloseHandle(aNode->mEnergyScanEvent);
@@ -300,7 +303,7 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
 {
-    printf("%d: mode %s\n", aNode->mId, aMode);
+    printf("%d: mode %s\r\n", aNode->mId, aMode);
 
     otLinkModeConfig linkMode = {0};
 
@@ -331,7 +334,7 @@ OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
 
 OTNODEAPI int32_t OTCALL otNodeStart(otNode* aNode)
 {
-    printf("%d: start\n", aNode->mId);
+    printf("%d: start\r\n", aNode->mId);
 
     auto error = otInterfaceUp(aNode->mInstance);
     if (error != kThreadError_None) return error;
@@ -340,7 +343,7 @@ OTNODEAPI int32_t OTCALL otNodeStart(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeStop(otNode* aNode)
 {
-    printf("%d: stop\n", aNode->mId);
+    printf("%d: stop\r\n", aNode->mId);
 
     (void)otThreadStop(aNode->mInstance);
     (void)otInterfaceDown(aNode->mInstance);
@@ -349,7 +352,7 @@ OTNODEAPI int32_t OTCALL otNodeStop(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
 {
-    printf("%d: whitelist clear\n", aNode->mId);
+    printf("%d: whitelist clear\r\n", aNode->mId);
 
     otClearMacWhitelist(aNode->mInstance);
     return 0;
@@ -357,7 +360,7 @@ OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
 {
-    printf("%d: whitelist enable\n", aNode->mId);
+    printf("%d: whitelist enable\r\n", aNode->mId);
 
     otEnableMacWhitelist(aNode->mInstance);
     return 0;
@@ -365,7 +368,7 @@ OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
 {
-    printf("%d: whitelist disable\n", aNode->mId);
+    printf("%d: whitelist disable\r\n", aNode->mId);
 
     otDisableMacWhitelist(aNode->mInstance);
     return 0;
@@ -374,8 +377,8 @@ OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
 OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi)
 {
     if (aRssi == 0)
-        printf("%d: whitelist add %s\n", aNode->mId, aExtAddr);
-    else printf("%d: whitelist add %s %d\n", aNode->mId, aExtAddr, aRssi);
+        printf("%d: whitelist add %s\r\n", aNode->mId, aExtAddr);
+    else printf("%d: whitelist add %s %d\r\n", aNode->mId, aExtAddr, aRssi);
 
     uint8_t extAddr[8];
     if (Hex2Bin(aExtAddr, extAddr, sizeof(extAddr)) != sizeof(extAddr))
@@ -393,7 +396,7 @@ OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr,
 
 OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr)
 {
-    printf("%d: whitelist remove %s\n", aNode->mId, aExtAddr);
+    printf("%d: whitelist remove %s\r\n", aNode->mId, aExtAddr);
 
     uint8_t extAddr[8];
     if (Hex2Bin(aExtAddr, extAddr, sizeof(extAddr)) != sizeof(extAddr))
@@ -406,7 +409,7 @@ OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAd
 OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode)
 {
     auto result = otGetRloc16(aNode->mInstance);
-    printf("%d: rloc16\n%04x\n", aNode->mId, result);
+    printf("%d: rloc16\r\n%04x\r\n", aNode->mId, result);
     return result;
 }
 
@@ -416,66 +419,66 @@ OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
     char* str = (char*)malloc(18);
     for (int i = 0; i < 8; i++)
         sprintf_s(str + i * 2, 18 - (2 * i), "%02x", extAddr[i]);
-    printf("%d: extaddr\n%s\n", aNode->mId, str);
+    printf("%d: extaddr\r\n%s\r\n", aNode->mId, str);
     return str;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
 {
-    printf("%d: channel %d\n", aNode->mId, aChannel);
+    printf("%d: channel %d\r\n", aNode->mId, aChannel);
     return otSetChannel(aNode->mInstance, aChannel);
 }
 
 OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
 {
     auto result = otGetKeySequenceCounter(aNode->mInstance);
-    printf("%d: key sequence\n%d\n", aNode->mId, result);
+    printf("%d: key sequence\r\n%d\r\n", aNode->mId, result);
     return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
 {
-    printf("%d: key sequence %d\n", aNode->mId, aSequence);
+    printf("%d: key sequence %d\r\n", aNode->mId, aSequence);
     otSetKeySequenceCounter(aNode->mInstance, aSequence);
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout)
 {
-    printf("%d: network id timeout %d\n", aNode->mId, aTimeout);
+    printf("%d: network id timeout %d\r\n", aNode->mId, aTimeout);
     otSetNetworkIdTimeout(aNode->mInstance, aTimeout);
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName)
 {
-    printf("%d: network name %s\n", aNode->mId, aName);
+    printf("%d: network name %s\r\n", aNode->mId, aName);
     return otSetNetworkName(aNode->mInstance, aName);
 }
 
 OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode)
 {
     auto result = otGetPanId(aNode->mInstance);
-    printf("%d: panid\n0x%04x\n", aNode->mId, result);
+    printf("%d: panid\r\n0x%04x\r\n", aNode->mId, result);
     return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId)
 {
-    printf("%d: panid 0x%04x\n", aNode->mId, aPanId);
+    printf("%d: panid 0x%04x\r\n", aNode->mId, aPanId);
     return otSetPanId(aNode->mInstance, aPanId);
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold)
 {
-    printf("%d: router upgrade threshold %d\n", aNode->mId, aThreshold);
+    printf("%d: router upgrade threshold %d\r\n", aNode->mId, aThreshold);
     otSetRouterUpgradeThreshold(aNode->mInstance, aThreshold);
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId)
 {
-    printf("%d: release router id %d\n", aNode->mId, aRouterId);
+    printf("%d: release router id %d\r\n", aNode->mId, aRouterId);
     return otReleaseRouterId(aNode->mInstance, aRouterId);
 }
 
@@ -483,13 +486,13 @@ OTNODEAPI const char* OTCALL otNodeGetState(otNode* aNode)
 {
     auto role = otGetDeviceRole(aNode->mInstance);
     auto result = _strdup(otDeviceRoleToString(role));
-    printf("%d: state\n%s\n", aNode->mId, result);
+    printf("%d: state\r\n%s\r\n", aNode->mId, result);
     return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetState(otNode* aNode, const char *aState)
 {
-    printf("%d: state %s\n", aNode->mId, aState);
+    printf("%d: state %s\r\n", aNode->mId, aState);
 
     if (strcmp(aState, "detached") == 0)
     {
@@ -520,7 +523,7 @@ OTNODEAPI uint32_t OTCALL otNodeGetTimeout(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout)
 {
-    printf("%d: timeout %d\n", aNode->mId, aTimeout);
+    printf("%d: timeout %d\r\n", aNode->mId, aTimeout);
     otSetChildTimeout(aNode->mInstance, aTimeout);
     return 0;
 }
@@ -532,14 +535,14 @@ OTNODEAPI uint8_t OTCALL otNodeGetWeight(otNode* aNode)
 
 OTNODEAPI int32_t OTCALL otNodeSetWeight(otNode* aNode, uint8_t aWeight)
 {
-    printf("%d: leader weight %d\n", aNode->mId, aWeight);
+    printf("%d: leader weight %d\r\n", aNode->mId, aWeight);
     otSetLocalLeaderWeight(aNode->mInstance, aWeight);
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeAddIpAddr(otNode* aNode, const char *aAddr)
 {
-    printf("%d: add ipaddr %s\n", aNode->mId, aAddr);
+    printf("%d: add ipaddr %s\r\n", aNode->mId, aAddr);
 
     otNetifAddress aAddress;
     auto error = otIp6AddressFromString(aAddr, &aAddress.mAddress);
@@ -572,6 +575,8 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
     {
         if (cur != str)
         {
+            *cur = '\r';
+            cur++;
             *cur = '\n';
             cur++;
         }
@@ -592,7 +597,7 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
 
     otFreeMemory(addrs);
     
-    printf("%d: ipaddr\n%s\n", aNode->mId, str);
+    printf("%d: ipaddr\r\n%s\r\n", aNode->mId, str);
 
     return str;
 }
@@ -768,23 +773,23 @@ void OTCALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const 
 {
     otNode* aNode = (otNode*)aContext;
 
-    printf("Energy: 0x%08x\n", aChannelMask);
+    printf("Energy: 0x%08x\r\n", aChannelMask);
     for (uint8_t i = 0; i < aEnergyListLength; i++)
         printf("%d ", aEnergyList[i]);
-    printf("\n");
+    printf("\r\n");
 
     SetEvent(aNode->mEnergyScanEvent);
 }
 
 OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr)
 {
-    printf("%d: energy scan 0x%x %d %d %d %s\n", aNode->mId, aMask, aCount, aPeriod, aDuration, aAddr);
+    printf("%d: energy scan 0x%x %d %d %d %s\r\n", aNode->mId, aMask, aCount, aPeriod, aDuration, aAddr);
 
     otIp6Address address = {0};
     auto error = otIp6AddressFromString(aAddr, &address);
     if (error != kThreadError_None)
     {
-        printf("otIp6AddressFromString(%s) failed, 0x%x!\n", aAddr, error);
+        printf("otIp6AddressFromString(%s) failed, 0x%x!\r\n", aAddr, error);
         return error;
     }
     
@@ -793,7 +798,7 @@ OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t
     error = otCommissionerEnergyScan(aNode->mInstance, aMask, aCount, aPeriod, aDuration, &address, otNodeCommissionerEnergyReportCallback, aNode);
     if (error != kThreadError_None)
     {
-        printf("otCommissionerEnergyScan failed, 0x%x!\n", error);
+        printf("otCommissionerEnergyScan failed, 0x%x!\r\n", error);
         return error;
     }
 
@@ -803,19 +808,19 @@ OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t
 void OTCALL otNodeCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
 {
     otNode* aNode = (otNode*)aContext;
-    printf("Conflict: 0x%04x, 0x%08x\n", aPanId, aChannelMask);
+    printf("Conflict: 0x%04x, 0x%08x\r\n", aPanId, aChannelMask);
     SetEvent(aNode->mPanIdConflictEvent);
 }
 
 OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr)
 {
-    printf("%d: panid query 0x%04x 0x%x %s\n", aNode->mId, aPanId, aMask, aAddr);
+    printf("%d: panid query 0x%04x 0x%x %s\r\n", aNode->mId, aPanId, aMask, aAddr);
 
     otIp6Address address = {0};
     auto error = otIp6AddressFromString(aAddr, &address);
     if (error != kThreadError_None)
     {
-        printf("otIp6AddressFromString(%s) failed, 0x%x!\n", aAddr, error);
+        printf("otIp6AddressFromString(%s) failed, 0x%x!\r\n", aAddr, error);
         return error;
     }
     
@@ -824,7 +829,7 @@ OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32
     error = otCommissionerPanIdQuery(aNode->mInstance, aPanId, aMask, &address, otNodeCommissionerPanIdConflictCallback, aNode);
     if (error != kThreadError_None)
     {
-        printf("otCommissionerPanIdQuery failed, 0x%x!\n", error);
+        printf("otCommissionerPanIdQuery failed, 0x%x!\r\n", error);
         return error;
     }
 
@@ -844,7 +849,7 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
     auto error = otIp6AddressFromString(aAddr, &otDestinationAddress);
     if (error != kThreadError_None)
     {
-        printf("otIp6AddressFromString(%s) failed!\n", aAddr);
+        printf("otIp6AddressFromString(%s) failed!\r\n", aAddr);
         return 0;
     }
     
@@ -868,7 +873,7 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
         DWORD dwError = ERROR_SUCCESS;
         if ((dwError = SetCurrentThreadCompartmentId(otGetCompartmentId(aNode->mInstance))) != ERROR_SUCCESS)
         {
-            printf("SetCurrentThreadCompartmentId failed, 0x%x\n", dwError);
+            printf("SetCurrentThreadCompartmentId failed, 0x%x\r\n", dwError);
         }
         RevertCompartmentOnExit = true;
     }
@@ -884,13 +889,13 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
 
     DWORD numberOfReplies = 0;
 
-    printf("%d: ping %s\n", aNode->mId, aAddr);
+    printf("%d: ping %s\r\n", aNode->mId, aAddr);
 
     // Get an ICMP handle
     auto IcmpHandle = Icmp6CreateFile();
     if (IcmpHandle == INVALID_HANDLE_VALUE)
     {
-        printf("Icmp6CreateFile failed!\n");
+        printf("Icmp6CreateFile failed!\r\n");
         goto exit;
     }
 
@@ -913,11 +918,11 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
 
     if (numberOfReplies == 0)
     {
-        printf("error: 0x%x\n", GetLastError());
+        printf("error: 0x%x\r\n", GetLastError());
     }
     else
     {    
-        printf("%d reply(s)\n", numberOfReplies);
+        printf("%d reply(s)\r\n", numberOfReplies);
 
         //ICMPV6_ECHO_REPLY* Reply = (ICMPV6_ECHO_REPLY*)RecvBuffer;
     }
