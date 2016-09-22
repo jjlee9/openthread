@@ -159,5 +159,6 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otFactoryAssignedIeeeEui64;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otHashMacAddress;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterDowngradeThreshold;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerPanIdQuery;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerEnergyScan;
 
 #endif // _IOCONTROL_H

@@ -102,6 +102,7 @@ public:
 typedef otCallback<otDeviceAvailabilityChangedCallback> otApiDeviceAvailabilityCallback;
 typedef otCallback<otHandleActiveScanResult> otApiActiveScanCallback;
 typedef otCallback<otStateChangedCallback> otApiStateChangeCallback;
+typedef otCallback<otCommissionerEnergyReportCallback> otApiCommissionerEnergyReportCallback;
 typedef otCallback<otCommissionerPanIdConflictCallback> otApiCommissionerPanIdConflictCallback;
 
 typedef struct otApiInstance
@@ -122,6 +123,7 @@ typedef struct otApiInstance
     vector<otApiActiveScanCallback*>    ActiveScanCallbacks;
     vector<otApiActiveScanCallback*>    DiscoverCallbacks;
     vector<otApiStateChangeCallback*>   StateChangedCallbacks;
+    vector<otApiCommissionerEnergyReportCallback*>  CommissionerEnergyReportCallbacks;
     vector<otApiCommissionerPanIdConflictCallback*> CommissionerPanIdConflictCallbacks;
 
     // Constructor
@@ -343,6 +345,9 @@ otApiFinalize(
         vector<otApiStateChangeCallback*> StateChangedCallbacks(aApitInstance->StateChangedCallbacks);
         aApitInstance->StateChangedCallbacks.clear();
 
+        vector<otApiCommissionerEnergyReportCallback*> CommissionerEnergyReportCallbacks(aApitInstance->CommissionerEnergyReportCallbacks);
+        aApitInstance->CommissionerEnergyReportCallbacks.clear();
+
         vector<otApiCommissionerPanIdConflictCallback*> CommissionerPanIdConflictCallbacks(aApitInstance->CommissionerPanIdConflictCallbacks);
         aApitInstance->CommissionerPanIdConflictCallbacks.clear();
 
@@ -376,6 +381,11 @@ otApiFinalize(
         {
             StateChangedCallbacks[i]->Release(true);
             delete StateChangedCallbacks[i];
+        }
+        for (size_t i = 0; i < CommissionerEnergyReportCallbacks.size(); i++)
+        {
+            CommissionerEnergyReportCallbacks[i]->Release(true);
+            delete CommissionerEnergyReportCallbacks[i];
         }
         for (size_t i = 0; i < CommissionerPanIdConflictCallbacks.size(); i++)
         {
@@ -539,6 +549,36 @@ ProcessNotification(
         {
             Callback->Callback(
                 Notif->ActiveScanPayload.Valid ? &Notif->ActiveScanPayload.Results : nullptr, 
+                Callback->CallbackContext);
+
+            Callback->Release();
+        }
+    }
+    else if (Notif->NotifType == OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT)
+    {
+        otCallback<otCommissionerEnergyReportCallback>* Callback = nullptr;
+
+        EnterCriticalSection(&aApitInstance->CallbackLock);
+
+        for (size_t i = 0; i < aApitInstance->CommissionerEnergyReportCallbacks.size(); i++)
+        {
+            if (aApitInstance->CommissionerEnergyReportCallbacks[i]->InterfaceGuid == Notif->InterfaceGuid)
+            {
+                aApitInstance->CommissionerEnergyReportCallbacks[i]->AddRef();
+                Callback = aApitInstance->CommissionerEnergyReportCallbacks[i];
+                break;
+            }
+        }
+
+        LeaveCriticalSection(&aApitInstance->CallbackLock);
+        
+        // Invoke the callback outside the lock and release ref when done
+        if (Callback)
+        {
+            Callback->Callback(
+                Notif->CommissionerEnergyReportPayload.ChannelMask,
+                Notif->CommissionerEnergyReportPayload.EnergyList,
+                Notif->CommissionerEnergyReportPayload.EnergyListLength,
                 Callback->CallbackContext);
 
             Callback->Release();
@@ -2812,6 +2852,21 @@ otCommissionerEnergyScan(
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
+
+    aInstance->ApiHandle->SetCallback(
+        aInstance->ApiHandle->CommissionerEnergyReportCallbacks,
+        aInstance->InterfaceGuid, aCallback, aContext
+        );
+
+    BYTE Buffer[sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(otIp6Address)];
+    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy(Buffer + sizeof(GUID), &aChannelMask, sizeof(aChannelMask));
+    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t), &aCount, sizeof(aCount));
+    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t), &aPeriod, sizeof(aPeriod));
+    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t), &aScanDuration, sizeof(aScanDuration));
+    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t), aAddress, sizeof(otIp6Address));
+    
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN, Buffer, sizeof(Buffer), nullptr, 0));
 
     UNREFERENCED_PARAMETER(aChannelMask);
     UNREFERENCED_PARAMETER(aCount);

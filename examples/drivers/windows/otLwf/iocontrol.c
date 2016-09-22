@@ -278,7 +278,11 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_HASH_MAC_ADDRESS",
     "IOCTL_OTLWF_OT_ROUTER_DOWNGRADE_THRESHOLD",
     "IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY",
+    "IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN",
 };
+
+static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
+              "The IoCtl strings should be up to date with the actual IoCtl list.");
 
 const char*
 IoCtlString(
@@ -536,6 +540,9 @@ otLwfCompleteOpenThreadIrp(
         break;
     case IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY:
         status = otLwfIoCtl_otCommissionerPanIdQuery(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN:
+        status = otLwfIoCtl_otCommissionerEnergyScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
@@ -2851,6 +2858,47 @@ otLwfIoCtl_otCommissionerPanIdQuery(
                 aChannelMask,
                 aAddress,
                 otLwfCommissionerPanIdConflictCallback,
+                pFilter)
+            );
+    }
+
+    return status;
+}    
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otCommissionerEnergyScan(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_opt_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(otIp6Address))
+    {
+        uint32_t aChannelMask = *(uint32_t*)InBuffer;
+        uint8_t aCount = *(uint8_t*)(InBuffer + sizeof(uint32_t));
+        uint16_t aPeriod = *(uint16_t*)(InBuffer + sizeof(uint32_t) + sizeof(uint8_t));
+        uint16_t aScanDuration = *(uint16_t*)(InBuffer + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t));
+        const otIp6Address *aAddress = (otIp6Address*)(InBuffer + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t));
+
+        status = ThreadErrorToNtstatus(
+            otCommissionerEnergyScan(
+                pFilter->otCtx,
+                aChannelMask,
+                aCount,
+                aPeriod,
+                aScanDuration,
+                aAddress,
+                otLwfCommissionerEnergyReportCallback,
                 pFilter)
             );
     }

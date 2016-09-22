@@ -57,9 +57,12 @@ typedef enum _OTLWF_NOTIF_TYPE
     OTLWF_NOTIF_STATE_CHANGE,
     OTLWF_NOTIF_DISCOVER,
     OTLWF_NOTIF_ACTIVE_SCAN,
+    OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT,
     OTLWF_NOTIF_COMMISSIONER_PANID_QUERY
 
 } OTLWF_NOTIF_TYPE;
+
+#define MAX_ENERGY_REPORT_LENGTH    64
 
 //
 // Queries (async) the next notification in the queue
@@ -96,6 +99,15 @@ typedef enum _OTLWF_NOTIF_TYPE
                 BOOLEAN                 Valid;
                 otActiveScanResult      Results;
             } ActiveScanPayload;
+
+            // Payload for OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT
+            struct
+            {
+                uint32_t                ChannelMask;
+                uint8_t                 EnergyListLength;
+                uint8_t                 EnergyList[MAX_ENERGY_REPORT_LENGTH];
+                                                          
+            } CommissionerEnergyReportPayload;
 
             // Payload for OTLWF_NOTIF_COMMISSIONER_PANID_QUERY
             struct
@@ -521,12 +533,21 @@ typedef struct otPSKd
 #define IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY \
     OTLWF_CTL_CODE(174, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
-    // uint16_t - InterfaceGuid
-    // uint32_t - InterfaceGuid
+    // uint16_t - aPanId
+    // uint32_t - aChannekMask
+    // otIp6Address - aAddress
+    
+#define IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN \
+    OTLWF_CTL_CODE(175, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // uint32_t - aChannekMask
+    // uint8_t - aCount
+    // uint16_t - aPeriod
+    // uint16_t - aScanDuration
     // otIp6Address - aAddress
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 174
+#define MAX_OTLWF_IOCTL_FUNC_CODE 175
 
 #endif //__OTLWFIOCTL_H__

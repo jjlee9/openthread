@@ -1097,6 +1097,31 @@ void otLwfDiscoverCallback(_In_ otActiveScanResult *aResult, _In_ void *aContext
     LogFuncExit(DRIVER_DEFAULT);
 }
 
+void otLwfCommissionerEnergyReportCallback(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength, void *aContext)
+{
+    LogFuncEntry(DRIVER_DEFAULT);
+    
+    PMS_FILTER pFilter = (PMS_FILTER)aContext;
+    PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
+    if (NotifEntry)
+    {
+        RtlZeroMemory(NotifEntry, sizeof(FILTER_NOTIFICATION_ENTRY));
+        NotifEntry->Notif.InterfaceGuid = pFilter->InterfaceGuid;
+        NotifEntry->Notif.NotifType = OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT;
+
+        // Limit the number of reports if necessary
+        if (aEnergyListLength > MAX_ENERGY_REPORT_LENGTH) aEnergyListLength = MAX_ENERGY_REPORT_LENGTH;
+        
+        NotifEntry->Notif.CommissionerEnergyReportPayload.ChannelMask = aChannelMask;
+        NotifEntry->Notif.CommissionerEnergyReportPayload.EnergyListLength = aEnergyListLength;
+        memcpy(NotifEntry->Notif.CommissionerEnergyReportPayload.EnergyList, aEnergyList, aEnergyListLength);
+        
+        otLwfIndicateNotification(NotifEntry);
+    }
+
+    LogFuncExit(DRIVER_DEFAULT);
+}
+
 void otLwfCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, _In_ void *aContext)
 {
     LogFuncEntry(DRIVER_DEFAULT);

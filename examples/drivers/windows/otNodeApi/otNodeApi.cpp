@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -96,8 +96,16 @@ otApiInstance* GetApiInstance()
             return nullptr;
         }
 
-        srand(gTopologyGuid.Data1);
-        gNextBusNumber = rand() % 1000 + 1;
+        auto offset = getenv("INSTANCE");
+        if (offset)
+        {
+            gNextBusNumber = (atoi(offset) * 32) % 1000 + 1;
+        }
+        else
+        {
+            srand(gTopologyGuid.Data1);
+            gNextBusNumber = rand() % 1000 + 1;
+        }
 
         printf("New topology created\r\n" GUID_FORMAT " [%d]\r\n\r\n", GUID_ARG(gTopologyGuid), gNextBusNumber);
     }
@@ -575,8 +583,6 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
     {
         if (cur != str)
         {
-            *cur = '\r';
-            cur++;
             *cur = '\n';
             cur++;
         }
