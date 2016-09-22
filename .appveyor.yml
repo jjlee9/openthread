@@ -18,7 +18,11 @@ test_script:
 
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
 
-    certutil -addstore root build\bin\%Platform2%\%Configuration%\sys\otLwf.cer
+    pushd build\bin\%Platform2%\%Configuration%\sys
+
+    certmgr.exe -add otLwf.cer -c -s -r localMachine Root
+
+    certmgr.exe -add otLwf.cer -c -s -r localMachine TrustedPublisher
 
     pushd build\bin\%Platform2%\%Configuration%\sys\otlwf
 
