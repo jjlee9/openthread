@@ -48,7 +48,7 @@ test_script:
 - cmd: >-
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
 
-    pushd build\bin\%Platform2%\%Configuration%\sys
+    cd build\bin\%Platform2%\%Configuration%\sys
 
     certutil -addstore root otLwf.cer
 
@@ -62,9 +62,7 @@ test_script:
 
     sc query otlwf
 
-    popd
-
-    cd test_release
+    cd ..\..\..\..\..\..\test_release
 
     7z e ..\etc\windows\test_binaries.zip
 
