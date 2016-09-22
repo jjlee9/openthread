@@ -17,3 +17,7 @@ test_script:
     if %Platform2%==x86 set Platform2=Win32
 
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
+
+    certutil -addstore root build\bin\%Platform2%\%Configuration%\sys\otLwf.cer
+
+    netcfg.exe -v -l build\bin\%Platform2%\%Configuration%\sys\otlwf.inf -c s -i otLwf
