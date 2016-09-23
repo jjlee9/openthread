@@ -34,9 +34,9 @@ class Cert_otLwf(unittest.TestCase):
     def setUp(self):
 
         # Load the DLL
-        self.Api = ctypes.WinDLL("otapi.dll")
+        self.Api = ctypes.WinDLL("otApi.dll")
         if self.Api == None:
-            raise OSError("Failed to load otapi.dll!")
+            raise OSError("Failed to load otApi.dll!")
         
         # Define the functions
         self.Api.otApiInit.restype = ctypes.c_void_p

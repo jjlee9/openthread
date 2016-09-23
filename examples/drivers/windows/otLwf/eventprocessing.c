@@ -860,8 +860,11 @@ otLwfEventWorkerThread(
                     }
                 }
 
-                // Complete the NBLs
-                otLwfCompleteNBLs(pFilter, FALSE, Event->Received, Event->NetBufferLists, NblStatus);
+                if (Event->NetBufferLists)
+                {
+                    // Complete the NBLs
+                    otLwfCompleteNBLs(pFilter, FALSE, Event->Received, Event->NetBufferLists, NblStatus);
+                }
 
                 // Free the event
                 NdisFreeMemory(Event, 0, 0);
