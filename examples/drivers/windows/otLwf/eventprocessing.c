@@ -437,14 +437,16 @@ otLwfCompleteNBLs(
     }
 }
 
-DRIVER_CANCEL otLwfEventProcessingCancelIrp;
-
-_Use_decl_annotations_
+_Function_class_(DRIVER_CANCEL)
+_Requires_lock_held_(_Global_cancel_spin_lock_)
+_Releases_lock_(_Global_cancel_spin_lock_)
+_IRQL_requires_min_(DISPATCH_LEVEL)
+_IRQL_requires_(DISPATCH_LEVEL)
 VOID
 otLwfEventProcessingCancelIrp(
-    _Inout_ PDEVICE_OBJECT DeviceObject,
+    _Inout_ struct _DEVICE_OBJECT *DeviceObject,
     _Inout_ _IRQL_uses_cancel_ struct _IRP *Irp
-)
+    )
 {
     PIRP IrpToCancel = NULL;
 
@@ -653,7 +655,13 @@ otLwfEventWorkerThread(
     KWAIT_BLOCK WaitBlocks[ARRAYSIZE(WaitEvents)] = { 0 };
 
     // Space to processing buffers
-    UCHAR MessageBuffer[1500];
+    const ULONG MessageBufferSize = 1500;
+    PUCHAR MessageBuffer = FILTER_ALLOC_MEM(pFilter->FilterHandle, MessageBufferSize);
+    if (MessageBuffer == NULL)
+    {
+        LogError(DRIVER_DATA_PATH, "Failed to allocate 1500 bytes for MessageBuffer!");
+        return;
+    }
 
     // Query the current addresses from TCPIP and cache them
     (void)otLwfInitializeAddresses(pFilter);
@@ -795,8 +803,8 @@ otLwfEventWorkerThread(
                         PNET_BUFFER CurrNb = NET_BUFFER_LIST_FIRST_NB(CurrNbl);
                         while (CurrNb != NULL)
                         {
-                            NT_ASSERT(NET_BUFFER_DATA_LENGTH(CurrNb) <= sizeof(MessageBuffer));
-                            if (NET_BUFFER_DATA_LENGTH(CurrNb) <= sizeof(MessageBuffer))
+                            NT_ASSERT(NET_BUFFER_DATA_LENGTH(CurrNb) <= MessageBufferSize);
+                            if (NET_BUFFER_DATA_LENGTH(CurrNb) <= MessageBufferSize)
                             {
                                 // Copy NB data into message
                                 if (NT_SUCCESS(CopyDataBuffer(CurrNb, NET_BUFFER_DATA_LENGTH(CurrNb), MessageBuffer)))

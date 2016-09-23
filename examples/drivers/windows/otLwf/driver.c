@@ -224,12 +224,8 @@ Return Value:
     //
     NdisFDeregisterFilterDriver(FilterDriverHandle);
 
-#if DBG
     // Validate we have no outstanding filter instances
-    FILTER_ACQUIRE_LOCK(&FilterListLock, FALSE);
-    ASSERT(IsListEmpty(&FilterModuleList));
-    FILTER_RELEASE_LOCK(&FilterListLock, FALSE);
-#endif
+    NT_ASSERT(IsListEmpty(&FilterModuleList));
 
     //
     // Clean up global variables

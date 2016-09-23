@@ -130,9 +130,7 @@ typedef struct _MS_FILTER
     KEVENT                          EventWorkerThreadProcessAddressChanges;
     KEVENT                          EventWorkerThreadProcessNBLs;
     NDIS_SPIN_LOCK                  EventsLock;
-    _Guarded_by_(EventsLock)
     LIST_ENTRY                      AddressChangesHead;
-    _Guarded_by_(EventsLock)
     LIST_ENTRY                      NBLsHead;
     ULONG                           CountPendingRecvNBLs;
     LARGE_INTEGER                   NextAlarmTickCount;
