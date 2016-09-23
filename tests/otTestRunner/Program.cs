@@ -90,7 +90,9 @@ namespace otTestRunner
                     process.BeginErrorReadLine();
                     process.BeginOutputReadLine();
 
-                    //Console.WriteLine("Starting {0} {1}", name, args);
+#if DEBUG
+                    Console.WriteLine("Starting {0} {1}", name, args);
+#endif
 
                     // Wait for process to complete
                     await Task.Run(
@@ -117,7 +119,9 @@ namespace otTestRunner
                     // Make sure the process is killed
                     try { process.Kill(); } catch (Exception) { }
 
-                    //Console.WriteLine("Completed {0} {1}", name, args);
+#if DEBUG
+                    Console.WriteLine("Completed {0} {1}", name, args);
+#endif
                 }
             }
             catch (Exception e)
@@ -129,6 +133,7 @@ namespace otTestRunner
             return Results;
         }
 
+        static bool VerboseOutput = false;
         static string ResultsFolder = "Results_" + DateTime.Now.ToString("yyyyMMdd_HH.mm.ss");
 
         /// <summary>
@@ -137,6 +142,15 @@ namespace otTestRunner
         static async Task<bool> RunTest(string file, int index)
         {
             TestResults Results = await ExecuteAsync("python.exe", file, 30 * 60 * 1000, index);
+
+            if (VerboseOutput)
+            {
+                lock (ResultsFolder)
+                {
+                    foreach (var line in Results.Output)
+                        Console.WriteLine(line);
+                }
+            }
 
             // Write the output to a file
             var filePrefix = Results.Pass ? "P_" : "F_";
@@ -157,7 +171,7 @@ namespace otTestRunner
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage: otTestRunner.exe [path] [search pattern] (number parallel = 1)");
+                Console.WriteLine("Usage: otTestRunner.exe [path] [search pattern] (parallel:n) (verbose)");
                 return;
             }
 
@@ -169,6 +183,13 @@ namespace otTestRunner
             }
 
             var NumberOfTestsToRunInParallel = 1;
+            for (var i = 2; i < args.Length; i++)
+            {
+                if (args[i].StartsWith("parallel:"))
+                    NumberOfTestsToRunInParallel = int.Parse(args[i].Substring(9));
+                else if (args[i].StartsWith("verbose"))
+                    VerboseOutput = true;
+            }
             if (args.Length > 2) NumberOfTestsToRunInParallel = int.Parse(args[2]);
 
             var CurNumTestsRunning = 0;
@@ -197,7 +218,7 @@ namespace otTestRunner
                     Task.Delay(1000).Wait();
                 }
 
-                lock (ReadyToRunEvent)
+                lock (ResultsFolder)
                 {
                     if (++CurNumTestsRunning == NumberOfTestsToRunInParallel)
                         ReadyToRunEvent.Reset();
@@ -211,7 +232,7 @@ namespace otTestRunner
                     async () =>
                     {
                         var result = await RunTest(fileName, index);
-                        lock (ReadyToRunEvent)
+                        lock (ResultsFolder)
                         {
                             var PrevColor = Console.ForegroundColor;
                             if (result)

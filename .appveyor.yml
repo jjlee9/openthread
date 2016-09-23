@@ -64,7 +64,7 @@ test_script:
 
     cd ..\..\..\..\..\..\test_release
 
-    otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf.py
+    otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf.py verbose
 artifacts:
 - path: release
   name: release
