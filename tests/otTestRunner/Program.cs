@@ -90,7 +90,7 @@ namespace otTestRunner
                     process.BeginErrorReadLine();
                     process.BeginOutputReadLine();
 
-                    Console.WriteLine("Starting {0} {1}", name, args);
+                    //Console.WriteLine("Starting {0} {1}", name, args);
 
                     // Wait for process to complete
                     await Task.Run(
@@ -117,7 +117,7 @@ namespace otTestRunner
                     // Make sure the process is killed
                     try { process.Kill(); } catch (Exception) { }
 
-                    Console.WriteLine("Completed {0} {1}", name, args);
+                    //Console.WriteLine("Completed {0} {1}", name, args);
                 }
             }
             catch (Exception e)

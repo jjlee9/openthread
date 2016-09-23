@@ -25,7 +25,7 @@ after_build:
 
     mkdir release
 
-    copy build\bin\%Platform2%\%Configuration%\sys\otlwf* release
+    copy build\bin\%Platform2%\%Configuration%\sys\otlwf\* release
 
     copy build\bin\%Platform2%\%Configuration%\sys\otlwf.cer release
 
@@ -61,6 +61,10 @@ test_script:
     Sleep 5
 
     sc query otlwf
+
+    cd ..\..\..\..\..\..\test_release
+
+    otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf.py
 artifacts:
 - path: release
   name: release
