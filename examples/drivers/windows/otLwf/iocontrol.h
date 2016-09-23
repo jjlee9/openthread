@@ -39,7 +39,7 @@ OTLWF_IOCTL_FUNC(
     _In_reads_bytes_(InBufferLength)
             PVOID           InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     );
@@ -80,7 +80,7 @@ OTLWF_OT_IOCTL_FUNC(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     );

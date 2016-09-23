@@ -36,7 +36,7 @@ otLwfIoCtlEnumerateInterfaces(
     _In_reads_bytes_(InBufferLength)
             PVOID           InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -104,7 +104,7 @@ otLwfIoCtlQueryInterface(
     _In_reads_bytes_(InBufferLength)
             PVOID           InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -571,7 +571,7 @@ otLwfIoCtl_otInterface(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -617,7 +617,7 @@ otLwfIoCtl_otThread(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -650,7 +650,7 @@ otLwfIoCtl_otActiveScan(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -692,7 +692,7 @@ otLwfIoCtl_otDiscover(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -735,7 +735,7 @@ otLwfIoCtl_otChannel(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -769,7 +769,7 @@ otLwfIoCtl_otChildTimeout(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -804,7 +804,7 @@ otLwfIoCtl_otExtendedAddress(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -837,7 +837,7 @@ otLwfIoCtl_otExtendedPanId(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -871,7 +871,7 @@ otLwfIoCtl_otFactoryAssignedIeeeEui64(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -902,7 +902,7 @@ otLwfIoCtl_otHashMacAddress(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -933,7 +933,7 @@ otLwfIoCtl_otLeaderRloc(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -963,7 +963,7 @@ otLwfIoCtl_otLinkMode(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -997,7 +997,7 @@ otLwfIoCtl_otMasterKey(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1034,7 +1034,7 @@ otLwfIoCtl_otMeshLocalEid(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1064,7 +1064,7 @@ otLwfIoCtl_otMeshLocalPrefix(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1101,7 +1101,7 @@ otLwfIoCtl_otNetworkName(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1134,7 +1134,7 @@ otLwfIoCtl_otPanId(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1167,7 +1167,7 @@ otLwfIoCtl_otRouterRollEnabled(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1201,7 +1201,7 @@ otLwfIoCtl_otShortAddress(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1234,7 +1234,7 @@ otLwfIoCtl_otActiveDataset(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1266,7 +1266,7 @@ otLwfIoCtl_otPendingDataset(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1298,7 +1298,7 @@ otLwfIoCtl_otLocalLeaderWeight(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1332,7 +1332,7 @@ otLwfIoCtl_otAddBorderRouter(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1357,7 +1357,7 @@ otLwfIoCtl_otRemoveBorderRouter(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1382,7 +1382,7 @@ otLwfIoCtl_otAddExternalRoute(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1407,7 +1407,7 @@ otLwfIoCtl_otRemoveExternalRoute(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1432,7 +1432,7 @@ otLwfIoCtl_otSendServerData(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1456,7 +1456,7 @@ otLwfIoCtl_otContextIdReuseDelay(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1490,7 +1490,7 @@ otLwfIoCtl_otKeySequenceCounter(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1524,7 +1524,7 @@ otLwfIoCtl_otNetworkIdTimeout(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1558,7 +1558,7 @@ otLwfIoCtl_otRouterUpgradeThreshold(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1592,7 +1592,7 @@ otLwfIoCtl_otRouterDowngradeThreshold(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1626,7 +1626,7 @@ otLwfIoCtl_otReleaseRouterId(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1651,7 +1651,7 @@ otLwfIoCtl_otMacWhitelistEnabled(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1693,7 +1693,7 @@ otLwfIoCtl_otAddMacWhitelist(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1723,7 +1723,7 @@ otLwfIoCtl_otRemoveMacWhitelist(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1749,7 +1749,7 @@ otLwfIoCtl_otMacWhitelistEntry(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1782,7 +1782,7 @@ otLwfIoCtl_otClearMacWhitelist(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1806,7 +1806,7 @@ otLwfIoCtl_otDeviceRole(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1870,7 +1870,7 @@ otLwfIoCtl_otChildInfoById(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1903,7 +1903,7 @@ otLwfIoCtl_otChildInfoByIndex(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1936,7 +1936,7 @@ otLwfIoCtl_otEidCacheEntry(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1969,7 +1969,7 @@ otLwfIoCtl_otLeaderData(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -1999,7 +1999,7 @@ otLwfIoCtl_otLeaderRouterId(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2030,7 +2030,7 @@ otLwfIoCtl_otLeaderWeight(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2061,7 +2061,7 @@ otLwfIoCtl_otNetworkDataVersion(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2092,7 +2092,7 @@ otLwfIoCtl_otPartitionId(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2123,7 +2123,7 @@ otLwfIoCtl_otRloc16(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2154,7 +2154,7 @@ otLwfIoCtl_otRouterIdSequence(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2185,7 +2185,7 @@ otLwfIoCtl_otRouterInfo(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2218,7 +2218,7 @@ otLwfIoCtl_otStableNetworkDataVersion(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2249,7 +2249,7 @@ otLwfIoCtl_otMacBlacklistEnabled(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2291,7 +2291,7 @@ otLwfIoCtl_otAddMacBlacklist(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2316,7 +2316,7 @@ otLwfIoCtl_otRemoveMacBlacklist(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2342,7 +2342,7 @@ otLwfIoCtl_otMacBlacklistEntry(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2375,7 +2375,7 @@ otLwfIoCtl_otClearMacBlacklist(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2399,7 +2399,7 @@ otLwfIoCtl_otMaxTransmitPower(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2433,7 +2433,7 @@ otLwfIoCtl_otNextOnMeshPrefix(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2474,7 +2474,7 @@ otLwfIoCtl_otPollPeriod(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2508,7 +2508,7 @@ otLwfIoCtl_otLocalLeaderPartitionId(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2542,7 +2542,7 @@ otLwfIoCtl_otAssignLinkQuality(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2584,7 +2584,7 @@ otLwfIoCtl_otPlatformReset(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2608,7 +2608,7 @@ otLwfIoCtl_otParentInfo(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2639,7 +2639,7 @@ otLwfIoCtl_otSingleton(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2670,7 +2670,7 @@ otLwfIoCtl_otMacCounters(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2701,7 +2701,7 @@ otLwfIoCtl_otMaxChildren(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2735,7 +2735,7 @@ otLwfIoCtl_otCommissionerStart(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2762,7 +2762,7 @@ otLwfIoCtl_otCommissionerStop(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2786,7 +2786,7 @@ otLwfIoCtl_otJoinerStart(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2813,7 +2813,7 @@ otLwfIoCtl_otJoinerStop(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2837,7 +2837,7 @@ otLwfIoCtl_otCommissionerPanIdQuery(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
@@ -2874,7 +2874,7 @@ otLwfIoCtl_otCommissionerEnergyScan(
     _In_reads_bytes_(InBufferLength)
             PUCHAR          InBuffer,
     _In_    ULONG           InBufferLength,
-    _Out_writes_bytes_opt_(*OutBufferLength)
+    _Out_writes_bytes_(*OutBufferLength)
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )

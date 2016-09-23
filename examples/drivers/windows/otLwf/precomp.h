@@ -32,8 +32,11 @@
  *  Precompiled header for otLwf project.
  */
 
-#pragma warning(disable:4201)  //nonstandard extension used : nameless struct/union
-#pragma warning(disable:4204) //nonstandard extension used : non-constant aggregate initializer
+#pragma warning(disable:4201)  // nonstandard extension used : nameless struct/union
+#pragma warning(disable:4204)  // nonstandard extension used : non-constant aggregate initializer
+#pragma warning(disable:28175) // The 'MajorFunction' member of _DRIVER_OBJECT should not be accessed by a driver:
+                               // Access to this member may be permitted for certain classes of drivers.
+#pragma warning(disable:28301) // No annotations for first declaration of *
 
 #include <ntifs.h>
 #include <ndis.h>

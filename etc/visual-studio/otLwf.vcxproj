@@ -78,24 +78,32 @@
     <OutputName>otlwf</OutputName>
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\sys\</OutDir>
     <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <CodeAnalysisRuleSet>..\..\..\..\..\..\..\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutputName>otlwf</OutputName>
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\sys\</OutDir>
     <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <CodeAnalysisRuleSet>..\..\..\..\..\..\..\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutputName>otlwf</OutputName>
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\sys\</OutDir>
     <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <CodeAnalysisRuleSet>..\..\..\..\..\..\..\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <OutputName>otlwf</OutputName>
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\sys\</OutDir>
     <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <CodeAnalysisRuleSet>..\..\..\..\..\..\..\Program Files (x86)\Windows Kits\10\CodeAnalysis\DriverMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -111,6 +119,7 @@
       <WppAdditionalOptions>-km %(WppAdditionalOptions)</WppAdditionalOptions>
       <WppModuleName>otLwf</WppModuleName>
       <WppSearchString>WPP_INIT_TRACING</WppSearchString>
+      <EnablePREfast>true</EnablePREfast>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..;.;</AdditionalIncludeDirectories>
@@ -133,6 +142,7 @@
       <WppAdditionalOptions>-km %(WppAdditionalOptions)</WppAdditionalOptions>
       <WppModuleName>otLwf</WppModuleName>
       <WppSearchString>WPP_INIT_TRACING</WppSearchString>
+      <EnablePREfast>true</EnablePREfast>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..;.;</AdditionalIncludeDirectories>
@@ -155,6 +165,7 @@
       <WppAdditionalOptions>-km %(WppAdditionalOptions)</WppAdditionalOptions>
       <WppModuleName>otLwf</WppModuleName>
       <WppSearchString>WPP_INIT_TRACING</WppSearchString>
+      <EnablePREfast>true</EnablePREfast>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..;.;</AdditionalIncludeDirectories>
@@ -183,6 +194,7 @@
       <WppAdditionalOptions>-km %(WppAdditionalOptions)</WppAdditionalOptions>
       <WppModuleName>otLwf</WppModuleName>
       <WppSearchString>WPP_INIT_TRACING</WppSearchString>
+      <EnablePREfast>true</EnablePREfast>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..;.;</AdditionalIncludeDirectories>

@@ -290,7 +290,7 @@ otLwfEventProcessingIndicateNewNetBufferLists(
     _In_ PNET_BUFFER_LIST       NetBufferLists
     );
 
-_IRQL_requires_max_(PASSIVE_LEVEL)
+_IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 otLwfEventProcessingIndicateNetBufferListsCancelled(
     _In_ PMS_FILTER             pFilter,

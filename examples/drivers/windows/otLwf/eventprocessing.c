@@ -354,7 +354,7 @@ otLwfEventProcessingIndicateNewNetBufferLists(
     KeSetEvent(&pFilter->EventWorkerThreadProcessNBLs, 0, FALSE);
 }
 
-_IRQL_requires_max_(PASSIVE_LEVEL)
+_IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 otLwfEventProcessingIndicateNetBufferListsCancelled(
     _In_ PMS_FILTER             pFilter,
@@ -576,7 +576,8 @@ NTSTATUS
 CopyDataBuffer(
     _In_ PNET_BUFFER            NetBuffer,
     _In_ ULONG                  Size,
-    _In_ PVOID                  Destination
+    _Out_writes_bytes_all_(Size) 
+         PVOID                  Destination
     )
 {
     NTSTATUS status = STATUS_SUCCESS;
@@ -611,6 +612,8 @@ otLwfEventProcessingTimer(
     _In_opt_ PVOID Context
     )
 {
+    if (Context == NULL) return;
+
     PMS_FILTER pFilter = (PMS_FILTER)Context;
     UNREFERENCED_PARAMETER(Timer);
     

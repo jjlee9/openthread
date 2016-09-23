@@ -110,10 +110,13 @@ otLwfRegisterDevice(
             NdisAllocateSpinLock(&FilterDeviceExtension->Lock);
             InitializeListHead(&FilterDeviceExtension->ClientList);
 
+            #pragma push
+            #pragma warning(disable:28168) // The function 'otLwfDispatch' does not have a _Dispatch_type_ annotation matching dispatch table position *
             FilterDriverObject->MajorFunction[IRP_MJ_CREATE] = otLwfDispatch;
             FilterDriverObject->MajorFunction[IRP_MJ_CLEANUP] = otLwfDispatch;
             FilterDriverObject->MajorFunction[IRP_MJ_CLOSE] = otLwfDispatch;
             FilterDriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = otLwfDeviceIoControl;
+            #pragma pop
 
             HANDLE fileHandle;
             Status = ObOpenObjectByPointer(DeviceObject,
