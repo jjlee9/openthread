@@ -375,6 +375,9 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
         // Make sure our helper function returns the right pointer for the filter, given the openthread instance
         NT_ASSERT(otCtxToFilter(pFilter->otCtx) == pFilter);
 
+        // Disable Icmp (ping) handling
+        otSetIcmpEchoEnabled(pFilter->otCtx, FALSE);
+
         // Register callbacks with OpenThread
         otSetStateChangedCallback(pFilter->otCtx, otLwfStateChangedCallback, pFilter);
         otSetReceiveIp6DatagramCallback(pFilter->otCtx, otLwfReceiveIp6DatagramCallback, pFilter);

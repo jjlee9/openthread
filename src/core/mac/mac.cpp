@@ -1065,8 +1065,11 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
     }
 
     // Duplicate Address Protection
-    VerifyOrExit(memcmp(&srcaddr.mExtAddress, &mExtAddress, sizeof(srcaddr.mExtAddress)) != 0,
-                 error = kThreadError_InvalidSourceAddress; otLogDebgMac("duplicate address received\n"));
+    if (memcmp(&srcaddr.mExtAddress, &mExtAddress, sizeof(srcaddr.mExtAddress)) == 0)
+    {
+        otLogDebgMac("duplicate address received\n");
+        ExitNow(error = kThreadError_InvalidSourceAddress);
+    }
 
     // Source Whitelist Processing
     if (srcaddr.mLength != 0 && mWhitelist.IsEnabled())

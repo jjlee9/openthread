@@ -491,16 +491,18 @@ typedef enum _OTLWF_NOTIF_TYPE
     // GUID - InterfaceGuid
     // uint8_t - aMaxChildren
 
-#define OPENTHREAD_PSK_MAX_LENGTH 32
-typedef struct otPSKd
+#define OPENTHREAD_PSK_MAX_LENGTH       32
+#define OPENTHREAD_PROV_URL_MAX_LENGTH  64
+typedef struct otCommissionConfig
 {
-    uint8_t buffer[OPENTHREAD_PSK_MAX_LENGTH + 1];
-} otPSKd;
+    uint8_t PSKd[OPENTHREAD_PSK_MAX_LENGTH + 1];
+    uint8_t ProvisioningUrl[OPENTHREAD_PROV_URL_MAX_LENGTH + 1];
+} otCommissionConfig;
     
 #define IOCTL_OTLWF_OT_COMMISIONER_START \
     OTLWF_CTL_CODE(167, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
-    // otPSKd - aPSKd
+    // otCommissionConfig - aConfig
     
 #define IOCTL_OTLWF_OT_COMMISIONER_STOP \
     OTLWF_CTL_CODE(168, METHOD_BUFFERED, FILE_WRITE_DATA)
@@ -509,7 +511,7 @@ typedef struct otPSKd
 #define IOCTL_OTLWF_OT_JOINER_START \
     OTLWF_CTL_CODE(169, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
-    // otPSKd - aPSKd
+    // otCommissionConfig - aConfig
     
 #define IOCTL_OTLWF_OT_JOINER_STOP \
     OTLWF_CTL_CODE(170, METHOD_BUFFERED, FILE_WRITE_DATA)

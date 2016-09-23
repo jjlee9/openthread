@@ -2811,21 +2811,27 @@ OTAPI
 ThreadError 
 otCommissionerStart(
      _In_ otInstance *aInstance, 
-    const char *aPSKd
+    const char *aPSKd, 
+    const char *aProvisioningUrl
     )
 {
-    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+    if (aInstance == nullptr || aPSKd == nullptr) return kThreadError_InvalidArgs;
 
-    otPSKd pskd = {0};
+    otCommissionConfig config = {0};
+
     size_t aPSKdLength = strlen(aPSKd);
-    if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH)
+    size_t aProvisioningUrlLength = aProvisioningUrl == nullptr ? 0 : strlen(aProvisioningUrl);
+
+    if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH ||
+        aProvisioningUrlLength > OPENTHREAD_PROV_URL_MAX_LENGTH)
     {
         return kThreadError_InvalidArgs;
     }
 
-    memcpy_s(pskd.buffer, sizeof(pskd.buffer), aPSKd, aPSKdLength);
+    memcpy_s(config.PSKd, sizeof(config.PSKd), aPSKd, aPSKdLength);
+    memcpy_s(config.ProvisioningUrl, sizeof(config.ProvisioningUrl), aProvisioningUrl, aProvisioningUrlLength);
 
-    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_COMMISIONER_START, (const otPSKd*)&pskd));
+    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_COMMISIONER_START, (const otCommissionConfig*)&config));
 }
 
 OTAPI 
@@ -2900,21 +2906,27 @@ OTAPI
 ThreadError 
 otJoinerStart(
      _In_ otInstance *aInstance,
-    const char *aPSKd
+    const char *aPSKd, 
+    const char *aProvisioningUrl
     )
 {
-    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+    if (aInstance == nullptr || aPSKd == nullptr) return kThreadError_InvalidArgs;
 
-    otPSKd pskd = {0};
+    otCommissionConfig config = {0};
+
     size_t aPSKdLength = strlen(aPSKd);
-    if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH)
+    size_t aProvisioningUrlLength = aProvisioningUrl == nullptr ? 0 : strlen(aProvisioningUrl);
+
+    if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH ||
+        aProvisioningUrlLength > OPENTHREAD_PROV_URL_MAX_LENGTH)
     {
         return kThreadError_InvalidArgs;
     }
 
-    memcpy_s(pskd.buffer, sizeof(pskd.buffer), aPSKd, aPSKdLength);
+    memcpy_s(config.PSKd, sizeof(config.PSKd), aPSKd, aPSKdLength);
+    memcpy_s(config.ProvisioningUrl, sizeof(config.ProvisioningUrl), aProvisioningUrl, aProvisioningUrlLength);
 
-    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_JOINER_START, (const otPSKd*)&pskd));
+    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_JOINER_START, (const otCommissionConfig*)&config));
 }
 
 OTAPI 

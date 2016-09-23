@@ -2745,10 +2745,11 @@ otLwfIoCtl_otCommissionerStart(
     UNREFERENCED_PARAMETER(OutBuffer);
     *OutBufferLength = 0;
     
-    if (InBufferLength >= sizeof(otPSKd))
+    if (InBufferLength >= sizeof(otCommissionConfig))
     {
-        otPSKd *aPSKd = (otPSKd*)InBuffer;
-        status = ThreadErrorToNtstatus(otCommissionerStart(pFilter->otCtx, (const char*)aPSKd->buffer));
+        otCommissionConfig *aConfig = (otCommissionConfig*)InBuffer;
+        status = ThreadErrorToNtstatus(otCommissionerStart(
+            pFilter->otCtx, (const char*)aConfig->PSKd, (const char*)aConfig->ProvisioningUrl));
     }
 
     return status;
@@ -2795,10 +2796,11 @@ otLwfIoCtl_otJoinerStart(
     UNREFERENCED_PARAMETER(OutBuffer);
     *OutBufferLength = 0;
     
-    if (InBufferLength >= sizeof(otPSKd))
+    if (InBufferLength >= sizeof(otCommissionConfig))
     {
-        otPSKd *aPSKd = (otPSKd*)InBuffer;
-        status = ThreadErrorToNtstatus(otJoinerStart(pFilter->otCtx, (const char*)aPSKd->buffer));
+        otCommissionConfig *aConfig = (otCommissionConfig*)InBuffer;
+        status = ThreadErrorToNtstatus(otJoinerStart(
+            pFilter->otCtx, (const char*)aConfig->PSKd, (const char*)aConfig->ProvisioningUrl));
     }
 
     return status;
