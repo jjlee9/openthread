@@ -190,7 +190,6 @@ namespace otTestRunner
                 else if (args[i].StartsWith("verbose"))
                     VerboseOutput = true;
             }
-            if (args.Length > 2) NumberOfTestsToRunInParallel = int.Parse(args[2]);
 
             var CurNumTestsRunning = 0;
             var ReadyToRunEvent = new ManualResetEvent(true);
