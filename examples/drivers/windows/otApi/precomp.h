@@ -5,6 +5,8 @@
 
 #pragma once
 
+#pragma warning(disable:28301)  // No annotations for first declaration of *
+
 #include <windows.h>
 #include <winnt.h>
 #include <winsock2.h>

@@ -697,7 +697,7 @@ SendIOCTL(
     _In_ DWORD dwIoControlCode,
     _In_reads_bytes_opt_(nInBufferSize) LPVOID lpInBuffer,
     _In_ DWORD nInBufferSize,
-    _Out_writes_bytes_to_opt_(nOutBufferSize, *lpBytesReturned) LPVOID lpOutBuffer,
+    _Out_writes_bytes_opt_(nOutBufferSize) LPVOID lpOutBuffer,
     _In_ DWORD nOutBufferSize
     )
 {
@@ -768,6 +768,39 @@ error:
     return dwError;
 }
 
+__pragma(pack(push,1))
+template <class T1, class T2>
+struct PackedBuffer2
+{
+    T1 data1; T2 data2;
+    PackedBuffer2(const T1 &d1, const T2 &d2) : data1(d1), data2(d2) { }
+};
+template <class T1, class T2, class T3>
+struct PackedBuffer3
+{
+    T1 data1; T2 data2; T3 data3;
+    PackedBuffer3(const T1 &d1, const T2 &d2, const T3 &d3) : data1(d1), data2(d2), data3(d3) { }
+};
+template <class T1, class T2, class T3, class T4>
+struct PackedBuffer4
+{
+    T1 data1; T2 data2; T3 data3; T4 data4;
+    PackedBuffer4(const T1 &d1, const T2 &d2, const T3 &d3, const T4 &d4) : data1(d1), data2(d2), data3(d3), data4(d4) { }
+};
+template <class T1, class T2, class T3, class T4, class T5>
+struct PackedBuffer5
+{
+    T1 data1; T2 data2; T3 data3; T4 data4; T5 data5;
+    PackedBuffer5(const T1 &d1, const T2 &d2, const T3 &d3, const T4 &d4, const T5 &d5) : data1(d1), data2(d2), data3(d3), data4(d4), data5(d5) { }
+};
+template <class T1, class T2, class T3, class T4, class T5, class T6>
+struct PackedBuffer6
+{
+    T1 data1; T2 data2; T3 data3; T4 data4; T5 data5; T6 data6;
+    PackedBuffer6(const T1 &d1, const T2 &d2, const T3 &d3, const T4 &d4, const T5 &d5, const T6 &d6) : data1(d1), data2(d2), data3(d3), data4(d4), data5(d5), data6(d6) { }
+};
+ __pragma(pack(pop))
+
 template <class in, class out>
 DWORD
 QueryIOCTL(
@@ -777,10 +810,8 @@ QueryIOCTL(
     _Out_ out* output
     )
 {
-    BYTE Buffer[sizeof(GUID) + sizeof(in)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), input, sizeof(in));
-    return SendIOCTL(aInstance->ApiHandle, dwIoControlCode, Buffer, sizeof(Buffer), output, sizeof(out));
+    PackedBuffer2<GUID,in> Buffer(aInstance->InterfaceGuid, *input);
+    return SendIOCTL(aInstance->ApiHandle, dwIoControlCode, &Buffer, sizeof(Buffer), output, sizeof(out));
 }
 
 template <class out>
@@ -802,10 +833,8 @@ SetIOCTL(
     _In_ const in* input
     )
 {
-    BYTE Buffer[sizeof(GUID) + sizeof(in)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), input, sizeof(in));
-    return SendIOCTL(aInstance->ApiHandle, dwIoControlCode, Buffer, sizeof(Buffer), nullptr, 0);
+    PackedBuffer2<GUID,in> Buffer(aInstance->InterfaceGuid, *input);
+    return SendIOCTL(aInstance->ApiHandle, dwIoControlCode, &Buffer, sizeof(Buffer), nullptr, 0);
 }
 
 template <class in>
@@ -816,10 +845,8 @@ SetIOCTL(
     _In_ const in input
     )
 {
-    BYTE Buffer[sizeof(GUID) + sizeof(in)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), &input, sizeof(in));
-    return SendIOCTL(aInstance->ApiHandle, dwIoControlCode, Buffer, sizeof(Buffer), nullptr, 0);
+    PackedBuffer2<GUID,in> Buffer(aInstance->InterfaceGuid, input);
+    return SendIOCTL(aInstance->ApiHandle, dwIoControlCode, &Buffer, sizeof(Buffer), nullptr, 0);
 }
 
 DWORD
@@ -1148,13 +1175,9 @@ otActiveScan(
         aInstance->ApiHandle->ActiveScanCallbacks,
         aInstance->InterfaceGuid, aCallback, aCallbackContext
         );
-
-    BYTE Buffer[sizeof(GUID) + sizeof(uint32_t) + sizeof(uint16_t)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), &aScanChannels, sizeof(aScanChannels));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t), &aScanDuration, sizeof(aScanDuration));
     
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ACTIVE_SCAN, Buffer, sizeof(Buffer), nullptr, 0));
+    PackedBuffer3<GUID,uint32_t,uint16_t> Buffer(aInstance->InterfaceGuid, aScanChannels, aScanDuration);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ACTIVE_SCAN, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 
@@ -1186,13 +1209,8 @@ otDiscover(
         aInstance->InterfaceGuid, aCallback, aCallbackContext
         );
 
-    BYTE Buffer[sizeof(GUID) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), &aScanChannels, sizeof(aScanChannels));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t), &aScanDuration, sizeof(aScanDuration));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint16_t), &aPanid, sizeof(aPanid));
-    
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_DISCOVER, Buffer, sizeof(Buffer), nullptr, 0));
+    PackedBuffer4<GUID,uint32_t,uint16_t,uint16_t> Buffer(aInstance->InterfaceGuid, aScanChannels, aScanDuration, aPanid);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_DISCOVER, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 
@@ -1392,7 +1410,9 @@ otGetMasterKey(
     _Out_ uint8_t *aKeyLength
     )
 {
-    if (aInstance == nullptr) return nullptr;
+    if (aInstance == nullptr || aKeyLength == nullptr) return nullptr;
+
+    *aKeyLength = 0;
 
     struct otMasterKeyAndLength
     {
@@ -1422,11 +1442,11 @@ otSetMasterKey(
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
-
+    
     BYTE Buffer[sizeof(GUID) + sizeof(otMasterKey) + sizeof(uint8_t)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), aKey, aKeyLength);
-    memcpy(Buffer + sizeof(GUID) + sizeof(otMasterKey), &aKeyLength, sizeof(aKeyLength));
+    memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), aKey, aKeyLength);
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otMasterKey), sizeof(Buffer) - sizeof(GUID) - sizeof(otMasterKey), &aKeyLength, sizeof(aKeyLength));
     
     return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_MASTER_KEY, Buffer, sizeof(Buffer), nullptr, 0));
 }
@@ -1569,28 +1589,28 @@ otGetNextOnMeshPrefix(
     _Out_ otBorderRouterConfig *aConfig
     )
 {
-    if (aInstance == nullptr) return kThreadError_InvalidArgs;
-
-    BYTE InBuffer[sizeof(GUID) + sizeof(BOOLEAN) + sizeof(uint8_t)];
-    BYTE OutBuffer[sizeof(uint8_t) + sizeof(otBorderRouterConfig)];
-
+    if (aInstance == nullptr || aConfig == nullptr) return kThreadError_InvalidArgs;
+    
     BOOLEAN aLocal = _aLocal ? TRUE : FALSE;
-    memcpy(InBuffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(InBuffer + sizeof(GUID), &aLocal, sizeof(aLocal));
-    memcpy(InBuffer + sizeof(GUID) + sizeof(BOOLEAN), aIterator, sizeof(uint8_t));
+    PackedBuffer3<GUID,BOOLEAN,otNetworkDataIterator> InBuffer(aInstance->InterfaceGuid, aLocal, *aIterator);
+    BYTE OutBuffer[sizeof(uint8_t) + sizeof(otBorderRouterConfig)];
 
     ThreadError aError = 
         DwordToThreadError(
             SendIOCTL(
                 aInstance->ApiHandle, 
                 IOCTL_OTLWF_OT_NEXT_ON_MESH_PREFIX, 
-                InBuffer, sizeof(InBuffer), 
+                &InBuffer, sizeof(InBuffer), 
                 OutBuffer, sizeof(OutBuffer)));
 
     if (aError == kThreadError_None)
     {
         memcpy(aIterator, OutBuffer, sizeof(uint8_t));
         memcpy(aConfig, OutBuffer + sizeof(uint8_t), sizeof(otBorderRouterConfig));
+    }
+    else
+    {
+        ZeroMemory(aConfig, sizeof(otBorderRouterConfig));
     }
 
     return aError;
@@ -2265,13 +2285,9 @@ otAddMacWhitelistRssi(
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
-
-    BYTE Buffer[sizeof(GUID) + sizeof(otExtAddress) + sizeof(int8_t)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), aExtAddr, sizeof(otExtAddress));
-    memcpy(Buffer + sizeof(GUID) + sizeof(otExtAddress), &aRssi, sizeof(aRssi));
     
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ADD_MAC_WHITELIST, Buffer, sizeof(Buffer), nullptr, 0));
+    PackedBuffer3<GUID,otExtAddress,int8_t> Buffer(aInstance->InterfaceGuid, *(otExtAddress*)aExtAddr, aRssi);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ADD_MAC_WHITELIST, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI
@@ -2356,12 +2372,8 @@ otBecomeChild(
     uint8_t Role = kDeviceRoleDetached;
     uint8_t Filter = (uint8_t)aFilter;
 
-    BYTE Buffer[sizeof(GUID) + sizeof(Role) + sizeof(Filter)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), &Role, sizeof(Role));
-    memcpy(Buffer + sizeof(GUID) + sizeof(Role), &Filter, sizeof(Filter));
-    
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_DEVICE_ROLE, Buffer, sizeof(Buffer), nullptr, 0));
+    PackedBuffer3<GUID,uint8_t,uint8_t> Buffer(aInstance->InterfaceGuid, Role, Filter);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_DEVICE_ROLE, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI
@@ -2475,11 +2487,9 @@ otSetAssignLinkQuality(
     uint8_t aLinkQuality
     )
 {
-    BYTE Buffer[sizeof(GUID) + sizeof(otExtAddress) + sizeof(uint8_t)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), aExtAddr, sizeof(otExtAddress));
-    memcpy(Buffer + sizeof(GUID) + sizeof(otExtAddress), &aLinkQuality, sizeof(aLinkQuality));
-    (void)SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ASSIGN_LINK_QUALITY, Buffer, sizeof(Buffer), nullptr, 0);
+    if (aInstance == nullptr) return;
+    PackedBuffer3<GUID,otExtAddress,uint8_t> Buffer(aInstance->InterfaceGuid, *(otExtAddress*)aExtAddr, aLinkQuality);
+    (void)SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ASSIGN_LINK_QUALITY, &Buffer, sizeof(Buffer), nullptr, 0);
 }
 
 OTAPI 
@@ -2864,15 +2874,8 @@ otCommissionerEnergyScan(
         aInstance->InterfaceGuid, aCallback, aContext
         );
 
-    BYTE Buffer[sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(otIp6Address)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), &aChannelMask, sizeof(aChannelMask));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t), &aCount, sizeof(aCount));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t), &aPeriod, sizeof(aPeriod));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t), &aScanDuration, sizeof(aScanDuration));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint16_t), aAddress, sizeof(otIp6Address));
-    
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN, Buffer, sizeof(Buffer), nullptr, 0));
+    PackedBuffer6<GUID,uint32_t,uint8_t,uint16_t,uint16_t,otIp6Address> Buffer(aInstance->InterfaceGuid, aChannelMask, aCount, aPeriod, aScanDuration, *aAddress);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI
@@ -2893,13 +2896,8 @@ otCommissionerPanIdQuery(
         aInstance->InterfaceGuid, aCallback, aContext
         );
 
-    BYTE Buffer[sizeof(GUID) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(otIp6Address)];
-    memcpy(Buffer, &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy(Buffer + sizeof(GUID), &aPanId, sizeof(aPanId));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint16_t), &aChannelMask, sizeof(aChannelMask));
-    memcpy(Buffer + sizeof(GUID) + sizeof(uint16_t) + sizeof(uint32_t), aAddress, sizeof(otIp6Address));
-    
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY, Buffer, sizeof(Buffer), nullptr, 0));
+    PackedBuffer4<GUID,uint16_t,uint32_t,otIp6Address> Buffer(aInstance->InterfaceGuid, aPanId, aChannelMask, *aAddress);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 
