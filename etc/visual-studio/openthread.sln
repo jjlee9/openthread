@@ -34,9 +34,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-cli", "libope
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ot-cli", "ot-cli.vcxproj", "{91D3ADEA-F1FE-4433-95B6-F8F6A7CF7BAF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ncp_spi", "libopenthread-ncp-spi.vcxproj", "{B92F449E-0FD9-44FC-ACFA-6521A3240CA2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-ncp-spi", "libopenthread-ncp-spi.vcxproj", "{B92F449E-0FD9-44FC-ACFA-6521A3240CA2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ncp_uart", "libopenthread-ncp-uart.vcxproj", "{D94867D2-6DAE-47E2-962A-5E8E658134D1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libopenthread-ncp-uart", "libopenthread-ncp-uart.vcxproj", "{D94867D2-6DAE-47E2-962A-5E8E658134D1}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ot-ncp-spi", "ot-ncp-spi.vcxproj", "{B4C744EC-B662-46C6-A076-FB58FA8FDF1B}"
 EndProject
