@@ -66,7 +66,8 @@ NetworkDiagnostic::NetworkDiagnostic(ThreadNetif &aThreadNetif) :
     mCoapMessageId = static_cast<uint8_t>(otPlatRandomGet());
 }
 
-ThreadError NetworkDiagnostic::SendDiagnosticGet(const Ip6::Address &aDestination, const uint8_t aTlvTypes[], uint8_t aCount)
+ThreadError NetworkDiagnostic::SendDiagnosticGet(const Ip6::Address &aDestination, const uint8_t aTlvTypes[],
+                                                 uint8_t aCount)
 {
     ThreadError error;
     Ip6::SockAddr sockaddr;

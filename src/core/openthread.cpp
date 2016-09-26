@@ -977,7 +977,7 @@ ThreadError otSendDiagnosticGet(otInstance *aInstance, const otIp6Address *aDest
                                                                             aCount);
 }
 
-ThreadError otSendDiagnosticReset(otInstance *aInstance, otIp6Address *aDestination, uint8_t aTlvTypes[],
+ThreadError otSendDiagnosticReset(otInstance *aInstance, const otIp6Address *aDestination, const uint8_t aTlvTypes[],
                                   uint8_t aCount)
 {
     return aInstance->mThreadNetif.GetNetworkDiagnostic().SendDiagnosticReset(*static_cast<const Ip6::Address *>
