@@ -71,14 +71,39 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode);
 OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode);
 
 /**
- * Starts the node
+ * Starts the thread interface
  */
-OTNODEAPI int32_t OTCALL otNodeStart(otNode* aNode);
+OTNODEAPI int32_t OTCALL otNodeInterfaceUp(otNode* aNode);
 
 /**
- * Stops the node
+ * Stops the thread interface
  */
-OTNODEAPI int32_t OTCALL otNodeStop(otNode* aNode);
+OTNODEAPI int32_t OTCALL otNodeInterfaceDown(otNode* aNode);
+
+/**
+ * Starts the thread logic
+ */
+OTNODEAPI int32_t OTCALL otNodeThreadStart(otNode* aNode);
+
+/**
+ * Stops the thread logic
+ */
+OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode);
+
+/**
+ * Starts the commissioner logic
+ */
+OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl);
+
+/**
+ * Stops the commissioner logic
+ */
+OTNODEAPI int32_t OTCALL otNodeCommissionerStop(otNode* aNode);
+
+/**
+ * Starts the joiner logic
+ */
+OTNODEAPI int32_t OTCALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl);
 
 /**
  * Clears the node's whitelist

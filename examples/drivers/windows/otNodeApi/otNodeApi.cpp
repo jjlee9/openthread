@@ -702,26 +702,89 @@ OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeStart(otNode* aNode)
+OTNODEAPI int32_t OTCALL otNodeInterfaceUp(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
-    printf("%d: start\r\n", aNode->mId);
+    printf("%d: ifconfig up\r\n", aNode->mId);
 
     auto error = otInterfaceUp(aNode->mInstance);
-    if (error == kThreadError_None)
-        error = otThreadStart(aNode->mInstance);
     
     otLogFuncExit();
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeStop(otNode* aNode)
+OTNODEAPI int32_t OTCALL otNodeInterfaceDown(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
-    printf("%d: stop\r\n", aNode->mId);
+    printf("%d: ifconfig down\r\n", aNode->mId);
+
+    (void)otInterfaceDown(aNode->mInstance);
+    
+    otLogFuncExit();
+    return 0;
+}
+
+OTNODEAPI int32_t OTCALL otNodeThreadStart(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: thread start\r\n", aNode->mId);
+
+    auto error = otThreadStart(aNode->mInstance);
+    
+    otLogFuncExit();
+    return error;
+}
+
+OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: thread stop\r\n", aNode->mId);
 
     (void)otThreadStop(aNode->mInstance);
-    (void)otInterfaceDown(aNode->mInstance);
+    
+    otLogFuncExit();
+    return 0;
+}
+
+OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl)
+{
+    otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aPSKd, aProvisioningUrl);
+    printf("%d: commissioner start %s %s\r\n", aNode->mId, aPSKd, aProvisioningUrl);
+
+    auto error = otCommissionerStart(aNode->mInstance, aPSKd, aProvisioningUrl);
+    
+    otLogFuncExit();
+    return error;
+}
+
+OTNODEAPI int32_t OTCALL otNodeCommissionerStop(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: commissioner stop\r\n", aNode->mId);
+
+    (void)otCommissionerStop(aNode->mInstance);
+    
+    otLogFuncExit();
+    return 0;
+}
+
+OTNODEAPI int32_t OTCALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl)
+{
+    otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aPSKd, aProvisioningUrl);
+    printf("%d: joiner start %s %s\r\n", aNode->mId, aPSKd, aProvisioningUrl);
+
+    auto error = otJoinerStart(aNode->mInstance, aPSKd, aProvisioningUrl);
+    
+    otLogFuncExit();
+    return error;
+}
+
+OTNODEAPI int32_t OTCALL otNodeJoinerStop(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: joiner stop\r\n", aNode->mId);
+
+    (void)otJoinerStop(aNode->mInstance);
     
     otLogFuncExit();
     return 0;

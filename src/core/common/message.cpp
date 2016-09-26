@@ -35,6 +35,7 @@
 #include <common/debug.hpp>
 #include <common/logging.hpp>
 #include <common/message.hpp>
+#include <common/logging.hpp>
 #include <net/ip6.hpp>
 
 #ifdef WINDOWS_LOGGING
@@ -94,7 +95,7 @@ Buffer *MessagePool::NewBuffer(void)
 
     if (mFreeBuffers == NULL)
     {
-        otLogWarnMem("Ran out of buffers!");
+        otLogWarnMem("Ran out of buffers!\n");
     }
 
     VerifyOrExit(mFreeBuffers != NULL, ;);

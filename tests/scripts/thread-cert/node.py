@@ -144,25 +144,63 @@ class Node:
     def debug(self, level):
         self.send_command('debug '+str(level))
 
-    def start(self):
+    def interface_up(self):
         if self.Api:
-            if self.Api.otNodeStart(self.otNode) != 0:
-                raise OSError("otNodeStart failed!")
-        else:     
+            if self.Api.otNodeInterfaceUp(self.otNode) != 0:
+                raise OSError("otNodeInterfaceUp failed!")
+        else:    
             self.send_command('ifconfig up')
             self.pexpect.expect('Done')
+
+    def interface_down(self):
+        if self.Api:
+            if self.Api.otNodeInterfaceDown(self.otNode) != 0:
+                raise OSError("otNodeInterfaceDown failed!")
+        else:    
+            self.send_command('ifconfig down')
+            self.pexpect.expect('Done')
+
+    def thread_start(self):
+        if self.Api:
+            if self.Api.otNodeThreadStart(self.otNode) != 0:
+                raise OSError("otNodeThreadStart failed!")
+        else:    
             self.send_command('thread start')
             self.pexpect.expect('Done')
 
-    def stop(self):
+    def thread_stop(self):
         if self.Api:
-            if self.Api.otNodeStop(self.otNode) != 0:
-                raise OSError("otNodeStop failed!")
-        else:     
+            if self.Api.otNodeThreadStop(self.otNode) != 0:
+                raise OSError("otNodeThreadStop failed!")
+        else:    
             self.send_command('thread stop')
             self.pexpect.expect('Done')
-            self.send_command('ifconfig down')
+
+    def commissioner_start(self, pskd='', provisioning_url=''):
+        if self.Api:
+            if self.Api.otNodeCommissionerStart(self.otNode, pskd, provisioning_url) != 0:
+                raise OSError("otNodeCommissionerStart failed!")
+        else:    
+            cmd = 'commissioner start ' + pskd + ' ' + provisioning_url
+            self.send_command(cmd)
             self.pexpect.expect('Done')
+
+    def joiner_start(self, pskd='', provisioning_url=''):
+        if self.Api:
+            if self.Api.otNodeJoinerStart(self.otNode, pskd, provisioning_url) != 0:
+                raise OSError("otNodeJoinerStart failed!")
+        else:    
+            cmd = 'joiner start ' + pskd + ' ' + provisioning_url
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
+    def start(self):
+        self.interface_up()
+        self.thread_start()
+
+    def stop(self):
+        self.thread_stop()
+        self.interface_down()
 
     def clear_whitelist(self):
         if self.Api:
@@ -241,6 +279,19 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
+    def get_masterkey(self):
+        self.send_command('masterkey')
+        i = self.pexpect.expect('([0-9a-fA-F]{32})')
+        if i == 0:
+            masterkey = self.pexpect.match.groups()[0].decode("utf-8")
+        self.pexpect.expect('Done')
+        return masterkey
+
+    def set_masterkey(self, masterkey):
+        cmd = 'masterkey ' + masterkey
+        self.send_command(cmd)
+        self.pexpect.expect('Done')
+
     def get_key_sequence(self):
         if self.Api:
             return self.Api.otNodeGetKeySequence(self.otNode)
@@ -306,6 +357,11 @@ class Node:
             cmd = 'routerupgradethreshold %d' % threshold
             self.send_command(cmd)
             self.pexpect.expect('Done')
+
+    def set_router_downgrade_threshold(self, threshold):
+        cmd = 'routerdowngradethreshold %d' % threshold
+        self.send_command(cmd)
+        self.pexpect.expect('Done')
 
     def release_router_id(self, router_id):
         if self.Api:
@@ -525,6 +581,11 @@ class Node:
 
             return result
 
+    def set_router_selection_jitter(self, jitter):
+        cmd = 'routerselectionjitter %d' % jitter
+        self.send_command(cmd)
+        self.pexpect.expect('Done')
+
     def log(self, message):
         if self.Api:
             self.Api.otNodeLog(message)
@@ -548,9 +609,25 @@ class Node:
         self.Api.otNodeSetMode.argtypes = [ctypes.c_void_p, 
                                            ctypes.c_char_p]
 
-        self.Api.otNodeStart.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeInterfaceUp.argtypes = [ctypes.c_void_p]
 
-        self.Api.otNodeStop.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeInterfaceDown.argtypes = [ctypes.c_void_p]
+
+        self.Api.otNodeThreadStart.argtypes = [ctypes.c_void_p]
+
+        self.Api.otNodeThreadStop.argtypes = [ctypes.c_void_p]
+
+        self.Api.otNodeCommissionerStart.argtypes = [ctypes.c_void_p, 
+                                                     ctypes.c_char_p,
+                                                     ctypes.c_char_p]
+
+        self.Api.otNodeCommissionerStop.argtypes = [ctypes.c_void_p]
+
+        self.Api.otNodeJoinerStart.argtypes = [ctypes.c_void_p, 
+                                               ctypes.c_char_p,
+                                               ctypes.c_char_p]
+
+        self.Api.otNodeJoinerStop.argtypes = [ctypes.c_void_p]
 
         self.Api.otNodeClearWhitelist.argtypes = [ctypes.c_void_p]
 

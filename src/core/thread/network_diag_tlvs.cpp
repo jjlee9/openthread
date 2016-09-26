@@ -28,40 +28,59 @@
 
 /**
  * @file
- *   This file implements the OpenThread platform abstraction for logging.
- *
+ *   This file implements common methods for manipulating Network Diagnostic TLVs.
  */
 
-#ifdef OPENTHREAD_CONFIG_FILE
-#include OPENTHREAD_CONFIG_FILE
-#else
-#include <openthread-config.h>
-#endif
-
-
-#include <platform/logging.h>
-#if OPENTHREAD_ENABLE_CLI_LOGGING
-#include <ctype.h>
-#include <inttypes.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-
 #include <common/code_utils.hpp>
-#include <cli/cli-uart.h>
-#endif
+#include <common/message.hpp>
+#include <thread/network_diag_tlvs.hpp>
 
-void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, ...)
+namespace Thread {
+namespace NetworkDiagnostic {
+
+ThreadError NetworkDiagnosticTlv::GetTlv(const Message &aMessage, Type aType, uint16_t aMaxLength,
+                                         NetworkDiagnosticTlv &aTlv)
 {
-#if OPENTHREAD_ENABLE_CLI_LOGGING
-    va_list args;
-    va_start(args, aFormat);
-    otCliLog(aLogLevel, aLogRegion, aFormat, args);
-    va_end(args);
-#else
-    (void)aLogLevel;
-    (void)aLogRegion;
-    (void)aFormat;
-#endif // OPENTHREAD_ENABLE_CLI_LOGGING
+    ThreadError error = kThreadError_Parse;
+    uint16_t offset;
+
+    SuccessOrExit(error = GetOffset(aMessage, aType, offset));
+    aMessage.Read(offset, sizeof(NetworkDiagnosticTlv), &aTlv);
+
+    if (aMaxLength > sizeof(aTlv) + aTlv.GetLength())
+    {
+        aMaxLength = sizeof(aTlv) + aTlv.GetLength();
+    }
+
+    aMessage.Read(offset, aMaxLength, &aTlv);
+
+exit:
+    return error;
 }
+
+ThreadError NetworkDiagnosticTlv::GetOffset(const Message &aMessage, Type aType, uint16_t &aOffset)
+{
+    ThreadError error = kThreadError_Parse;
+    uint16_t offset = aMessage.GetOffset();
+    uint16_t end = aMessage.GetLength();
+    NetworkDiagnosticTlv tlv;
+
+    while (offset < end)
+    {
+        aMessage.Read(offset, sizeof(NetworkDiagnosticTlv), &tlv);
+
+        if (tlv.GetType() == aType && (offset + sizeof(tlv) + tlv.GetLength()) <= end)
+        {
+            aOffset = offset;
+            ExitNow(error = kThreadError_None);
+        }
+
+        offset += sizeof(tlv) + tlv.GetLength();
+    }
+
+exit:
+    return error;
+}
+
+}  // namespace NetworkDiagnostic
+}  // namespace Thread
