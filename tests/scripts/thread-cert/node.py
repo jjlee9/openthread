@@ -503,7 +503,7 @@ class Node:
         if self.Api:
             if size == None:
                 size = 100
-            numberOfResponders = self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_ushort(size))
+            numberOfResponders = self.Api.otNodePing(self.otNode, ipaddr.encode('utf-8'), ctypes.c_ushort(size), ctypes.c_uint(num_responses))
             return numberOfResponders >= num_responses
         else:
             cmd = 'ping ' + ipaddr
@@ -659,7 +659,8 @@ class Node:
 
         self.Api.otNodePing.argtypes = [ctypes.c_void_p, 
                                         ctypes.c_char_p,
-                                        ctypes.c_ushort]
+                                        ctypes.c_ushort,
+                                        ctypes.c_uint]
         self.Api.otNodePing.restype = ctypes.c_uint
 
 

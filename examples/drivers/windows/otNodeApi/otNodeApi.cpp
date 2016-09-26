@@ -29,6 +29,8 @@
 #include "precomp.h"
 #include "otNodeApi.tmh"
 
+#define DEBUG_PING 1
+
 #define GUID_FORMAT "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}"
 #define GUID_ARG(guid) guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]
 
@@ -57,7 +59,15 @@ otApiInstance *gApiInstance = nullptr;
 otApiInstance* GetApiInstance()
 {
     if (gApiInstance == nullptr)
-    {
+    { 
+        WSADATA wsaData;
+        int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+        if (result != 0)
+        {
+            printf("WSAStartup failed!\r\n");
+            return nullptr;
+        }
+
         gApiInstance = otApiInit();
         if (gApiInstance == nullptr)
         {
@@ -139,6 +149,8 @@ void Unload()
         otApiFinalize(gApiInstance);
         gApiInstance = nullptr;
 
+        WSACleanup();
+
         printf("Topology destroyed\r\n");
     }
 }
@@ -193,13 +205,29 @@ int Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
     return static_cast<int>(cur - aBin);
 }
 
+typedef struct otPingHandler
+{
+    otNode*         mParentNode;
+    bool            mActive;
+    otIp6Address    mAddress;
+    SOCKET          mSocket;
+    CHAR            mRecvBuffer[1500];
+    WSAOVERLAPPED   mOverlapped;
+    WSABUF          mWSARecvBuffer;
+    DWORD           mNumBytesReceived;
+    SOCKADDR_IN6    mSourceAddr6;
+    int             mSourceAddr6Len;
+
+} otPingHandler;
+
 typedef struct otNode
 {
-    uint32_t    mId;
-    DWORD       mBusIndex;
-    otInstance* mInstance;
-    HANDLE      mEnergyScanEvent;
-    HANDLE      mPanIdConflictEvent;
+    uint32_t                mId;
+    DWORD                   mBusIndex;
+    otInstance*             mInstance;
+    HANDLE                  mEnergyScanEvent;
+    HANDLE                  mPanIdConflictEvent;
+    vector<otPingHandler*>  mPingHandlers;
 } otNode;
 
 const char* otDeviceRoleToString(otDeviceRole role)
@@ -216,13 +244,289 @@ const char* otDeviceRoleToString(otDeviceRole role)
     }
 }
 
+const USHORT CertificationPingPort = htons(12345);
+
+const IN6_ADDR LinkLocalAllNodesAddress    = { { 0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 } };
+const IN6_ADDR LinkLocalAllRoutersAddress  = { { 0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } };
+const IN6_ADDR RealmLocalAllNodesAddress   = { { 0xFF, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 } };
+const IN6_ADDR RealmLocalAllRoutersAddress = { { 0xFF, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } };
+
+void
+CALLBACK 
+PingHandlerRecvCallback(
+    _In_ DWORD dwError,
+    _In_ DWORD cbTransferred,
+    _In_ LPWSAOVERLAPPED lpOverlapped,
+    _In_ DWORD dwFlags
+    )
+{
+    otPingHandler *aPingHandler = (otPingHandler*)lpOverlapped->hEvent;
+    if (dwError != ERROR_SUCCESS) return;
+
+    int result;
+
+    // Make sure it didn't come from our address
+    if (memcmp(&aPingHandler->mSourceAddr6.sin6_addr, &aPingHandler->mAddress, sizeof(IN6_ADDR)) != 0)
+    {
+        CHAR szIpAddress[46] = { 0 };
+        RtlIpv6AddressToStringA(&aPingHandler->mSourceAddr6.sin6_addr, szIpAddress);
+        
+#if DEBUG_PING
+        printf("received ping (%d bytes) from %s\r\n", cbTransferred, szIpAddress);
+#endif
+
+        bool shouldReply = true;
+
+        // TODO - Fix this hack...
+        auto RecvDest = (const otIp6Address*)aPingHandler->mRecvBuffer;
+        if (memcmp(RecvDest, &LinkLocalAllRoutersAddress, sizeof(IN6_ADDR)) == 0 ||
+            memcmp(RecvDest, &RealmLocalAllNodesAddress, sizeof(IN6_ADDR)) == 0)
+        {
+            auto Role = otGetDeviceRole(aPingHandler->mParentNode->mInstance);
+            if (Role != kDeviceRoleLeader && Role != kDeviceRoleRouter)
+                shouldReply = false;
+        }
+
+        if (shouldReply)
+        {
+            // Send the received data back
+            result = 
+                sendto(
+                    aPingHandler->mSocket, 
+                    aPingHandler->mRecvBuffer, cbTransferred, 0, 
+                    (SOCKADDR*)&aPingHandler->mSourceAddr6, aPingHandler->mSourceAddr6Len
+                    );
+            if (result == SOCKET_ERROR)
+            {
+                printf("sendto failed, 0x%x\r\n", WSAGetLastError());
+            }
+        }
+    }
+
+    // Post another recv
+    dwFlags = MSG_PARTIAL;
+    aPingHandler->mSourceAddr6Len = sizeof(aPingHandler->mSourceAddr6);
+    result = 
+        WSARecvFrom(
+            aPingHandler->mSocket, 
+            &aPingHandler->mWSARecvBuffer, 1, &aPingHandler->mNumBytesReceived, &dwFlags, 
+            (SOCKADDR*)&aPingHandler->mSourceAddr6, &aPingHandler->mSourceAddr6Len, 
+            &aPingHandler->mOverlapped, PingHandlerRecvCallback
+            );
+    if (result != SOCKET_ERROR)
+    {
+        PingHandlerRecvCallback(NO_ERROR, aPingHandler->mNumBytesReceived, &aPingHandler->mOverlapped, dwFlags);
+    }
+    else
+    {
+        result = WSAGetLastError();
+        if (result != WSA_IO_PENDING)
+        {
+            printf("WSARecvFrom failed, 0x%x\r\n", result);
+        }
+    }
+}
+
+void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
+{
+    otPingHandler *aPingHandler = new otPingHandler();
+    aPingHandler->mParentNode = aNode;
+    aPingHandler->mAddress = *aAddress;
+    aPingHandler->mSocket = INVALID_SOCKET;
+    aPingHandler->mOverlapped.hEvent = aPingHandler;
+    aPingHandler->mWSARecvBuffer = { 1500, aPingHandler->mRecvBuffer };
+    aPingHandler->mActive = true;
+    
+    SOCKADDR_IN6 addr6 = { 0 };
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_port = CertificationPingPort;
+    memcpy(&addr6.sin6_addr, aAddress, sizeof(IN6_ADDR));
+    
+    CHAR szIpAddress[46] = { 0 };
+    RtlIpv6AddressToStringA(&addr6.sin6_addr, szIpAddress);
+
+#if DEBUG_PING
+    printf("%d: starting ping handler for %s\r\n", aNode->mId, szIpAddress);
+#endif
+
+    // Put the current thead in the correct compartment
+    bool RevertCompartmentOnExit = false;
+    ULONG OriginalCompartmentID = GetCurrentThreadCompartmentId();
+    if (OriginalCompartmentID != otGetCompartmentId(aNode->mInstance))
+    {
+        DWORD dwError = ERROR_SUCCESS;
+        if ((dwError = SetCurrentThreadCompartmentId(otGetCompartmentId(aNode->mInstance))) != ERROR_SUCCESS)
+        {
+            printf("SetCurrentThreadCompartmentId failed, 0x%x\r\n", dwError);
+        }
+        RevertCompartmentOnExit = true;
+    }
+
+    int result;
+    DWORD Flag = FALSE;
+    IPV6_MREQ MCReg;
+    MCReg.ipv6mr_interface = otGetDeviceIfIndex(aNode->mInstance);
+    
+    // Create the socket
+    aPingHandler->mSocket = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    if (aPingHandler->mSocket == INVALID_SOCKET)
+    {
+        printf("WSASocket failed, 0x%x\r\n", WSAGetLastError());
+        goto exit;
+    }
+
+    // Bind the socket to the address
+    result = bind(aPingHandler->mSocket, (sockaddr*)&addr6, sizeof(addr6));
+    if (result == SOCKET_ERROR)
+    {
+        printf("bind failed, 0x%x\r\n", WSAGetLastError());
+        goto exit;
+    }
+    
+    // Block our own sends from getting called as receives
+    result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (char *)&Flag, sizeof(Flag));
+    if (result == SOCKET_ERROR)
+    {
+        printf("setsockopt (IPV6_MULTICAST_LOOP) failed, 0x%x\r\n", WSAGetLastError());
+        goto exit;
+    }
+
+    // Bind to the multicast addresses
+    if (IN6_IS_ADDR_LINKLOCAL(&addr6.sin6_addr))
+    {
+        // All nodes address
+        MCReg.ipv6mr_multiaddr = LinkLocalAllNodesAddress;
+        result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&MCReg, sizeof(MCReg));
+        if (result == SOCKET_ERROR)
+        {
+            printf("setsockopt (IPV6_ADD_MEMBERSHIP) failed, 0x%x\r\n", WSAGetLastError());
+            goto exit;
+        }
+
+        // All routers address
+        MCReg.ipv6mr_multiaddr = LinkLocalAllRoutersAddress;
+        result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&MCReg, sizeof(MCReg));
+        if (result == SOCKET_ERROR)
+        {
+            printf("setsockopt (IPV6_ADD_MEMBERSHIP) failed, 0x%x\r\n", WSAGetLastError());
+            goto exit;
+        }
+    }
+    else
+    {
+        // All nodes address
+        MCReg.ipv6mr_multiaddr = RealmLocalAllNodesAddress;
+        result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&MCReg, sizeof(MCReg));
+        if (result == SOCKET_ERROR)
+        {
+            printf("setsockopt (IPV6_ADD_MEMBERSHIP) failed, 0x%x\r\n", WSAGetLastError());
+            goto exit;
+        }
+        
+        // All routers address
+        MCReg.ipv6mr_multiaddr = RealmLocalAllRoutersAddress;
+        result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&MCReg, sizeof(MCReg));
+        if (result == SOCKET_ERROR)
+        {
+            printf("setsockopt (IPV6_ADD_MEMBERSHIP) failed, 0x%x\r\n", WSAGetLastError());
+            goto exit;
+        }
+    }
+
+    // Start the receive
+    Flag = MSG_PARTIAL;
+    aPingHandler->mSourceAddr6Len = sizeof(aPingHandler->mSourceAddr6);
+    result = 
+        WSARecvFrom(
+            aPingHandler->mSocket, 
+            &aPingHandler->mWSARecvBuffer, 1, &aPingHandler->mNumBytesReceived, &Flag, 
+            (SOCKADDR*)&aPingHandler->mSourceAddr6, &aPingHandler->mSourceAddr6Len, 
+            &aPingHandler->mOverlapped, PingHandlerRecvCallback
+            );
+    if (result != SOCKET_ERROR)
+    {
+        PingHandlerRecvCallback(NO_ERROR, aPingHandler->mNumBytesReceived, &aPingHandler->mOverlapped, Flag);
+    }
+    else
+    {
+        result = WSAGetLastError();
+        if (result != WSA_IO_PENDING)
+        {
+            printf("WSARecvFrom failed, 0x%x\r\n", result);
+            goto exit;
+        }
+    }
+
+    aNode->mPingHandlers.push_back(aPingHandler);
+    aPingHandler = nullptr;
+
+exit:
+    
+    // Revert the comparment if necessary
+    if (RevertCompartmentOnExit)
+    {
+        (VOID)SetCurrentThreadCompartmentId(OriginalCompartmentID);
+    }
+
+    // Clean up ping handler if necessary
+    if (aPingHandler)
+    {
+        if (aPingHandler->mSocket != INVALID_SOCKET) 
+            closesocket(aPingHandler->mSocket);
+        delete aPingHandler;
+    }
+}
+
+void HandleAddressChanges(otNode *aNode)
+{
+    auto addrs = otGetUnicastAddresses(aNode->mInstance);
+        
+    // Invalidate all handlers
+    for (ULONG i = 0; i < aNode->mPingHandlers.size(); i++)
+        aNode->mPingHandlers[i]->mActive = false;
+
+    // Search for matches
+    for (auto addr = addrs; addr; addr = addr->mNext)
+    {
+        bool found = false;
+        for (ULONG i = 0; i < aNode->mPingHandlers.size(); i++)
+            if (!aNode->mPingHandlers[i]->mActive &&
+                memcmp(&addr->mAddress, &aNode->mPingHandlers[i]->mAddress, sizeof(otIp6Address)) == 0)
+            {
+                found = true;
+                aNode->mPingHandlers[i]->mActive = true;
+                break;
+            }
+        if (!found) AddPingHandler(aNode, &addr->mAddress);
+    }
+        
+    // Release all left over handlers
+    for (int i = aNode->mPingHandlers.size() - 1; i >= 0; i--)
+        if (aNode->mPingHandlers[i]->mActive == false)
+        {
+            auto aPingHandler = aNode->mPingHandlers[i];
+            aNode->mPingHandlers.erase(aNode->mPingHandlers.begin() + i);
+                
+            closesocket(aPingHandler->mSocket);
+            delete aPingHandler;
+        }
+
+    if (addrs) otFreeMemory(addrs);
+}
+
 void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
 {
     otNode* aNode = (otNode*)aContext;
 
     if ((aFlags & OT_NET_ROLE) != 0)
     {
-        printf("%d: new role: %s\r\n", aNode->mId, otDeviceRoleToString(otGetDeviceRole(aNode->mInstance)));
+        auto Role = otGetDeviceRole(aNode->mInstance);
+        printf("%d: new role: %s\r\n", aNode->mId, otDeviceRoleToString(Role));
+    }
+
+    if ((aFlags & OT_IP6_ADDRESS_ADDED) != 0 || (aFlags & OT_IP6_ADDRESS_REMOVED) != 0)
+    {
+        HandleAddressChanges(aNode);
     }
 }
 
@@ -234,10 +538,13 @@ OTNODEAPI int32_t OTCALL otNodeLog(const char *aMessage)
 
 OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
 {
+    otLogFuncEntry();
+
     auto ApiInstance = GetApiInstance();
     if (ApiInstance == nullptr)
     {
         printf("GetApiInstance failed!\r\n");
+        otLogFuncExitMsg("GetApiInstance failed");
         return nullptr;
     }
 
@@ -264,6 +571,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
         else
         {
             printf("otvmpAddVirtualBus failed, 0x%x!\r\n", dwError);
+            otLogFuncExitMsg("otvmpAddVirtualBus failed");
             return nullptr;
         }
     }
@@ -271,12 +579,14 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     if (tries == 1000)
     {
         printf("otvmpAddVirtualBus failed to find an empty bus!\r\n");
+        otLogFuncExitMsg("otvmpAddVirtualBus failed to find an empty bus");
         return nullptr;
     }
 
     if ((dwError = otvmpSetAdapterTopologyGuid(gVmpHandle, newBusIndex, &gTopologyGuid)) != ERROR_SUCCESS)
     {
         printf("otvmpSetAdapterTopologyGuid failed, 0x%x!\r\n", dwError);
+        otLogFuncExitMsg("otvmpSetAdapterTopologyGuid failed");
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -285,6 +595,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     if (ERROR_SUCCESS != ConvertInterfaceIndexToLuid(ifIndex, &ifLuid))
     {
         printf("ConvertInterfaceIndexToLuid(%u) failed!\r\n", ifIndex);
+        otLogFuncExitMsg("ConvertInterfaceIndexToLuid failed");
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -293,6 +604,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     if (ERROR_SUCCESS != ConvertInterfaceLuidToGuid(&ifLuid, &ifGuid))
     {
         printf("ConvertInterfaceLuidToGuid failed!\r\n");
+        otLogFuncExitMsg("ConvertInterfaceLuidToGuid failed");
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -301,6 +613,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     if (instance == nullptr)
     {
         printf("otInstanceInit failed!\r\n");
+        otLogFuncExitMsg("otInstanceInit failed");
         otvmpRemoveVirtualBus(gVmpHandle, newBusIndex);
         return nullptr;
     }
@@ -322,11 +635,16 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
 
     otSetStateChangedCallback(instance, otNodeStateChangedCallback, node);
 
+    HandleAddressChanges(node);
+
+    otLogFuncExitMsg("success");
+
     return node;
 }
 
 OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
 {
+    otLogFuncEntry();
     if (aNode != nullptr)
     {
         printf("%d: Removing Device\r\n", aNode->mId);
@@ -334,6 +652,9 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
         CloseHandle(aNode->mPanIdConflictEvent);
         CloseHandle(aNode->mEnergyScanEvent);
         otSetStateChangedCallback(aNode->mInstance, nullptr, nullptr);
+        otFreeMemory(aNode->mInstance);
+        aNode->mInstance = nullptr;
+        HandleAddressChanges(aNode);
         otvmpRemoveVirtualBus(gVmpHandle, aNode->mBusIndex);
         delete aNode;
         
@@ -342,11 +663,13 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
             Unload();
         }
     }
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
 {
+    otLogFuncEntryMsg("[%d] %s", aNode->mId, aMode);
     printf("%d: mode %s\r\n", aNode->mId, aMode);
 
     otLinkModeConfig linkMode = {0};
@@ -373,53 +696,70 @@ OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
         index++;
     }
 
-    return otSetLinkMode(aNode->mInstance, linkMode);
+    auto result = otSetLinkMode(aNode->mInstance, linkMode);
+    
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeStart(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: start\r\n", aNode->mId);
 
     auto error = otInterfaceUp(aNode->mInstance);
-    if (error != kThreadError_None) return error;
-    return otThreadStart(aNode->mInstance);
+    if (error == kThreadError_None)
+        error = otThreadStart(aNode->mInstance);
+    
+    otLogFuncExit();
+    return error;
 }
 
 OTNODEAPI int32_t OTCALL otNodeStop(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: stop\r\n", aNode->mId);
 
     (void)otThreadStop(aNode->mInstance);
     (void)otInterfaceDown(aNode->mInstance);
+    
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist clear\r\n", aNode->mId);
 
     otClearMacWhitelist(aNode->mInstance);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist enable\r\n", aNode->mId);
 
     otEnableMacWhitelist(aNode->mInstance);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist disable\r\n", aNode->mId);
 
     otDisableMacWhitelist(aNode->mInstance);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     if (aRssi == 0)
         printf("%d: whitelist add %s\r\n", aNode->mId, aExtAddr);
     else printf("%d: whitelist add %s %d\r\n", aNode->mId, aExtAddr, aRssi);
@@ -428,18 +768,22 @@ OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr,
     if (Hex2Bin(aExtAddr, extAddr, sizeof(extAddr)) != sizeof(extAddr))
         return kThreadError_Parse;
 
+    ThreadError error;
     if (aRssi == 0)
     {
-        return otAddMacWhitelist(aNode->mInstance, extAddr);
+        error = otAddMacWhitelist(aNode->mInstance, extAddr);
     }
     else
     {
-        return otAddMacWhitelistRssi(aNode->mInstance, extAddr, aRssi);
+        error = otAddMacWhitelistRssi(aNode->mInstance, extAddr, aRssi);
     }
+    otLogFuncExit();
+    return error;
 }
 
 OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist remove %s\r\n", aNode->mId, aExtAddr);
 
     uint8_t extAddr[8];
@@ -447,145 +791,189 @@ OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAd
         return kThreadError_InvalidArgs;
 
     otRemoveMacWhitelist(aNode->mInstance, extAddr);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetRloc16(aNode->mInstance);
     printf("%d: rloc16\r\n%04x\r\n", aNode->mId, result);
+    otLogFuncExit();
     return result;
 }
 
 OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     auto extAddr = otGetExtendedAddress(aNode->mInstance);
     char* str = (char*)malloc(18);
     for (int i = 0; i < 8; i++)
         sprintf_s(str + i * 2, 18 - (2 * i), "%02x", extAddr[i]);
     printf("%d: extaddr\r\n%s\r\n", aNode->mId, str);
+    otLogFuncExit();
     return str;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: channel %d\r\n", aNode->mId, aChannel);
-    return otSetChannel(aNode->mInstance, aChannel);
+    auto result = otSetChannel(aNode->mInstance, aChannel);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetKeySequenceCounter(aNode->mInstance);
     printf("%d: key sequence\r\n%d\r\n", aNode->mId, result);
+    otLogFuncExit();
     return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: key sequence %d\r\n", aNode->mId, aSequence);
     otSetKeySequenceCounter(aNode->mInstance, aSequence);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: network id timeout %d\r\n", aNode->mId, aTimeout);
     otSetNetworkIdTimeout(aNode->mInstance, aTimeout);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: network name %s\r\n", aNode->mId, aName);
-    return otSetNetworkName(aNode->mInstance, aName);
+    auto result = otSetNetworkName(aNode->mInstance, aName);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetPanId(aNode->mInstance);
     printf("%d: panid\r\n0x%04x\r\n", aNode->mId, result);
+    otLogFuncExit();
     return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: panid 0x%04x\r\n", aNode->mId, aPanId);
-    return otSetPanId(aNode->mInstance, aPanId);
+    auto result = otSetPanId(aNode->mInstance, aPanId);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: router upgrade threshold %d\r\n", aNode->mId, aThreshold);
     otSetRouterUpgradeThreshold(aNode->mInstance, aThreshold);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: release router id %d\r\n", aNode->mId, aRouterId);
-    return otReleaseRouterId(aNode->mInstance, aRouterId);
+    auto result = otReleaseRouterId(aNode->mInstance, aRouterId);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI const char* OTCALL otNodeGetState(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     auto role = otGetDeviceRole(aNode->mInstance);
     auto result = _strdup(otDeviceRoleToString(role));
     printf("%d: state\r\n%s\r\n", aNode->mId, result);
+    otLogFuncExit();
     return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetState(otNode* aNode, const char *aState)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: state %s\r\n", aNode->mId, aState);
 
+    ThreadError error;
     if (strcmp(aState, "detached") == 0)
     {
-        return otBecomeDetached(aNode->mInstance);
+        error = otBecomeDetached(aNode->mInstance);
     }
     else if (strcmp(aState, "child") == 0)
     {
-        return otBecomeChild(aNode->mInstance, kMleAttachAnyPartition);
+        error = otBecomeChild(aNode->mInstance, kMleAttachAnyPartition);
     }
     else if (strcmp(aState, "router") == 0)
     {
-        return otBecomeRouter(aNode->mInstance);
+        error = otBecomeRouter(aNode->mInstance);
     }
     else if (strcmp(aState, "leader") == 0)
     {
-        return otBecomeLeader(aNode->mInstance);
+        error = otBecomeLeader(aNode->mInstance);
     }
     else
     {
-        return kThreadError_InvalidArgs;
+        error = kThreadError_InvalidArgs;
     }
+    otLogFuncExit();
+    return error;
 }
 
 OTNODEAPI uint32_t OTCALL otNodeGetTimeout(otNode* aNode)
 {
-    return otGetChildTimeout(aNode->mInstance);
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otGetChildTimeout(aNode->mInstance);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: timeout %d\r\n", aNode->mId, aTimeout);
     otSetChildTimeout(aNode->mInstance, aTimeout);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI uint8_t OTCALL otNodeGetWeight(otNode* aNode)
 {
-    return otGetLeaderWeight(aNode->mInstance);
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otGetLeaderWeight(aNode->mInstance);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetWeight(otNode* aNode, uint8_t aWeight)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: leader weight %d\r\n", aNode->mId, aWeight);
     otSetLocalLeaderWeight(aNode->mInstance, aWeight);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeAddIpAddr(otNode* aNode, const char *aAddr)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: add ipaddr %s\r\n", aNode->mId, aAddr);
 
     otNetifAddress aAddress;
@@ -595,7 +983,9 @@ OTNODEAPI int32_t OTCALL otNodeAddIpAddr(otNode* aNode, const char *aAddr)
     aAddress.mPrefixLength = 64;
     aAddress.mPreferredLifetime = 0xffffffff;
     aAddress.mValidLifetime = 0xffffffff;
-    return otAddUnicastAddress(aNode->mInstance, &aAddress);
+    auto result = otAddUnicastAddress(aNode->mInstance, &aAddress);
+    otLogFuncExit();
+    return result;
 }
 
 inline uint16_t Swap16(uint16_t v)
@@ -607,6 +997,7 @@ inline uint16_t Swap16(uint16_t v)
 
 OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     auto addrs = otGetUnicastAddresses(aNode->mInstance);
     if (addrs == nullptr) return nullptr;
 
@@ -640,23 +1031,30 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
     otFreeMemory(addrs);
     
     printf("%d: ipaddr\r\n%s\r\n", aNode->mId, str);
+    otLogFuncExit();
 
     return str;
 }
 
 OTNODEAPI uint32_t OTCALL otNodeGetContextReuseDelay(otNode* aNode)
 {
-    return otGetContextIdReuseDelay(aNode->mInstance);
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otGetContextIdReuseDelay(aNode->mInstance);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDelay)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     otSetContextIdReuseDelay(aNode->mInstance, aDelay);
+    otLogFuncExit();
     return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, const char *aFlags, const char *aPreference)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     otBorderRouterConfig config = {0};
     char *prefixLengthStr;
     char *endptr;
@@ -723,11 +1121,14 @@ OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, con
         return kThreadError_InvalidArgs;
     }
 
-    return otAddBorderRouter(aNode->mInstance, &config);
+    auto result = otAddBorderRouter(aNode->mInstance, &config);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     struct otIp6Prefix prefix;
     char *prefixLengthStr;
     char *endptr;
@@ -744,11 +1145,14 @@ OTNODEAPI int32_t OTCALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix)
 
     if (*endptr != '\0') return kThreadError_Parse;
 
-    return otRemoveBorderRouter(aNode->mInstance, &prefix);
+    auto result = otRemoveBorderRouter(aNode->mInstance, &prefix);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, const char *aPreference)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     otExternalRouteConfig config = {0};
     char *prefixLengthStr;
     char *endptr;
@@ -782,11 +1186,14 @@ OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, cons
         return kThreadError_InvalidArgs;
     }
 
-    return otAddExternalRoute(aNode->mInstance, &config);
+    auto result = otAddExternalRoute(aNode->mInstance, &config);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     struct otIp6Prefix prefix;
     char *prefixLengthStr;
     char *endptr;
@@ -803,12 +1210,17 @@ OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
 
     if (*endptr != '\0') return kThreadError_Parse;
 
-    return otRemoveExternalRoute(aNode->mInstance, &prefix);
+    auto result = otRemoveExternalRoute(aNode->mInstance, &prefix);
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI int32_t OTCALL otNodeRegisterNetdata(otNode* aNode)
 {
-    return otSendServerData(aNode->mInstance);
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otSendServerData(aNode->mInstance);
+    otLogFuncExit();
+    return result;
 }
 
 void OTCALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength, void *aContext)
@@ -825,6 +1237,7 @@ void OTCALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const 
 
 OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: energy scan 0x%x %d %d %d %s\r\n", aNode->mId, aMask, aCount, aPeriod, aDuration, aAddr);
 
     otIp6Address address = {0};
@@ -844,7 +1257,9 @@ OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t
         return error;
     }
 
-    return WaitForSingleObject(aNode->mEnergyScanEvent, 8000) == WAIT_OBJECT_0 ? kThreadError_None : kThreadError_NotFound;
+    auto result = WaitForSingleObject(aNode->mEnergyScanEvent, 8000) == WAIT_OBJECT_0 ? kThreadError_None : kThreadError_NotFound;
+    otLogFuncExit();
+    return result;
 }
 
 void OTCALL otNodeCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
@@ -856,6 +1271,7 @@ void OTCALL otNodeCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aC
 
 OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: panid query 0x%04x 0x%x %s\r\n", aNode->mId, aPanId, aMask, aAddr);
 
     otIp6Address address = {0};
@@ -875,17 +1291,24 @@ OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32
         return error;
     }
 
-    return WaitForSingleObject(aNode->mPanIdConflictEvent, 8000) == WAIT_OBJECT_0 ? kThreadError_None : kThreadError_NotFound;
+    auto result = WaitForSingleObject(aNode->mPanIdConflictEvent, 8000) == WAIT_OBJECT_0 ? kThreadError_None : kThreadError_NotFound;
+    otLogFuncExit();
+    return result;
 }
 
 OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode)
 {
+    otLogFuncEntryMsg("[%d]", aNode->mId);
     UNREFERENCED_PARAMETER(aNode);
+    otLogFuncExit();
     return nullptr;
 }
 
-OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize)
+OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies)
 {
+    otLogFuncEntryMsg("[%d] %s (%d bytes)", aNode->mId, aAddr, aSize);
+    printf("%d: ping %s (%d bytes)\r\n", aNode->mId, aAddr, aSize);
+
     // Convert string to destination address
     otIp6Address otDestinationAddress = {0};
     auto error = otIp6AddressFromString(aAddr, &otDestinationAddress);
@@ -898,8 +1321,8 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
     // Get ML-EID as source address for ping
     auto otSourceAddress = otGetMeshLocalEid(aNode->mInstance);
 
-    sockaddr_in6 SourceAddress = { AF_INET6, 0 };
-    sockaddr_in6 DestinationAddress = { AF_INET6, 0 };
+    sockaddr_in6 SourceAddress = { AF_INET6, (USHORT)(CertificationPingPort + 1) };
+    sockaddr_in6 DestinationAddress = { AF_INET6, CertificationPingPort };
 
     memcpy(&SourceAddress.sin6_addr, otSourceAddress, sizeof(IN6_ADDR));
     memcpy(&DestinationAddress.sin6_addr, &otDestinationAddress, sizeof(IN6_ADDR));
@@ -920,58 +1343,97 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
         RevertCompartmentOnExit = true;
     }
 
-    auto SendBuffer = (PUCHAR)malloc(aSize);
+    int result = 0;
 
-    uint32_t aRecvSize = sizeof(ICMP_ECHO_REPLY) + aSize + MAX_OPT_SIZE;
-    auto RecvBuffer = (PUCHAR)malloc(aRecvSize);
+    auto SendBuffer = (PCHAR)malloc(aSize);
+    auto RecvBuffer = (PCHAR)malloc(aSize);
+
+    WSABUF WSARecvBuffer = { aSize, RecvBuffer };
+    
+    WSAOVERLAPPED Overlapped = { 0 };
+    Overlapped.hEvent = WSACreateEvent();
+
+    DWORD numberOfReplies = 0;
+    bool isPending = false;
+    DWORD Flags;
+    DWORD cbReceived;
+    int cbDestinationAddress = sizeof(DestinationAddress);
+
+    SOCKET Socket = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    if (Socket == INVALID_SOCKET)
+    {
+        printf("WSASocket failed, 0x%x\r\n", WSAGetLastError());
+        goto exit;
+    }
+
+    // Bind the socket to the address
+    result = bind(Socket, (sockaddr*)&SourceAddress, sizeof(SourceAddress));
+    if (result == SOCKET_ERROR)
+    {
+        printf("bind failed, 0x%x\r\n", WSAGetLastError());
+        goto exit;
+    }
 
     // Initialize the send buffer pattern.
     for (uint32_t i = 0; i < aSize; i++)
         SendBuffer[i] = (char)('a' + (i % 23));
 
-    DWORD numberOfReplies = 0;
+    // Hack to retrieve destination on other end
+    memcpy_s(SendBuffer, aSize, &otDestinationAddress, sizeof(IN6_ADDR));
 
-    printf("%d: ping %s\r\n", aNode->mId, aAddr);
-
-    // Get an ICMP handle
-    auto IcmpHandle = Icmp6CreateFile();
-    if (IcmpHandle == INVALID_HANDLE_VALUE)
+    // Send the buffer
+    result = sendto(Socket, SendBuffer, sizeof(SendBuffer), 0, (SOCKADDR*)&DestinationAddress, sizeof(DestinationAddress));
+    if (result == SOCKET_ERROR)
     {
-        printf("Icmp6CreateFile failed!\r\n");
+        printf("sendto failed, 0x%x\r\n", WSAGetLastError());
         goto exit;
     }
 
-    // Send the Echo Request
-    numberOfReplies = 
-        Icmp6SendEcho2(
-            IcmpHandle,
-            nullptr,
-            nullptr,
-            nullptr,
-            &SourceAddress,
-            &DestinationAddress,
-            SendBuffer,
-            aSize,
-            nullptr,
-            RecvBuffer,
-            aRecvSize,
-            4000 // Timeout
-            );
-
-    if (numberOfReplies == 0)
+    auto StartTick = GetTickCount64();
+    
+    while (numberOfReplies < aMinReplies)
     {
-        auto LastError = GetLastError();
-        if (LastError == IP_REQ_TIMED_OUT)
+        Flags = 0; //MSG_PARTIAL;
+        result = WSARecvFrom(Socket, &WSARecvBuffer, 1, &cbReceived, &Flags, (SOCKADDR*)&DestinationAddress, &cbDestinationAddress, &Overlapped, NULL);
+        if (result == SOCKET_ERROR)
         {
-            printf("no reply(s)\r\n");
+            result = WSAGetLastError();
+            if (result == WSA_IO_PENDING)
+            {
+                isPending = true;
+            }
+            else
+            {
+                printf("WSARecvFrom failed, 0x%x\r\n", result);
+                goto exit;
+            }
         }
-        else printf("error: 0x%x\r\n", LastError);
-    }
-    else
-    {    
-        printf("%d reply(s)\r\n", numberOfReplies);
 
-        //ICMPV6_ECHO_REPLY* Reply = (ICMPV6_ECHO_REPLY*)RecvBuffer;
+        if (isPending)
+        {
+            //printf("waiting for completion event...\r\n");
+            // Wait for the receive to complete
+            result = WSAWaitForMultipleEvents(1, &Overlapped.hEvent, TRUE, (DWORD)(4000 - (GetTickCount64() - StartTick)), TRUE);
+            if (result == WSA_WAIT_TIMEOUT)
+            {
+                //printf("recv timeout\r\n");
+                goto exit;
+            }
+            else if (result == WSA_WAIT_FAILED)
+            {
+                printf("recv failed\r\n");
+                goto exit;
+            }
+        }
+
+        result = WSAGetOverlappedResult(Socket, &Overlapped, &cbReceived, TRUE, &Flags);
+        if (result == FALSE)
+        {
+            printf("WSAGetOverlappedResult failed, 0x%x\r\n", WSAGetLastError());
+            goto exit;
+        }
+
+        numberOfReplies++;
     }
 
 exit:
@@ -985,7 +1447,11 @@ exit:
     free(RecvBuffer);
     free(SendBuffer);
 
-    IcmpCloseHandle(IcmpHandle);
+    WSACloseEvent(Overlapped.hEvent);
+
+    if (Socket != INVALID_SOCKET) closesocket(Socket);
+
+    otLogFuncExit();
 
     return numberOfReplies;
 }

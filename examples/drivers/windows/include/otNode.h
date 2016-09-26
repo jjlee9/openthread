@@ -253,7 +253,7 @@ OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode);
 /**
  * Performs an scan for the node
  */
-OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize);
+OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies);
 
 #ifdef __cplusplus
 }  // extern "C"

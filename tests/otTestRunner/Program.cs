@@ -67,9 +67,11 @@ namespace otTestRunner
             TestResults Results = new TestResults();
             Results.Pass = false;
             Results.Output = new List<string>();
+            var Errors = new List<string>();
 
             Results.Output.Add(string.Format("> set NODE_TYPE=win-sim"));
             Results.Output.Add(string.Format("> {0} {1}", name, args));
+            Results.Output.Add("----------------------------------------------------------------------");
 
             try
             {
@@ -84,7 +86,7 @@ namespace otTestRunner
                     process.ErrorDataReceived +=
                         (object sender, DataReceivedEventArgs e) => {
                             if (e.Data != null && e.Data.Length > 0)
-                                lock (Results.Output) { Results.Output.Add(e.Data); }
+                                lock (Results.Output) { Errors.Add(e.Data); }
                         };
 
                     process.BeginErrorReadLine();
@@ -112,9 +114,10 @@ namespace otTestRunner
                     process.CancelOutputRead();
                     process.CancelErrorRead();
 
-                    Results.Output.Add("");
-                    Results.Output.Add(string.Format("EXIT: {0}", process.ExitCode));
-                    Results.Pass = process.ExitCode == 0;
+                    Results.Output.AddRange(Errors);
+                    //Results.Output.Add(string.Format("EXIT: {0}", process.ExitCode));
+                    //Results.Pass = process.ExitCode == 0;
+                    Results.Pass = Errors.Count > 0 && Errors[Errors.Count - 1] == "OK";
 
                     // Make sure the process is killed
                     try { process.Kill(); } catch (Exception) { }
