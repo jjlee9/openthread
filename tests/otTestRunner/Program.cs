@@ -157,14 +157,14 @@ namespace otTestRunner
 
                 var jsonData =
                     string.Format(
-                        "{" +
+                        "{{" +
                             "\"testName\": \"{0}\"," +
                             "\"testFramework\": \"MSTest\"," +
                             "\"fileName\": \"{0}.py\"," +
                             "\"outcome\": \"{1}\"," +
                             "\"durationMilliseconds\": \"{2}\"," +
                             "\"ErrorMessage\": \"{3}\"," +
-                        "}",
+                        "}}",
                         name,
                         passed ? "Passed" : "Failed",
                         durationMS,
