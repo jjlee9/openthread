@@ -3006,8 +3006,21 @@ otSendDiagnosticGet(
 {
     if (aInstance == nullptr || aDestination == nullptr) return kThreadError_InvalidArgs;
     if (aTlvTypes == nullptr && aCount != 0) return kThreadError_InvalidArgs;
-    // TODO
-    return kThreadError_NotImplemented;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(otIp6Address) + sizeof(uint8_t) + aCount;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), aDestination, sizeof(otIp6Address));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otIp6Address), BufferSize - sizeof(GUID) - sizeof(otIp6Address), &aCount, sizeof(aCount));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otIp6Address) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(otIp6Address) - sizeof(uint8_t), aTlvTypes, aCount);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
@@ -3022,8 +3035,21 @@ otSendDiagnosticReset(
 {
     if (aInstance == nullptr || aDestination == nullptr) return kThreadError_InvalidArgs;
     if (aTlvTypes == nullptr && aCount != 0) return kThreadError_InvalidArgs;
-    // TODO
-    return kThreadError_NotImplemented;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(otIp6Address) + sizeof(uint8_t) + aCount;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), aDestination, sizeof(otIp6Address));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otIp6Address), BufferSize - sizeof(GUID) - sizeof(otIp6Address), &aCount, sizeof(aCount));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otIp6Address) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(otIp6Address) - sizeof(uint8_t), aTlvTypes, aCount);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 

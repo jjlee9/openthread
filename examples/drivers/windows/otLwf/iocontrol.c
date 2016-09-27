@@ -281,6 +281,8 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN",
     "IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER",
     "IOCTL_OTLWF_OT_JOINER_UDP_PORT",
+    "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET",
+    "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET",
 };
 
 static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
@@ -551,6 +553,12 @@ otLwfCompleteOpenThreadIrp(
         break;
     case IOCTL_OTLWF_OT_JOINER_UDP_PORT:
         status = otLwfIoCtl_otJoinerUdpPort(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET:
+        status = otLwfIoCtl_otSendDiagnosticGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET:
+        status = otLwfIoCtl_otSendDiagnosticReset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
@@ -2979,6 +2987,82 @@ otLwfIoCtl_otJoinerUdpPort(
     else
     {
         *OutBufferLength = 0;
+    }
+
+    return status;
+}    
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendDiagnosticGet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(otIp6Address) + sizeof(uint8_t))
+    {
+        const otIp6Address *aAddress = (otIp6Address*)InBuffer;
+        uint8_t aCount = *(uint8_t*)(InBuffer + sizeof(otIp6Address));
+        PUCHAR aTlvTypes = InBuffer + sizeof(otIp6Address) + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(otIp6Address) + sizeof(uint8_t) + aCount)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendDiagnosticGet(
+                    pFilter->otCtx,
+                    aAddress,
+                    aTlvTypes,
+                    aCount)
+                );
+        }
+    }
+
+    return status;
+}   
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendDiagnosticReset(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(otIp6Address) + sizeof(uint8_t))
+    {
+        const otIp6Address *aAddress = (otIp6Address*)InBuffer;
+        uint8_t aCount = *(uint8_t*)(InBuffer + sizeof(otIp6Address));
+        PUCHAR aTlvTypes = InBuffer + sizeof(otIp6Address) + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(otIp6Address) + sizeof(uint8_t) + aCount)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendDiagnosticGet(
+                    pFilter->otCtx,
+                    aAddress,
+                    aTlvTypes,
+                    aCount)
+                );
+        }
     }
 
     return status;

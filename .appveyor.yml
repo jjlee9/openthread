@@ -1,3 +1,31 @@
+#
+#  Copyright (c) 2016, The OpenThread Authors.
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are met:
+#  1. Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#  2. Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#  3. Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+
 version: 0.1.{build}
 image: Visual Studio 2015
 configuration:
@@ -8,71 +36,33 @@ platform:
 - x86
 clone_depth: 10
 install:
-- ps: >-
-    Bcdedit.exe -set TESTSIGNING ON
-
-    Restart-Computer -Force
-
-    Start-Sleep -s 10
+    - cmd: Bcdedit.exe -set TESTSIGNING ON
+    - ps: Restart-Computer -Force
+    - ps: Start-Sleep -s 10
 build:
   project: etc/visual-studio/openthread.sln
   verbosity: minimal
 after_build:
-- ps: >-
-    $env:Platform2 = $env:Platform
-
-    If ($env:Platform2 -eq "x86") { $env:Platform2 = "Win32" }
-
-    mkdir release
-
-    copy build\bin\$env:Platform2\$env:Configuration\sys\otlwf\* release
-
-    copy build\bin\$env:Platform2\$env:Configuration\sys\otlwf.cer release
-
-    copy build\bin\$env:Platform2\$env:Configuration\dll\otApi.dll release
-
-    copy build\bin\$env:Platform2\$env:Configuration\dll\otApi.pdb release
-
-    copy build\bin\$env:Platform2\$env:Configuration\exe\otCli.exe release
-
-    copy build\bin\$env:Platform2\$env:Configuration\exe\otCli.pdb release
-
-    mkdir test_release
-
-    copy build\bin\$env:Platform2\$env:Configuration\dll\ot*.dll test_release
-
-    copy build\bin\$env:Platform2\$env:Configuration\dll\ot*.pdb test_release
-
-    copy build\bin\$env:Platform2\$env:Configuration\exe\otTestRunner.* test_release
-
-    cd build\bin\$env:Platform2\$env:Configuration\sys
-
-    certutil -addstore root otLwf.cer
-
-    certutil -addstore TrustedPublisher otLwf.cer
-
-    cd otLwf
-
-    netcfg.exe -v -l otlwf.inf -c s -i otLwf
-
-    cd ..\..\..\..\..\..
-
-    Restart-Computer -Force
-
-    Start-Sleep -s 10
+    - ps: $env:Platform2 = $env:Platform
+    - ps: If ($env:Platform2 -eq "x86") { $env:Platform2 = "Win32" }
+    # Set up the release directories
+    - cmd: .appveyor\make_release.cmd
+    - cmd: .appveyor\make_test_release.cmd
+    # Start logging and install driver
+    - cmd: netsh trace start persistent=yes traceFile=%APPVEYOR_BUILD_FOLDER%\test_release\trace.etl report=no perfMerge=no provider={1AA98926-2E40-43D1-9D83-34C6BE816365}
+    - cmd: .appveyor\install_driver.cmd
+    # Restart the machine to apply the driver installs
+    - ps: Restart-Computer -Force
+    - ps: Start-Sleep -s 10
 test_script:
-- cmd: >-
-    vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
-
-    sc query otlwf
-
-    cd test_release
-
-    netsh trace start traceFile=trace.etl report=no perfMerge=no provider={1AA98926-2E40-43D1-9D83-34C6BE816365}
-
-    otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
-
-    netsh trace stop
+    # Run the unit tests
+    - cmd: vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
+    # Run the sanity test for the driver
+    - cmd: cd test_release
+    - cmd: sc query otlwf
+    - cmd: otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
+    # Stop the logging
+    - cmd: netsh trace stop
 artifacts:
 - path: release
   name: release

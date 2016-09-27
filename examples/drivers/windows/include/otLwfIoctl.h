@@ -557,9 +557,23 @@ typedef struct otCommissionConfig
     OTLWF_CTL_CODE(177, METHOD_BUFFERED, FILE_READ_DATA)
     // GUID - InterfaceGuid
     // uint16_t - aJoinerUdpPort
+    
+#define IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET \
+    OTLWF_CTL_CODE(178, METHOD_BUFFERED, FILE_READ_DATA)
+    // GUID - InterfaceGuid
+    // otIp6Address - aDestination
+    // uint8_t - aCount
+    // uint8_t[aCount] - aTlvTypes
+    
+#define IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET \
+    OTLWF_CTL_CODE(179, METHOD_BUFFERED, FILE_READ_DATA)
+    // GUID - InterfaceGuid
+    // otIp6Address - aDestination
+    // uint8_t - aCount
+    // uint8_t[aCount] - aTlvTypes
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 177
+#define MAX_OTLWF_IOCTL_FUNC_CODE 179
 
 #endif //__OTLWFIOCTL_H__

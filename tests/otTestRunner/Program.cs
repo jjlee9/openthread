@@ -124,8 +124,6 @@ namespace otTestRunner
                     process.CancelErrorRead();
 
                     Results.Output.AddRange(Errors);
-                    //Results.Output.Add(string.Format("EXIT: {0}", process.ExitCode));
-                    //Results.Pass = process.ExitCode == 0;
                     Results.Pass = Errors.Count > 0 && Errors[Errors.Count - 1] == "OK";
 
                     if (!Results.Pass) Results.Error = EscapeJson(string.Join("\\r\\n", Errors));

@@ -162,5 +162,7 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerPanIdQuery;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerEnergyScan;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterSelectionJitter;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otJoinerUdpPort;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticGet;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticReset;
 
 #endif // _IOCONTROL_H
