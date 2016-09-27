@@ -21,7 +21,7 @@ after_build:
 - ps: >-
     $env:Platform2 = $env:Platform
 
-    If ($env:Platform2 -eq "x86") s$env:Platform2 = "Win32""
+    If ($env:Platform2 -eq "x86") { $env:Platform2 = "Win32" }
 
     mkdir release
 
