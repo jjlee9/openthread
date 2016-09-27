@@ -18,35 +18,32 @@ build:
   project: etc/visual-studio/openthread.sln
   verbosity: minimal
 after_build:
-- cmd: >-
-    set Platform2=%Platform%
+- ps: >-
+    $env:Platform2 = $env:Platform
 
-    if %Platform2%==x86 set Platform2=Win32
+    If ($env:Platform2 -eq "x86") s$env:Platform2 = "Win32""
 
     mkdir release
 
-    copy build\bin\%Platform2%\%Configuration%\sys\otlwf\* release
+    copy build\bin\$env:Platform2\$env:Configuration\sys\otlwf\* release
 
-    copy build\bin\%Platform2%\%Configuration%\sys\otlwf.cer release
+    copy build\bin\$env:Platform2\$env:Configuration\sys\otlwf.cer release
 
-    copy build\bin\%Platform2%\%Configuration%\dll\otApi.dll release
+    copy build\bin\$env:Platform2\$env:Configuration\dll\otApi.dll release
 
-    copy build\bin\%Platform2%\%Configuration%\dll\otApi.pdb release
+    copy build\bin\$env:Platform2\$env:Configuration\dll\otApi.pdb release
 
-    copy build\bin\%Platform2%\%Configuration%\exe\otCli.exe release
+    copy build\bin\$env:Platform2\$env:Configuration\exe\otCli.exe release
 
-    copy build\bin\%Platform2%\%Configuration%\exe\otCli.pdb release
+    copy build\bin\$env:Platform2\$env:Configuration\exe\otCli.pdb release
 
     mkdir test_release
 
-    copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
+    copy build\bin\$env:Platform2\$env:Configuration\dll\ot*.dll test_release
 
-    copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
+    copy build\bin\$env:Platform2\$env:Configuration\dll\ot*.pdb test_release
 
-    copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
-test_script:
-- ps: >-
-    vstest.console /logger:Appveyor /inIsolation /platform:$env:Platform build\bin\$env:Platform2\$env:Configuration\dll\UnitTests.dll
+    copy build\bin\$env:Platform2\$env:Configuration\exe\otTestRunner.* test_release
 
     cd build\bin\$env:Platform2\$env:Configuration\sys
 
@@ -58,13 +55,18 @@ test_script:
 
     netcfg.exe -v -l otlwf.inf -c s -i otLwf
 
+    cd ..\..\..\..\..\..
+
     Restart-Computer -Force
 
     Start-Sleep -s 10
+test_script:
+- cmd: >-
+    vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
 
     sc query otlwf
 
-    cd ..\..\..\..\..\..\test_release
+    cd test_release
 
     otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* verbose appveyor
 artifacts:
