@@ -64,8 +64,9 @@ test_script:
     - cmd: otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
     # Flush the logging
     - cmd: reg query HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\WMI\AutoLogger\Thread
-    - cmd: logman update Thread -ets
-    - cmd: copy %SystemRoot%\System32\LogFiles\WMI\Thread.etl
+    - cmd: logman query Thread -ets
+    - cmd: logman stop Thread -ets
+    - cmd: copy %SystemRoot%\System32\LogFiles\WMI\Thread.*
 artifacts:
 - path: release
   name: release
