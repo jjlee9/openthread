@@ -151,40 +151,48 @@ namespace otTestRunner
         {
             if (AppVeyorApiUrl == null) return;
 
-            var request = (HttpWebRequest)WebRequest.Create(Path.Combine(AppVeyorApiUrl, "api/tests"));
-
-            var jsonData =
-                string.Format(
-                    "{" +
-                        "\"testName\": \"{0}\"," +
-                        "\"testFramework\": \"MSTest\"," +
-                        "\"fileName\": \"{0}.py\"," +
-                        "\"outcome\": \"{1}\"," +
-                        "\"durationMilliseconds\": \"{2}\"," +
-                        "\"ErrorMessage\": \"{3}\"," +
-                    "}",
-                    name,
-                    passed ? "Passed" : "Failed",
-                    durationMS,
-                    error == null ? "" : error
-                    );
-            
-            var data = Encoding.UTF8.GetBytes(jsonData);
-
-            request.Method = "POST";
-            request.ContentType = "application/json";
-            request.ContentLength = data.Length;
-
-            using (var stream = request.GetRequestStream())
+            try
             {
-                stream.Write(data, 0, data.Length);
+                var request = (HttpWebRequest)WebRequest.Create(Path.Combine(AppVeyorApiUrl, "api/tests"));
+
+                var jsonData =
+                    string.Format(
+                        "{" +
+                            "\"testName\": \"{0}\"," +
+                            "\"testFramework\": \"MSTest\"," +
+                            "\"fileName\": \"{0}.py\"," +
+                            "\"outcome\": \"{1}\"," +
+                            "\"durationMilliseconds\": \"{2}\"," +
+                            "\"ErrorMessage\": \"{3}\"," +
+                        "}",
+                        name,
+                        passed ? "Passed" : "Failed",
+                        durationMS,
+                        error == null ? "" : error
+                        );
+
+                var data = Encoding.UTF8.GetBytes(jsonData);
+
+                request.Method = "POST";
+                request.ContentType = "application/json";
+                request.ContentLength = data.Length;
+
+                using (var stream = request.GetRequestStream())
+                {
+                    stream.Write(data, 0, data.Length);
+                }
+
+                var response = (HttpWebResponse)request.GetResponse();
+
+                var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
+
+                Console.WriteLine("Response from appveyor: {0}", responseString);
             }
-
-            var response = (HttpWebResponse)request.GetResponse();
-
-            var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
-
-            Console.WriteLine("Response from appveyor: {0}", responseString);
+            catch (Exception e)
+            {
+                Console.WriteLine("Encountered exception for http post: " + e.Message);
+                Console.WriteLine(e.StackTrace);
+            }
         }
 
         /// <summary>
