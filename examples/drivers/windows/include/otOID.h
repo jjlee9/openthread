@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -181,6 +181,24 @@
 
 #define SIZEOF_OT_RSSI_REVISION_1 \
     RTL_SIZEOF_THROUGH_FIELD(OT_RSSI, Rssi)
+
+// The maximum of each type (short or extended) of MAC address to pend
+#define MAX_PENDING_MAC_SIZE    32
+
+// Used to set the list of MAC addresses for SEDs we currently have packets pending
+#define OID_OT_PENDING_MAC_OFFLOAD                  OT_DEFINE_OID(108, OT_OPERATIONAL_OID, OT_MANDATORY_OID)
+    typedef struct _OT_PENDING_MAC_OFFLOAD
+    {
+        #define OT_PENDING_MAC_OFFLOAD_REVISION_1 1
+        NDIS_OBJECT_HEADER Header;
+        UCHAR              ShortAddressCount;
+        UCHAR              ExtendedAddressCount;
+        // Dynamic array of USHORT ShortAddresses of count ShortAddressCount
+        // Dynamic array of ULONGLONG ExtendedAddresses of count ExtendedAddressCount
+    } OT_PENDING_MAC_OFFLOAD, * POT_PENDING_MAC_OFFLOAD;
+
+#define SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1 \
+    RTL_SIZEOF_THROUGH_FIELD(OT_PENDING_MAC_OFFLOAD, ExtendedAddressCount)
 
 //
 // Thread Mode OIDs

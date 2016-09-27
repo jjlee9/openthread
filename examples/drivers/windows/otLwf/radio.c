@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, Microsoft Corporation.
+ *  Copyright (c) 2016, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -564,6 +564,11 @@ otLwfRadioTransmitFrameDone(
     }
 
     LogFuncExit(DRIVER_DATA_PATH);
+}
+
+void otPlatRadioSendPendingMacOffload(_In_ PMS_FILTER pFilter)
+{
+    UNREFERENCED_PARAMETER(pFilter);
 }
 
 void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
