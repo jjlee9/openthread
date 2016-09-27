@@ -68,7 +68,7 @@ test_script:
 
     cd test_release
 
-    netsh trace start traceFile=trace.etl perfMerge=no provider={1AA98926-2E40-43D1-9D83-34C6BE816365}
+    netsh trace start traceFile=trace.etl report=no perfMerge=no provider={1AA98926-2E40-43D1-9D83-34C6BE816365}
 
     otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
 
