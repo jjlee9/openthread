@@ -49,7 +49,7 @@ after_build:
     - cmd: .appveyor\make_release.cmd
     - cmd: .appveyor\make_test_release.cmd
     # Start logging and install driver
-    - cmd: netsh trace start persistent=yes traceFile=%APPVEYOR_BUILD_FOLDER%\test_release\trace.etl report=no perfMerge=no provider={1AA98926-2E40-43D1-9D83-34C6BE816365}
+    - cmd: netsh trace start persistent=yes traceFile=%APPVEYOR_BUILD_FOLDER%\test_release\trace.etl report=no perfMerge=no provider={1AA98926-2E40-43D1-9D83-34C6BE816365} level=0xffff keywords=0xffff
     - cmd: .appveyor\install_driver.cmd
     # Restart the machine to apply the driver installs
     - ps: Restart-Computer -Force

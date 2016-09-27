@@ -35,6 +35,7 @@ REM Copy the relavant binaries
 
 copy build\bin\%Platform2%\%Configuration%\sys\otlwf\* release
 copy build\bin\%Platform2%\%Configuration%\sys\otlwf.cer release
+copy build\bin\%Platform2%\%Configuration%\sys\otlwf.pdb release
 copy build\bin\%Platform2%\%Configuration%\dll\otApi.dll release
 copy build\bin\%Platform2%\%Configuration%\dll\otApi.pdb release
 copy build\bin\%Platform2%\%Configuration%\exe\otCli.exe release
