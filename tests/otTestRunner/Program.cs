@@ -46,6 +46,11 @@ namespace otTestRunner
             public string Error;
         }
 
+        static string EscapeJson(string data)
+        {
+            return data.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        }
+
         /// <summary>
         /// Executes an exe with the given args and captures the output
         /// </summary>
@@ -123,7 +128,7 @@ namespace otTestRunner
                     //Results.Pass = process.ExitCode == 0;
                     Results.Pass = Errors.Count > 0 && Errors[Errors.Count - 1] == "OK";
 
-                    if (!Results.Pass) Results.Error = string.Join("\\\\r\\\\n", Errors);
+                    if (!Results.Pass) Results.Error = EscapeJson(string.Join("\\r\\n", Errors));
 
                     // Make sure the process is killed
                     try { process.Kill(); } catch (Exception) { }
