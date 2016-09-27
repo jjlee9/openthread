@@ -30,6 +30,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,6 +43,7 @@ namespace otTestRunner
         {
             public bool Pass;
             public List<string> Output;
+            public string Error;
         }
 
         /// <summary>
@@ -67,6 +70,7 @@ namespace otTestRunner
             TestResults Results = new TestResults();
             Results.Pass = false;
             Results.Output = new List<string>();
+            Results.Error = null;
             var Errors = new List<string>();
 
             Results.Output.Add(string.Format("> set NODE_TYPE=win-sim"));
@@ -119,6 +123,8 @@ namespace otTestRunner
                     //Results.Pass = process.ExitCode == 0;
                     Results.Pass = Errors.Count > 0 && Errors[Errors.Count - 1] == "OK";
 
+                    if (!Results.Pass) Results.Error = string.Join("\r\n", Errors);
+
                     // Make sure the process is killed
                     try { process.Kill(); } catch (Exception) { }
 
@@ -137,8 +143,52 @@ namespace otTestRunner
         }
 
         static bool VerboseOutput = false;
-        static bool AppVeyorPaths = false;
+        static bool AppVeyorMode = false;
+        static string AppVeyorApiUrl = null;
         static string ResultsFolder = "Results_" + DateTime.Now.ToString("yyyyMMdd_HH.mm.ss");
+
+        static void UploadAppVeyorTestResult(string name, bool passed, long durationMS, string error = null)
+        {
+            if (AppVeyorApiUrl == null) return;
+
+            var request = (HttpWebRequest)WebRequest.Create(AppVeyorApiUrl);
+
+            var jsonData =
+                string.Format(
+                    "{" +
+                        "\"testName\": \"{0}\"," +
+                        "\"testFramework\": \"MSTest\"," +
+                        "\"fileName\": \"{0}.py\"," +
+                        "\"outcome\": \"{1}\"," +
+                        "\"durationMilliseconds\": \"{2}\"," +
+                        "\"ErrorMessage\": \"{3}\"," +
+                        "\"ErrorStackTrace\": \"\"," +
+                        "\"StdOut\": \"\"," +
+                        "\"StdErr\": \"\"" +
+                    "}",
+                    name,
+                    passed ? "Passed" : "Failed",
+                    durationMS,
+                    error == null ? "" : error
+                    );
+            
+            var data = Encoding.UTF8.GetBytes(jsonData);
+
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.ContentLength = data.Length;
+
+            using (var stream = request.GetRequestStream())
+            {
+                stream.Write(data, 0, data.Length);
+            }
+
+            var response = (HttpWebResponse)request.GetResponse();
+
+            var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
+
+            Console.WriteLine("Response from appveyor: {0}", responseString);
+        }
 
         /// <summary>
         /// Runs a python test file and returns success/failure
@@ -146,7 +196,7 @@ namespace otTestRunner
         static async Task<bool> RunTest(string file, int index)
         {
             string pythonPath = "python.exe";
-            if (AppVeyorPaths)
+            if (AppVeyorMode)
             {
                 if (Environment.GetEnvironmentVariable("Platform").ToLower() == "x64")
                 {
@@ -157,7 +207,13 @@ namespace otTestRunner
                     pythonPath = @"c:\python35\python.exe";
                 }
             }
+
+            Stopwatch Timer = new Stopwatch();
+            Timer.Start();
+
             TestResults Results = await ExecuteAsync(pythonPath, file, 30 * 60 * 1000, index);
+
+            Timer.Stop();
 
             if (VerboseOutput)
             {
@@ -167,6 +223,8 @@ namespace otTestRunner
                         Console.WriteLine(line);
                 }
             }
+
+            UploadAppVeyorTestResult(Path.GetFileNameWithoutExtension(file), Results.Pass, Timer.ElapsedMilliseconds, Results.Error);
 
             // Write the output to a file
             var filePrefix = Results.Pass ? "P_" : "F_";
@@ -206,7 +264,11 @@ namespace otTestRunner
                 else if (args[i].StartsWith("verbose"))
                     VerboseOutput = true;
                 else if (args[i].StartsWith("appveyor"))
-                    AppVeyorPaths = true;
+                {
+                    AppVeyorMode = true;
+                    AppVeyorApiUrl = Environment.GetEnvironmentVariable("APPVEYOR_API_URL");
+                    Console.WriteLine("AppVeyorApiUrl = {0}", AppVeyorApiUrl);
+                }
             }
 
             var CurNumTestsRunning = 0;
@@ -285,7 +347,7 @@ namespace otTestRunner
             Console.WriteLine("{0} tests run in {1}", files.Length, elapsedTime);
             Console.WriteLine("{0} passed and {1} failed", TestPassCount, files.Length - TestPassCount);
 
-            if (!AppVeyorPaths)
+            if (!AppVeyorMode)
                 Environment.ExitCode = files.Length == TestPassCount ? 0 : 1;
         }
     }
