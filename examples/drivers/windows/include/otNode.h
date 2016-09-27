@@ -280,6 +280,11 @@ OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode);
  */
 OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies);
 
+/**
+ * Sets the router selection jitter value for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

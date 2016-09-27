@@ -279,6 +279,7 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_ROUTER_DOWNGRADE_THRESHOLD",
     "IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY",
     "IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN",
+    "IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER",
 };
 
 static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
@@ -543,6 +544,9 @@ otLwfCompleteOpenThreadIrp(
         break;
     case IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN:
         status = otLwfIoCtl_otCommissionerEnergyScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER:
+        status = otLwfIoCtl_otRouterSelectionJitter(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
@@ -2906,4 +2910,38 @@ otLwfIoCtl_otCommissionerEnergyScan(
     }
 
     return status;
-}    
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otRouterSelectionJitter(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(uint8_t))
+    {
+        otSetRouterSelectionJitter(pFilter->otCtx, *(uint8_t*)InBuffer);
+        status = STATUS_SUCCESS;
+        *OutBufferLength = 0;
+    }
+    else if (*OutBufferLength >= sizeof(uint8_t))
+    {
+        *(uint8_t*)OutBuffer = otGetRouterSelectionJitter(pFilter->otCtx);
+        status = STATUS_SUCCESS;
+        *OutBufferLength = sizeof(uint8_t);
+    }
+    else
+    {
+        *OutBufferLength = 0;
+    }
+
+    return status;
+}

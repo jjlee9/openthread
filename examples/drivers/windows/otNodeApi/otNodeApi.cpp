@@ -250,6 +250,7 @@ const IN6_ADDR LinkLocalAllNodesAddress    = { { 0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0
 const IN6_ADDR LinkLocalAllRoutersAddress  = { { 0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } };
 const IN6_ADDR RealmLocalAllNodesAddress   = { { 0xFF, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 } };
 const IN6_ADDR RealmLocalAllRoutersAddress = { { 0xFF, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 } };
+const IN6_ADDR RealmLocalSpecialAddress    = { { 0xFF, 0x33, 0, 0x40, 0xfd, 0xde, 0xad, 0, 0xbe, 0xef, 0, 0, 0, 0, 0, 0x01 } };
 
 void
 CALLBACK 
@@ -425,6 +426,15 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
         
         // All routers address
         MCReg.ipv6mr_multiaddr = RealmLocalAllRoutersAddress;
+        result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&MCReg, sizeof(MCReg));
+        if (result == SOCKET_ERROR)
+        {
+            printf("setsockopt (IPV6_ADD_MEMBERSHIP) failed, 0x%x\r\n", WSAGetLastError());
+            goto exit;
+        }
+        
+        // Special realm local address
+        MCReg.ipv6mr_multiaddr = RealmLocalSpecialAddress;
         result = setsockopt(aPingHandler->mSocket, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&MCReg, sizeof(MCReg));
         if (result == SOCKET_ERROR)
         {
@@ -637,7 +647,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
 
     HandleAddressChanges(node);
 
-    otLogFuncExitMsg("success");
+    otLogFuncExitMsg("success. [%d] = %!GUID!", id, &DeviceGuid);
 
     return node;
 }
@@ -1517,4 +1527,12 @@ exit:
     otLogFuncExit();
 
     return numberOfReplies;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    otSetRouterSelectionJitter(aNode->mInstance, aRouterJitter);
+    otLogFuncExit();
+    return 0;
 }

@@ -547,9 +547,14 @@ typedef struct otCommissionConfig
     // uint16_t - aPeriod
     // uint16_t - aScanDuration
     // otIp6Address - aAddress
+    
+#define IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER \
+    OTLWF_CTL_CODE(176, METHOD_BUFFERED, FILE_READ_DATA)
+    // GUID - InterfaceGuid
+    // uint8_t - aRouterJitter
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 175
+#define MAX_OTLWF_IOCTL_FUNC_CODE 176
 
 #endif //__OTLWFIOCTL_H__

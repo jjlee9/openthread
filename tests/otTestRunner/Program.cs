@@ -151,11 +151,13 @@ namespace otTestRunner
         {
             if (AppVeyorApiUrl == null) return;
 
+            string jsonData = null;
+
             try
             {
                 var request = (HttpWebRequest)WebRequest.Create(Path.Combine(AppVeyorApiUrl, "api/tests"));
 
-                var jsonData =
+                jsonData =
                     string.Format(
                         "{{" +
                             "\"testName\": \"{0}\"," +
@@ -187,8 +189,12 @@ namespace otTestRunner
             }
             catch (Exception e)
             {
-                Console.WriteLine("Encountered exception for http post: " + e.Message);
+                Console.WriteLine("Encountered exception for http post:");
+                Console.WriteLine(e.Message);
                 Console.WriteLine(e.StackTrace);
+
+                Console.WriteLine("Json content:");
+                Console.WriteLine(jsonData);
             }
         }
 

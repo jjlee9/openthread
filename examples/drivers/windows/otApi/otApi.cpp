@@ -1085,6 +1085,7 @@ otGetDeviceIfIndex(
 
 OTAPI 
 uint32_t 
+OTCALL
 otGetCompartmentId(
     _In_ otInstance *aInstance
     )
@@ -2375,9 +2376,9 @@ otGetRouterSelectionJitter(
     _In_ otInstance *aInstance
     )
 {
-    if (aInstance == nullptr) return 0;
-    // TODO
-    return 0;
+    uint8_t Result = 0;
+    if (aInstance) (void)QueryIOCTL(aInstance, IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER, &Result);
+    return Result;
 }
 
 OTAPI 
@@ -2388,9 +2389,7 @@ otSetRouterSelectionJitter(
     uint8_t aRouterJitter
     )
 {
-    UNREFERENCED_PARAMETER(aInstance);
-    UNREFERENCED_PARAMETER(aRouterJitter);
-    // TODO
+    if (aInstance) (void)SetIOCTL(aInstance, IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER, aRouterJitter);
 }
 
 OTAPI

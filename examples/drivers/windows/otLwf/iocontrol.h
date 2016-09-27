@@ -160,5 +160,6 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otHashMacAddress;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterDowngradeThreshold;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerPanIdQuery;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerEnergyScan;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterSelectionJitter;
 
 #endif // _IOCONTROL_H

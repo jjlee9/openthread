@@ -582,9 +582,13 @@ class Node:
             return result
 
     def set_router_selection_jitter(self, jitter):
-        cmd = 'routerselectionjitter %d' % jitter
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
+        if self.Api:
+            if self.Api.otNodeSetRouterSelectionJitter(self.otNode, ctypes.c_ubyte(jitter)) != 0:
+                raise OSError("otNodeSetRouterSelectionJitter failed!")
+        else:  
+            cmd = 'routerselectionjitter %d' % jitter
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
 
     def log(self, message):
         if self.Api:
@@ -739,6 +743,9 @@ class Node:
                                         ctypes.c_ushort,
                                         ctypes.c_uint]
         self.Api.otNodePing.restype = ctypes.c_uint
+
+        self.Api.otNodeSetRouterSelectionJitter.argtypes = [ctypes.c_void_p, 
+                                                            ctypes.c_ubyte]
 
 
         # Initialize a new node
