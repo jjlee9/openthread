@@ -63,7 +63,7 @@ test_script:
     - cmd: sc query otlwf
     - cmd: otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
     # Flush the logging
-    - cmd: reg query HKEY_LOCAL_MACHINE\SYSTEM\urrentControlSet\Control\WMI\AutoLogger\Thread
+    - cmd: reg query HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\WMI\AutoLogger\Thread
     - cmd: logman update Thread -ets
     - cmd: copy %SystemRoot%\System32\LogFiles\WMI\Thread.etl
 artifacts:
