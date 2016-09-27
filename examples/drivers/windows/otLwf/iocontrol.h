@@ -161,5 +161,6 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterDowngradeThreshold;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerPanIdQuery;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerEnergyScan;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterSelectionJitter;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otJoinerUdpPort;
 
 #endif // _IOCONTROL_H

@@ -123,7 +123,7 @@ namespace otTestRunner
                     //Results.Pass = process.ExitCode == 0;
                     Results.Pass = Errors.Count > 0 && Errors[Errors.Count - 1] == "OK";
 
-                    if (!Results.Pass) Results.Error = string.Join("\\r\\n", Errors);
+                    if (!Results.Pass) Results.Error = string.Join("\\\\r\\\\n", Errors);
 
                     // Make sure the process is killed
                     try { process.Kill(); } catch (Exception) { }
@@ -160,12 +160,12 @@ namespace otTestRunner
                 jsonData =
                     string.Format(
                         "{{" +
-                            "\"testName\": \"{0}\"," +
-                            "\"testFramework\": \"MSTest\"," +
-                            "\"fileName\": \"{0}.py\"," +
-                            "\"outcome\": \"{1}\"," +
-                            "\"durationMilliseconds\": \"{2}\"," +
-                            "\"ErrorMessage\": \"{3}\"," +
+                            "\"testName\": \"{0}\", " +
+                            "\"testFramework\": \"MSTest\", " +
+                            "\"fileName\": \"{0}.py\", " +
+                            "\"outcome\": \"{1}\", " +
+                            "\"durationMilliseconds\": \"{2}\", " +
+                            "\"ErrorMessage\": \"{3}\"" +
                         "}}",
                         name,
                         passed ? "Passed" : "Failed",

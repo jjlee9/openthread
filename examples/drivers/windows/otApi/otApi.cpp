@@ -2176,9 +2176,9 @@ otGetJoinerUdpPort(
     _In_ otInstance *aInstance
 )
 {
-    UNREFERENCED_PARAMETER(aInstance);
-    // TODO
-    return 0;
+    uint16_t Result = 0;
+    if (aInstance) (void)QueryIOCTL(aInstance, IOCTL_OTLWF_OT_JOINER_UDP_PORT, &Result);
+    return Result;
 }
 
 OTAPI 
@@ -2190,9 +2190,7 @@ otSetJoinerUdpPort(
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aJoinerUdpPort);
-    // TODO
-    return kThreadError_NotImplemented;
+    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_JOINER_UDP_PORT, aJoinerUdpPort));
 }
 
 OTAPI

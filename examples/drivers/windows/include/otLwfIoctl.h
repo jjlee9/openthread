@@ -552,9 +552,14 @@ typedef struct otCommissionConfig
     OTLWF_CTL_CODE(176, METHOD_BUFFERED, FILE_READ_DATA)
     // GUID - InterfaceGuid
     // uint8_t - aRouterJitter
+    
+#define IOCTL_OTLWF_OT_JOINER_UDP_PORT \
+    OTLWF_CTL_CODE(177, METHOD_BUFFERED, FILE_READ_DATA)
+    // GUID - InterfaceGuid
+    // uint16_t - aJoinerUdpPort
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 176
+#define MAX_OTLWF_IOCTL_FUNC_CODE 177
 
 #endif //__OTLWFIOCTL_H__
