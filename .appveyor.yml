@@ -45,7 +45,7 @@ after_build:
 
     copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
 test_script:
-- cmd: >-
+- ps: >-
     vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
 
     cd build\bin\%Platform2%\%Configuration%\sys
@@ -58,7 +58,9 @@ test_script:
 
     netcfg.exe -v -l otlwf.inf -c s -i otLwf
 
-    Sleep 5
+    Restart-Computer -Force
+
+    Start-Sleep -s 10
 
     sc query otlwf
 
