@@ -183,10 +183,7 @@ namespace otTestRunner
                 }
 
                 var response = (HttpWebResponse)request.GetResponse();
-
                 var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
-
-                Console.WriteLine("Response from appveyor: {0}", responseString);
             }
             catch (Exception e)
             {
@@ -272,7 +269,7 @@ namespace otTestRunner
                 {
                     AppVeyorMode = true;
                     AppVeyorApiUrl = Environment.GetEnvironmentVariable("APPVEYOR_API_URL");
-                    Console.WriteLine("AppVeyorApiUrl = {0}", AppVeyorApiUrl);
+                    //Console.WriteLine("AppVeyorApiUrl = {0}", AppVeyorApiUrl);
                 }
             }
 
