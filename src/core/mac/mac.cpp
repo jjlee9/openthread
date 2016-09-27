@@ -669,7 +669,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-        assert(false);
+        TransmitDoneTask(false, kThreadError_Abort);
     }
 }
 
@@ -815,9 +815,8 @@ void Mac::SentFrame(ThreadError aError)
     switch (aError)
     {
     case kThreadError_None:
-        break;
-
     case kThreadError_ChannelAccessFailure:
+    case kThreadError_Abort:
         break;
 
     case kThreadError_NoAck:

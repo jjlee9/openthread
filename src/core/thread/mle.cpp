@@ -1725,7 +1725,8 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
     PendingTimestampTlv pendingTimestamp;
     Tlv tlv;
     uint16_t offset;
-    int8_t diff;
+    int8_t diff = 0;
+    bool dataRequest = false;
 
     otLogInfoMle("Received Data Response\n");
 
@@ -1770,6 +1771,10 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
             aMessage.Read(offset, sizeof(tlv), &tlv);
             mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
         }
+        else
+        {
+            dataRequest = true;
+        }
     }
 
     // Pending Timestamp
@@ -1782,6 +1787,10 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
         {
             aMessage.Read(offset, sizeof(tlv), &tlv);
             mNetif.GetPendingDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
+        }
+        else
+        {
+            dataRequest = true;
         }
     }
 
@@ -1802,6 +1811,15 @@ exit:
     }
 
     (void)aMessageInfo;
+
+    if (diff > 0 && dataRequest)
+    {
+        uint8_t tlvs[] = {Tlv::kNetworkData};
+
+        SendDataRequest(aMessageInfo.GetPeerAddr(), tlvs, sizeof(tlvs));
+        mRetrieveNewNetworkData = true;
+    }
+
     return error;
 }
 

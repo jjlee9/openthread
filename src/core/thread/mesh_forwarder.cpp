@@ -130,6 +130,7 @@ ThreadError MeshForwarder::Stop()
     }
 
     mEnabled = false;
+    mSendMessage = NULL;
     mMac.SetRxOnWhenIdle(false);
 
 exit:
@@ -815,10 +816,12 @@ ThreadError MeshForwarder::HandleFrameRequest(void *aContext, Mac::Frame &aFrame
 
 ThreadError MeshForwarder::HandleFrameRequest(Mac::Frame &aFrame)
 {
+    ThreadError error = kThreadError_None;
     Mac::Address macDest;
     Child *child = NULL;
+
+    VerifyOrExit(mSendMessage != NULL, error = kThreadError_Abort);
     mSendBusy = true;
-    assert(mSendMessage != NULL);
 
     switch (mSendMessage->GetType())
     {
@@ -869,7 +872,8 @@ ThreadError MeshForwarder::HandleFrameRequest(Mac::Frame &aFrame)
     dump("sent frame", aFrame.GetHeader(), aFrame.GetLength());
 #endif
 
-    return kThreadError_None;
+exit:
+    return error;
 }
 
 ThreadError MeshForwarder::SendPoll(Message &aMessage, Mac::Frame &aFrame)
@@ -1135,11 +1139,7 @@ void MeshForwarder::HandleSentFrame(Mac::Frame &aFrame, ThreadError aError)
     Neighbor *neighbor;
 
     mSendBusy = false;
-
-    if (!mEnabled)
-    {
-        ExitNow();
-    }
+    VerifyOrExit(mSendMessage != NULL, ;);
 
     mSendMessage->SetOffset(mMessageNextOffset);
 
@@ -1244,6 +1244,7 @@ void MeshForwarder::HandleSentFrame(Mac::Frame &aFrame, ThreadError aError)
     {
         mSendQueue.Dequeue(*mSendMessage);
         mSendMessage->Free();
+        mSendMessage = NULL;
     }
 
     mScheduleTransmissionTask.Post();
@@ -1275,6 +1276,7 @@ void MeshForwarder::HandleDiscoverTimer(void)
         {
             mSendQueue.Dequeue(*mSendMessage);
             mSendMessage->Free();
+            mSendMessage = NULL;
             mMac.SetChannel(mRestoreChannel);
             mScanning = false;
             mMle.HandleDiscoverComplete();
@@ -1658,27 +1660,21 @@ void MeshForwarder::UpdateFramePending()
 
 void MeshForwarder::HandleDataRequest(const Mac::Address &aMacSource, const ThreadMessageInfo &aMessageInfo)
 {
-    Neighbor *neighbor;
-    uint8_t childIndex;
+    Child *child;
 
     // Security Check: only process secure Data Poll frames.
     VerifyOrExit(aMessageInfo.mLinkSecurity, ;);
 
     assert(mMle.GetDeviceState() != Mle::kDeviceStateDetached);
 
-    VerifyOrExit((neighbor = mMle.GetNeighbor(aMacSource)) != NULL, ;);
-    neighbor->mLastHeard = Timer::GetNow();
+    VerifyOrExit((child = mMle.GetChild(aMacSource)) != NULL, ;);
+    child->mLastHeard = Timer::GetNow();
 
-    mMle.HandleMacDataRequest(*static_cast<Child *>(neighbor));
-    childIndex = mMle.GetChildIndex(*static_cast<Child *>(neighbor));
+    mMle.HandleMacDataRequest(*child);
 
-    for (Message *message = mSendQueue.GetHead(); message; message = message->GetNext())
+    if (child->mQueuedIndirectMessageCnt > 0)
     {
-        if (message->GetDirectTransmission() == false && message->GetChildMask(childIndex))
-        {
-            neighbor->mDataRequest = true;
-            break;
-        }
+        child->mDataRequest = true;
     }
 
     mScheduleTransmissionTask.Post();
