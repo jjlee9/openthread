@@ -137,6 +137,7 @@ namespace otTestRunner
         }
 
         static bool VerboseOutput = false;
+        static bool AppVeyorPaths = false;
         static string ResultsFolder = "Results_" + DateTime.Now.ToString("yyyyMMdd_HH.mm.ss");
 
         /// <summary>
@@ -144,7 +145,19 @@ namespace otTestRunner
         /// </summary>
         static async Task<bool> RunTest(string file, int index)
         {
-            TestResults Results = await ExecuteAsync("python.exe", file, 30 * 60 * 1000, index);
+            string pythonPath = "python.exe";
+            if (AppVeyorPaths)
+            {
+                if (Environment.GetEnvironmentVariable("Platform").ToLower() == "x64")
+                {
+                    pythonPath = @"c:\python35-x64\python.exe";
+                }
+                else
+                {
+                    pythonPath = @"c:\python35\python.exe";
+                }
+            }
+            TestResults Results = await ExecuteAsync(pythonPath, file, 30 * 60 * 1000, index);
 
             if (VerboseOutput)
             {
@@ -192,6 +205,8 @@ namespace otTestRunner
                     NumberOfTestsToRunInParallel = int.Parse(args[i].Substring(9));
                 else if (args[i].StartsWith("verbose"))
                     VerboseOutput = true;
+                else if (args[i].StartsWith("appveyor"))
+                    AppVeyorPaths = true;
             }
 
             var CurNumTestsRunning = 0;
@@ -270,7 +285,8 @@ namespace otTestRunner
             Console.WriteLine("{0} tests run in {1}", files.Length, elapsedTime);
             Console.WriteLine("{0} passed and {1} failed", TestPassCount, files.Length - TestPassCount);
 
-            Environment.ExitCode = files.Length == TestPassCount ? 0 : 1;
+            if (!AppVeyorPaths)
+                Environment.ExitCode = files.Length == TestPassCount ? 0 : 1;
         }
     }
 }

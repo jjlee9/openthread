@@ -63,6 +63,8 @@ test_script:
     sc query otlwf
 
     cd ..\..\..\..\..\..\test_release
+
+    otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* verbose appveyor
 artifacts:
 - path: release
   name: release
