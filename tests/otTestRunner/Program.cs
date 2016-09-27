@@ -151,7 +151,7 @@ namespace otTestRunner
         {
             if (AppVeyorApiUrl == null) return;
 
-            var request = (HttpWebRequest)WebRequest.Create(AppVeyorApiUrl);
+            var request = (HttpWebRequest)WebRequest.Create(Path.Combine(AppVeyorApiUrl, "api/tests"));
 
             var jsonData =
                 string.Format(
@@ -162,9 +162,6 @@ namespace otTestRunner
                         "\"outcome\": \"{1}\"," +
                         "\"durationMilliseconds\": \"{2}\"," +
                         "\"ErrorMessage\": \"{3}\"," +
-                        "\"ErrorStackTrace\": \"\"," +
-                        "\"StdOut\": \"\"," +
-                        "\"StdErr\": \"\"" +
                     "}",
                     name,
                     passed ? "Passed" : "Failed",
