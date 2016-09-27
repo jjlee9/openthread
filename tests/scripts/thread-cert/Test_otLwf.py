@@ -30,6 +30,16 @@
 import unittest
 import ctypes
 
+class GUID(ctypes.Structure):
+    _fields_ = [("Data1", ctypes.c_uint),
+                ("Data2", ctypes.c_ushort),
+                ("Data3", ctypes.c_ushort),
+                ("Data4", ctypes.c_ubyte * 8)]
+    
+class otDeviceList(ctypes.Structure):
+    _fields_ = [("aDevicesLength", ctypes.c_ushort),
+                ("aDevices", GUID * 64)]
+
 class Cert_otLwf(unittest.TestCase):
     def setUp(self):
 
@@ -42,6 +52,10 @@ class Cert_otLwf(unittest.TestCase):
         self.Api.otApiInit.restype = ctypes.c_void_p
         self.Api.otApiFinalize.argtypes = [ctypes.c_void_p]
         self.Api.otApiFinalize.restype = None
+        self.Api.otFreeMemory.argtypes = [ctypes.c_void_p]
+        self.Api.otFreeMemory.restype = None
+        self.Api.otEnumerateDevices.argtypes = [ctypes.c_void_p]
+        self.Api.otEnumerateDevices.restype = ctypes.POINTER(otDeviceList)
 
     def tearDown(self):
         if self.ApiInstance:
@@ -52,6 +66,12 @@ class Cert_otLwf(unittest.TestCase):
         self.ApiInstance = self.Api.otApiInit()
         # Assert that it didn't return NULL
         self.assertNotEqual(self.ApiInstance, None)
+        # Query the device list
+        devices = self.Api.otEnumerateDevices(self.ApiInstance)
+        # Assert that it didn't return NULL
+        self.assertNotEqual(devices, None)
+        # Print the number of devices
+        print("devices found: %d" % devices.contents.aDevicesLength)
 
 if __name__ == '__main__':
     unittest.main()

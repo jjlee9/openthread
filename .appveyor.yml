@@ -46,9 +46,9 @@ after_build:
     copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release
 test_script:
 - ps: >-
-    vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
+    vstest.console /logger:Appveyor /inIsolation /platform:$env:Platform build\bin\$env:Platform2\$env:Configuration\dll\UnitTests.dll
 
-    cd build\bin\%Platform2%\%Configuration%\sys
+    cd build\bin\$env:Platform2\$env:Configuration\sys
 
     certutil -addstore root otLwf.cer
 
