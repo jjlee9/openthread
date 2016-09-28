@@ -177,6 +177,14 @@ typedef struct _MS_FILTER
     uint64_t                        otExtendedAddress;
     uint16_t                        otShortAddress;
 
+    BOOLEAN                         otPendingMacOffloadEnabled;
+    
+    uint8_t                         otPendingShortAddressCount;
+    uint16_t                        otPendingShortAddresses[MAX_PENDING_MAC_SIZE];
+
+    uint8_t                         otPendingExtendedAddressCount;
+    uint64_t                        otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
+
     //
     // OpenThread context buffer
     //

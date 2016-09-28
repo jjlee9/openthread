@@ -740,7 +740,7 @@ SendIOCTL(
             &Overlapped,
             &dwBytesReturned,
             c_MaxOverlappedWaitTimeMS,
-            TRUE
+            FALSE
             ))
     {
         dwError = GetLastError();

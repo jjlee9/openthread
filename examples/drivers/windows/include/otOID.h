@@ -200,6 +200,9 @@
 #define SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1 \
     RTL_SIZEOF_THROUGH_FIELD(OT_PENDING_MAC_OFFLOAD, ExtendedAddressCount)
 
+#define COMPLETE_SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1(ShortAddressCount, ExtendedAddressCount) \
+    (SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1 + sizeof(USHORT) * ShortAddressCount + sizeof(ULONGLONG) * ExtendedAddressCount)
+
 //
 // Thread Mode OIDs
 //

@@ -75,6 +75,10 @@ otLwfRadioInit(
     pFilter->otReceiveFrame.mPsdu = pFilter->otReceiveMessage;
     pFilter->otTransmitFrame.mPsdu = pFilter->otTransmitMessage;
     
+    pFilter->otPendingMacOffloadEnabled = FALSE;
+    pFilter->otPendingShortAddressCount = 0;
+    pFilter->otPendingExtendedAddressCount = 0;
+    
     LogInfo(DRIVER_DEFAULT, "Filter %p PhyState = kStateDisabled.", pFilter);
     
     LogFuncExit(DRIVER_DEFAULT);
@@ -566,51 +570,238 @@ otLwfRadioTransmitFrameDone(
     LogFuncExit(DRIVER_DATA_PATH);
 }
 
-void otPlatRadioSendPendingMacOffload(_In_ PMS_FILTER pFilter)
+NDIS_STATUS 
+otPlatRadioSendPendingMacOffload(
+    _In_ PMS_FILTER pFilter
+    )
 {
-    UNREFERENCED_PARAMETER(pFilter);
+    NDIS_STATUS status;
+    ULONG bytesProcessed;
+    UCHAR ShortAddressCount = pFilter->otPendingMacOffloadEnabled == TRUE ? pFilter->otPendingShortAddressCount : 0;
+    UCHAR ExtendedAddressCount = pFilter->otPendingMacOffloadEnabled == TRUE ? pFilter->otPendingExtendedAddressCount : 0;
+    USHORT OidBufferSize = COMPLETE_SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1(ShortAddressCount, ExtendedAddressCount);
+    POT_PENDING_MAC_OFFLOAD OidBuffer = (POT_PENDING_MAC_OFFLOAD)FILTER_ALLOC_MEM(pFilter->FilterHandle, OidBufferSize);
+    PUCHAR Offset = (PUCHAR)(OidBuffer + 1);
+    ULONG BufferSizeLeft = OidBufferSize - sizeof(OT_PENDING_MAC_OFFLOAD);
+
+    OidBuffer->Header.Type = NDIS_OBJECT_TYPE_DEFAULT;
+    OidBuffer->Header.Revision = OT_PENDING_MAC_OFFLOAD_REVISION_1;
+    OidBuffer->Header.Size = OidBufferSize;
+
+    OidBuffer->ShortAddressCount = ShortAddressCount;
+    OidBuffer->ExtendedAddressCount = ExtendedAddressCount;
+
+    if (ShortAddressCount != 0)
+    {
+        memcpy_s(Offset, BufferSizeLeft, pFilter->otPendingShortAddresses, sizeof(USHORT) * ShortAddressCount);
+        Offset += sizeof(USHORT) * ShortAddressCount;
+        BufferSizeLeft -= sizeof(USHORT) * ShortAddressCount;
+    }
+
+    if (ExtendedAddressCount != 0)
+    {
+        memcpy_s(Offset, BufferSizeLeft, pFilter->otPendingExtendedAddresses, sizeof(ULONGLONG) * ExtendedAddressCount);
+    }
+
+    LogInfo(DRIVER_DEFAULT, "Interface %!GUID! indicating updated Pending Mac Offload", &pFilter->InterfaceGuid);
+    
+    // Indicate to the miniport
+    status = 
+        otLwfSendInternalRequest(
+            pFilter,
+            NdisRequestSetInformation,
+            OID_OT_PENDING_MAC_OFFLOAD,
+            OidBuffer,
+            OidBufferSize,
+            &bytesProcessed
+            );
+    if (status != NDIS_STATUS_SUCCESS)
+    {
+        LogError(DRIVER_DEFAULT, "Set for OID_OT_PENDING_MAC_OFFLOAD failed, %!NDIS_STATUS!", status);
+    }
+
+    FILTER_FREE_MEM(OidBuffer);
+
+    return status;
 }
 
-void otPlatRadioEnableSrcMatch(otInstance *aInstance, bool aEnable)
+void otPlatRadioEnableSrcMatch(_In_ otInstance *otCtx, bool aEnable)
 {
-    (void)aInstance;
-    (void)aEnable;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+
+    // Ignore if we are already in the correct state
+    if (aEnable == pFilter->otPendingMacOffloadEnabled) return;
+
+    // Set the new value and update the miniport
+    pFilter->otPendingMacOffloadEnabled = aEnable ? TRUE : FALSE;
+    otPlatRadioSendPendingMacOffload(pFilter);
 }
 
-ThreadError otPlatRadioAddSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
+ThreadError otPlatRadioAddSrcMatchShortEntry(_In_ otInstance *otCtx, const uint16_t aShortAddress)
 {
-    (void)aInstance;
-    (void)aShortAddress;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    
+    // Make sure we are enabled
+    NT_ASSERT(pFilter->otPendingMacOffloadEnabled);
+    if (pFilter->otPendingMacOffloadEnabled == FALSE)
+        return kThreadError_InvalidState;
+
+    // Check to see if it is in the list
+    BOOLEAN Found = false;
+    for (ULONG i = 0; i < pFilter->otPendingShortAddressCount; i++)
+    {
+        if (aShortAddress == pFilter->otPendingShortAddresses[i])
+        {
+            Found = TRUE;
+            break;
+        }
+    }
+
+    // Already in the list, return success
+    if (Found) return kThreadError_None;
+
+    // Make sure we have room
+    if (pFilter->otPendingShortAddressCount == MAX_PENDING_MAC_SIZE) return kThreadError_NoBufs;
+    
+    // Copy to the list
+    pFilter->otPendingShortAddresses[pFilter->otPendingShortAddressCount] = aShortAddress;
+    pFilter->otPendingShortAddressCount++;
+
+    // Update the miniport
+    otPlatRadioSendPendingMacOffload(pFilter);
+
     return kThreadError_None;
 }
 
-ThreadError otPlatRadioAddSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
+ThreadError otPlatRadioAddSrcMatchExtEntry(_In_ otInstance *otCtx, const uint8_t *aExtAddress)
 {
-    (void)aInstance;
-    (void)aExtAddress;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    
+    // Make sure we are enabled
+    NT_ASSERT(pFilter->otPendingMacOffloadEnabled);
+    if (pFilter->otPendingMacOffloadEnabled == FALSE)
+        return kThreadError_InvalidState;
+
+    // Check to see if it is in the list
+    BOOLEAN Found = false;
+    for (ULONG i = 0; i < pFilter->otPendingExtendedAddressCount; i++)
+    {
+        if (memcmp(aExtAddress, &pFilter->otPendingExtendedAddresses[i], sizeof(ULONGLONG)) == 0)
+        {
+            Found = TRUE;
+            break;
+        }
+    }
+
+    // Already in the list, return success
+    if (Found) return kThreadError_None;
+
+    // Make sure we have room
+    if (pFilter->otPendingExtendedAddressCount == MAX_PENDING_MAC_SIZE) return kThreadError_NoBufs;
+    
+    // Copy to the list
+    memcpy(&pFilter->otPendingExtendedAddresses[pFilter->otPendingExtendedAddressCount], aExtAddress, sizeof(ULONGLONG));
+    pFilter->otPendingExtendedAddressCount++;
+
+    // Update the miniport
+    otPlatRadioSendPendingMacOffload(pFilter);
+
     return kThreadError_None;
 }
 
-ThreadError otPlatRadioClearSrcMatchShortEntry(otInstance *aInstance, const uint16_t aShortAddress)
+ThreadError otPlatRadioClearSrcMatchShortEntry(_In_ otInstance *otCtx, const uint16_t aShortAddress)
 {
-    (void)aInstance;
-    (void)aShortAddress;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    
+    // Make sure we are enabled
+    NT_ASSERT(pFilter->otPendingMacOffloadEnabled);
+    if (pFilter->otPendingMacOffloadEnabled == FALSE)
+        return kThreadError_InvalidState;
+
+    // Check to see if it is in the list
+    BOOLEAN Found = false;
+    for (ULONG i = 0; i < pFilter->otPendingShortAddressCount; i++)
+    {
+        if (aShortAddress == pFilter->otPendingShortAddresses[i])
+        {
+            // Remove it from the list
+            if (i + 1 != pFilter->otPendingShortAddressCount)
+                pFilter->otPendingShortAddresses[i] = pFilter->otPendingShortAddresses[pFilter->otPendingShortAddressCount - 1];
+            pFilter->otPendingShortAddressCount--;
+            Found = TRUE;
+            break;
+        }
+    }
+
+    // Wasn't in the list, return failure
+    if (Found == FALSE) return kThreadError_NotFound;
+
+    // Update the miniport
+    otPlatRadioSendPendingMacOffload(pFilter);
+
     return kThreadError_None;
 }
 
-ThreadError otPlatRadioClearSrcMatchExtEntry(otInstance *aInstance, const uint8_t *aExtAddress)
+ThreadError otPlatRadioClearSrcMatchExtEntry(_In_ otInstance *otCtx, const uint8_t *aExtAddress)
 {
-    (void)aInstance;
-    (void)aExtAddress;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    
+    // Make sure we are enabled
+    NT_ASSERT(pFilter->otPendingMacOffloadEnabled);
+    if (pFilter->otPendingMacOffloadEnabled == FALSE)
+        return kThreadError_InvalidState;
+
+    // Check to see if it is in the list
+    BOOLEAN Found = false;
+    for (ULONG i = 0; i < pFilter->otPendingExtendedAddressCount; i++)
+    {
+        if (memcmp(aExtAddress, &pFilter->otPendingExtendedAddresses[i], sizeof(ULONGLONG)) == 0)
+        {
+            // Remove it from the list
+            if (i + 1 != pFilter->otPendingExtendedAddressCount)
+                pFilter->otPendingExtendedAddresses[i] = pFilter->otPendingExtendedAddresses[pFilter->otPendingExtendedAddressCount - 1];
+            pFilter->otPendingExtendedAddressCount--;
+            Found = TRUE;
+            break;
+        }
+    }
+    
+    // Wasn't in the list, return failure
+    if (Found == FALSE) return kThreadError_NotFound;
+
+    // Update the miniport
+    otPlatRadioSendPendingMacOffload(pFilter);
+
     return kThreadError_None;
 }
 
-void otPlatRadioClearSrcMatchShortEntries(otInstance *aInstance)
+void otPlatRadioClearSrcMatchShortEntries(_In_ otInstance *otCtx)
 {
-    (void)aInstance;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+
+    // Ignore if we are already in the correct state
+    if (pFilter->otPendingShortAddressCount == 0) return;
+
+    // Set the new value and update the miniport
+    pFilter->otPendingShortAddressCount = 0;
+    otPlatRadioSendPendingMacOffload(pFilter);
 }
 
-void otPlatRadioClearSrcMatchExtEntries(otInstance *aInstance)
+void otPlatRadioClearSrcMatchExtEntries(_In_ otInstance *otCtx)
 {
-    (void)aInstance;
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+
+    // Ignore if we are already in the correct state
+    if (pFilter->otPendingExtendedAddressCount == 0) return;
+
+    // Set the new value and update the miniport
+    pFilter->otPendingExtendedAddressCount = 0;
+    otPlatRadioSendPendingMacOffload(pFilter);
 }

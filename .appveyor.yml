@@ -60,7 +60,7 @@ test_script:
     - cmd: vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
     # Run the sanity test for the driver
     - cmd: cd test_release
-    - ps: If ($env:Platform -eq "x86") { net start otLwf }
+    #- ps: If ($env:Platform -eq "x86") { net start otLwf }
     - cmd: sc query otlwf
     - cmd: otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
     # Flush the logging

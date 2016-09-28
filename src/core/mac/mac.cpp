@@ -1300,7 +1300,7 @@ otMacCounters &Mac::GetCounters(void)
 
 void Mac::EnableSrcMatch(bool aEnable)
 {
-    otPlatRadioEnableSrcMatch(NULL, aEnable);
+    otPlatRadioEnableSrcMatch(mNetif.GetInstance(), aEnable);
     otLogDebgMac("Enable SrcMatch -- %d(0:Dis, 1:En)\n", aEnable);
 }
 
@@ -1310,7 +1310,7 @@ ThreadError Mac::AddSrcMatchEntry(Address &aAddr)
 
     if (aAddr.mLength == 2)
     {
-        error = otPlatRadioAddSrcMatchShortEntry(NULL, aAddr.mShortAddress);
+        error = otPlatRadioAddSrcMatchShortEntry(mNetif.GetInstance(), aAddr.mShortAddress);
         otLogDebgMac("Adding short address: 0x%x -- %d (0:Ok, 3:NoBufs)\n", aAddr.mShortAddress, error);
     }
     else
@@ -1322,7 +1322,7 @@ ThreadError Mac::AddSrcMatchEntry(Address &aAddr)
             buf[i] = aAddr.mExtAddress.m8[7 - i];
         }
 
-        error = otPlatRadioAddSrcMatchExtEntry(NULL, buf);
+        error = otPlatRadioAddSrcMatchExtEntry(mNetif.GetInstance(), buf);
         otLogDebgMac("Adding extended address: 0x%02x%02x%02x%02x%02x%02x%02x%02x -- %d (0:OK, 3:NoBufs)\n",
                      buf[7], buf[6], buf[5], buf[4], buf[3], buf[2], buf[1], buf[0], error);
     }
@@ -1336,7 +1336,7 @@ ThreadError Mac::ClearSrcMatchEntry(Address &aAddr)
 
     if (aAddr.mLength == 2)
     {
-        error = otPlatRadioClearSrcMatchShortEntry(NULL, aAddr.mShortAddress);
+        error = otPlatRadioClearSrcMatchShortEntry(mNetif.GetInstance(), aAddr.mShortAddress);
         otLogDebgMac("Clearing short address: 0x%x -- %d (0:OK, 10:NoAddress)\n", aAddr.mShortAddress, error);
     }
     else
@@ -1348,7 +1348,7 @@ ThreadError Mac::ClearSrcMatchEntry(Address &aAddr)
             buf[i] = aAddr.mExtAddress.m8[7 - i];
         }
 
-        error = otPlatRadioClearSrcMatchExtEntry(NULL, buf);
+        error = otPlatRadioClearSrcMatchExtEntry(mNetif.GetInstance(), buf);
         otLogDebgMac("Clearing extended address: 0x%02x%02x%02x%02x%02x%02x%02x%02x -- %d (0:OK, 10:NoAddress)\n",
                      buf[7], buf[6], buf[5], buf[4], buf[3], buf[2], buf[1], buf[0], error);
     }
@@ -1358,8 +1358,8 @@ ThreadError Mac::ClearSrcMatchEntry(Address &aAddr)
 
 void Mac::ClearSrcMatchEntries()
 {
-    otPlatRadioClearSrcMatchShortEntries(NULL);
-    otPlatRadioClearSrcMatchExtEntries(NULL);
+    otPlatRadioClearSrcMatchShortEntries(mNetif.GetInstance());
+    otPlatRadioClearSrcMatchExtEntries(mNetif.GetInstance());
     otLogDebgMac("Clearing source match table");
 }
 

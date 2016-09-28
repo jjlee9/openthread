@@ -228,6 +228,11 @@ extern "C" {
 #define otLogDebgMeshCoP(aFormat, ...)
 #endif
 
+#define otLogCritMbedTls(aFormat, ...) otLogCritMeshCoP(aFormat, ## __VA_ARGS__)
+#define otLogWarnMbedTls(aFormat, ...) otLogWarnMeshCoP(aFormat, ## __VA_ARGS__)
+#define otLogInfoMbedTls(aFormat, ...) otLogInfoMeshCoP(aFormat, ## __VA_ARGS__)
+#define otLogDebgMbedTls(aFormat, ...) otLogDebgMeshCoP(aFormat, ## __VA_ARGS__)
+
 /**
  * @def otLogCritMle
  *

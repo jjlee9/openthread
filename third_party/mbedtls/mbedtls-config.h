@@ -42,6 +42,15 @@
 
 #if defined(WINDOWS_KERNEL)
 #define MBEDTLS_PLATFORM_EXIT_MACRO
+__inline int windows_kernel_snprintf(char * s, size_t n, const char * format, ...)
+{
+    va_list argp;
+    va_start( argp, format );
+    int ret = _vsnprintf_s( s, n, _TRUNCATE, format, argp );
+    va_end( argp );
+    return ret;
+}
+#define MBEDTLS_PLATFORM_STD_SNPRINTF    windows_kernel_snprintf
 #endif
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_DEPRECATE) && !defined(WINDOWS_KERNEL)

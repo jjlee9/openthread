@@ -38,6 +38,7 @@
 #include <mstcpip.h>
 #include <rpc.h>
 #include <rpcdce.h>
+#include <assert.h>
 #include <new>
 #include <vector>
 #include <tuple>

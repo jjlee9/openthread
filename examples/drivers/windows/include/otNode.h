@@ -146,6 +146,16 @@ OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode);
 OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel);
 
 /**
+ * sets the node's master key
+ */
+OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey);
+
+/**
+ * Gets the node's master key
+ */
+OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode);
+
+/**
  * Gets the key sequance for the node
  */
 OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode);
@@ -179,6 +189,11 @@ OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId);
  * Sets the router upgrade threshold for the node
  */
 OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold);
+
+/**
+ * Sets the router downgrade threshold for the node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_t aThreshold);
 
 /**
  * Releases a router id for the node

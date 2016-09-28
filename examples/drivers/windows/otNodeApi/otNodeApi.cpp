@@ -207,6 +207,8 @@ int Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
 
 typedef struct otPingHandler
 {
+    volatile LONG   mRefCount;
+    HANDLE          mhCleanUp;
     otNode*         mParentNode;
     bool            mActive;
     otIp6Address    mAddress;
@@ -228,6 +230,7 @@ typedef struct otNode
     HANDLE                  mEnergyScanEvent;
     HANDLE                  mPanIdConflictEvent;
     vector<otPingHandler*>  mPingHandlers;
+    vector<void*>           mMemoryToFree;
 } otNode;
 
 const char* otDeviceRoleToString(otDeviceRole role)
@@ -261,8 +264,10 @@ PingHandlerRecvCallback(
     _In_ DWORD dwFlags
     )
 {
-    otPingHandler *aPingHandler = (otPingHandler*)lpOverlapped->hEvent;
     if (dwError != ERROR_SUCCESS) return;
+
+    otPingHandler *aPingHandler = (otPingHandler*)lpOverlapped->hEvent;
+    InterlockedIncrement(&aPingHandler->mRefCount);
 
     int result;
 
@@ -326,6 +331,9 @@ PingHandlerRecvCallback(
             printf("WSARecvFrom failed, 0x%x\r\n", result);
         }
     }
+
+    if (InterlockedDecrement(&aPingHandler->mRefCount) == 0)
+        SetEvent(aPingHandler->mhCleanUp);
 }
 
 void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
@@ -337,16 +345,18 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
     aPingHandler->mOverlapped.hEvent = aPingHandler;
     aPingHandler->mWSARecvBuffer = { 1500, aPingHandler->mRecvBuffer };
     aPingHandler->mActive = true;
+    aPingHandler->mRefCount = 1;
+    aPingHandler->mhCleanUp = CreateEvent(NULL, TRUE, FALSE, NULL);
     
     SOCKADDR_IN6 addr6 = { 0 };
     addr6.sin6_family = AF_INET6;
     addr6.sin6_port = CertificationPingPort;
     memcpy(&addr6.sin6_addr, aAddress, sizeof(IN6_ADDR));
     
+#if DEBUG_PING
     CHAR szIpAddress[46] = { 0 };
     RtlIpv6AddressToStringA(&addr6.sin6_addr, szIpAddress);
 
-#if DEBUG_PING
     printf("%d: starting ping handler for %s\r\n", aNode->mId, szIpAddress);
 #endif
 
@@ -515,9 +525,21 @@ void HandleAddressChanges(otNode *aNode)
         if (aNode->mPingHandlers[i]->mActive == false)
         {
             auto aPingHandler = aNode->mPingHandlers[i];
+
+#if DEBUG_PING
+            CHAR szIpAddress[46] = { 0 };
+            RtlIpv6AddressToStringA((PIN6_ADDR)&aPingHandler->mAddress, szIpAddress);
+            printf("%d: removing ping handler for %s\r\n", aNode->mId, szIpAddress);
+#endif
+
             aNode->mPingHandlers.erase(aNode->mPingHandlers.begin() + i);
                 
+            shutdown(aPingHandler->mSocket, SD_BOTH);
             closesocket(aPingHandler->mSocket);
+
+            if (InterlockedDecrement(&aPingHandler->mRefCount) != 0)
+                WaitForSingleObject(aPingHandler->mhCleanUp, INFINITE);
+
             delete aPingHandler;
         }
 
@@ -659,17 +681,31 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
     {
         printf("%d: Removing Device\r\n", aNode->mId);
 
+        // Free any memory that we allocated now
+        for each (auto mem in aNode->mMemoryToFree)
+            free(mem);
+
+        // Clean up callbacks
         CloseHandle(aNode->mPanIdConflictEvent);
         CloseHandle(aNode->mEnergyScanEvent);
         otSetStateChangedCallback(aNode->mInstance, nullptr, nullptr);
+
+        // Free the instance
         otFreeMemory(aNode->mInstance);
         aNode->mInstance = nullptr;
+
+        // Free the ping handlers
         HandleAddressChanges(aNode);
+        assert(aNode->mPingHandlers.size() == 0);
+        if (aNode->mPingHandlers.size() != 0) printf("%d left over ping handlers!!!", (int)aNode->mPingHandlers.size());
+
+        // Delete the virtual bus
         otvmpRemoveVirtualBus(gVmpHandle, aNode->mBusIndex);
         delete aNode;
         
         if (0 == InterlockedDecrement(&gNumberOfInterfaces))
         {
+            // Uninitialize everything else if this is the last ref
             Unload();
         }
     }
@@ -882,8 +918,10 @@ OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto extAddr = otGetExtendedAddress(aNode->mInstance);
     char* str = (char*)malloc(18);
+    aNode->mMemoryToFree.push_back(str);
     for (int i = 0; i < 8; i++)
         sprintf_s(str + i * 2, 18 - (2 * i), "%02x", extAddr[i]);
+    otFreeMemory(extAddr);
     printf("%d: extaddr\r\n%s\r\n", aNode->mId, str);
     otLogFuncExit();
     return str;
@@ -896,6 +934,40 @@ OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
     auto result = otSetChannel(aNode->mInstance, aChannel);
     otLogFuncExit();
     return result;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey)
+{
+    otLogFuncEntryMsg("[%d] %s", aNode->mId, aMasterkey);
+    printf("%d: masterkey %s\r\n", aNode->mId, aMasterkey);
+
+    int keyLength;
+    uint8_t key[OT_MASTER_KEY_SIZE];
+    if ((keyLength = Hex2Bin(aMasterkey, key, sizeof(key))) != OT_MASTER_KEY_SIZE)
+    {
+        printf("invalid length key %d\r\n", keyLength);
+        return kThreadError_Parse;
+    }
+
+    auto error = otSetMasterKey(aNode->mInstance, key, (uint8_t)keyLength);
+    otLogFuncExit();
+    return error;
+}
+
+OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    uint8_t aKeyLength = 0;
+    auto aMasterKey = otGetMasterKey(aNode->mInstance, &aKeyLength);
+    uint8_t strLength = 2*aKeyLength + 1;
+    char* str = (char*)malloc(strLength);
+    aNode->mMemoryToFree.push_back(str);
+    for (int i = 0; i < aKeyLength; i++)
+        sprintf_s(str + i * 2, strLength - (2 * i), "%02x", aMasterKey[i]);
+    otFreeMemory(aMasterKey);
+    printf("%d: masterkey\r\n%s\r\n", aNode->mId, str);
+    otLogFuncExit();
+    return str;
 }
 
 OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
@@ -961,6 +1033,15 @@ OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t 
     return 0;
 }
 
+OTNODEAPI int32_t OTCALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_t aThreshold)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: routerdowngradethreshold %d\r\n", aNode->mId, aThreshold);
+    otSetRouterDowngradeThreshold(aNode->mInstance, aThreshold);
+    otLogFuncExit();
+    return 0;
+}
+
 OTNODEAPI int32_t OTCALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
@@ -975,6 +1056,7 @@ OTNODEAPI const char* OTCALL otNodeGetState(otNode* aNode)
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto role = otGetDeviceRole(aNode->mInstance);
     auto result = _strdup(otDeviceRoleToString(role));
+    aNode->mMemoryToFree.push_back(result);
     printf("%d: state\r\n%s\r\n", aNode->mId, result);
     otLogFuncExit();
     return result;
@@ -1079,6 +1161,7 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
     if (addrs == nullptr) return nullptr;
 
     char* str = (char*)malloc(512);
+    aNode->mMemoryToFree.push_back(str);
     RtlZeroMemory(str, 512);
 
     char* cur = str;
@@ -1106,7 +1189,7 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
                 Swap16(addr->mAddress.mFields.m16[6]),
                 Swap16(addr->mAddress.mFields.m16[7]));
 
-        printf("%s\r\n", cur);
+        printf("%s\r\n", last);
     }
 
     otFreeMemory(addrs);
@@ -1136,17 +1219,26 @@ OTNODEAPI int32_t OTCALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDel
 OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, const char *aFlags, const char *aPreference)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: prefix add %s %s %s\r\n", aNode->mId, aPrefix, aFlags, aPreference);
+
     otBorderRouterConfig config = {0};
     char *prefixLengthStr;
     char *endptr;
 
     if ((prefixLengthStr = (char*)strchr(aPrefix, '/')) == NULL)
+    {
+        printf("invalid prefix!\r\n");
         return kThreadError_InvalidArgs;
+    }
 
     *prefixLengthStr++ = '\0';
     
     auto error = otIp6AddressFromString(aPrefix, &config.mPrefix.mPrefix);
-    if (error != kThreadError_None) return error;
+    if (error != kThreadError_None)
+    {
+        printf("ipaddr to string failed, 0x%x!\r\n", error);
+        return error;
+    }
 
     config.mPrefix.mLength = static_cast<uint8_t>(strtol(prefixLengthStr, &endptr, 0));
     
@@ -1299,6 +1391,7 @@ OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
 OTNODEAPI int32_t OTCALL otNodeRegisterNetdata(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: registernetdata\r\n", aNode->mId);
     auto result = otSendServerData(aNode->mInstance);
     otLogFuncExit();
     return result;

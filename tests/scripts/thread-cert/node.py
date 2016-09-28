@@ -178,7 +178,7 @@ class Node:
 
     def commissioner_start(self, pskd='', provisioning_url=''):
         if self.Api:
-            if self.Api.otNodeCommissionerStart(self.otNode, pskd, provisioning_url) != 0:
+            if self.Api.otNodeCommissionerStart(self.otNode, pskd.encode('utf-8'), provisioning_url.encode('utf-8')) != 0:
                 raise OSError("otNodeCommissionerStart failed!")
         else:    
             cmd = 'commissioner start ' + pskd + ' ' + provisioning_url
@@ -187,7 +187,7 @@ class Node:
 
     def joiner_start(self, pskd='', provisioning_url=''):
         if self.Api:
-            if self.Api.otNodeJoinerStart(self.otNode, pskd, provisioning_url) != 0:
+            if self.Api.otNodeJoinerStart(self.otNode, pskd.encode('utf-8'), provisioning_url.encode('utf-8')) != 0:
                 raise OSError("otNodeJoinerStart failed!")
         else:    
             cmd = 'joiner start ' + pskd + ' ' + provisioning_url
@@ -280,17 +280,24 @@ class Node:
             self.pexpect.expect('Done')
 
     def get_masterkey(self):
-        self.send_command('masterkey')
-        i = self.pexpect.expect('([0-9a-fA-F]{32})')
-        if i == 0:
-            masterkey = self.pexpect.match.groups()[0].decode("utf-8")
-        self.pexpect.expect('Done')
-        return masterkey
+        if self.Api:
+            return self.Api.otNodeGetMasterkey(self.otNode).decode("utf-8")
+        else:     
+            self.send_command('masterkey')
+            i = self.pexpect.expect('([0-9a-fA-F]{32})')
+            if i == 0:
+                masterkey = self.pexpect.match.groups()[0].decode("utf-8")
+            self.pexpect.expect('Done')
+            return masterkey
 
     def set_masterkey(self, masterkey):
-        cmd = 'masterkey ' + masterkey
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
+        if self.Api:
+            if self.Api.otNodeSetMasterkey(self.otNode, masterkey.encode('utf-8')) != 0:
+                raise OSError("otNodeSetMasterkey failed!")
+        else:     
+            cmd = 'masterkey ' + masterkey
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
 
     def get_key_sequence(self):
         if self.Api:
@@ -359,9 +366,13 @@ class Node:
             self.pexpect.expect('Done')
 
     def set_router_downgrade_threshold(self, threshold):
-        cmd = 'routerdowngradethreshold %d' % threshold
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
+        if self.Api:
+            if self.Api.otNodeSetRouterDowngradeThreshold(self.otNode, ctypes.c_ubyte(threshold)) != 0:
+                raise OSError("otNodeSetRouterDowngradeThreshold failed!")
+        else:  
+            cmd = 'routerdowngradethreshold %d' % threshold
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
 
     def release_router_id(self, router_id):
         if self.Api:
@@ -522,7 +533,7 @@ class Node:
 
     def energy_scan(self, mask, count, period, scan_duration, ipaddr):
         if self.Api:
-            if self.Api.otNodeEnergyScan(self.otNode, ctypes.c_uint(mask), ctypes.c_ubyte(count), ctypes.c_ushort(period), ctypes.c_ushort(scan_duration), ctypes.cast(ipaddr, ctypes.c_char_p)) != 0:
+            if self.Api.otNodeEnergyScan(self.otNode, ctypes.c_uint(mask), ctypes.c_ubyte(count), ctypes.c_ushort(period), ctypes.c_ushort(scan_duration), ipaddr.encode('utf-8')) != 0:
                 raise OSError("otNodeEnergyScan failed!")
         else:  
             cmd = 'commissioner energy ' + str(mask) + ' ' + str(count) + ' ' + str(period) + ' ' + str(scan_duration) + ' ' + ipaddr
@@ -654,9 +665,18 @@ class Node:
 
         self.Api.otNodeSetChannel.argtypes = [ctypes.c_void_p, 
                                               ctypes.c_ubyte]
+
+        self.Api.otNodeSetMasterkey.argtypes = [ctypes.c_void_p, 
+                                                ctypes.c_char_p]
+        
+        self.Api.otNodeGetMasterkey.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetMasterkey.restype = ctypes.c_char_p
         
         self.Api.otNodeGetKeySequence.argtypes = [ctypes.c_void_p]
         self.Api.otNodeGetKeySequence.restype = ctypes.c_uint
+
+        self.Api.otNodeSetKeySequence.argtypes = [ctypes.c_void_p, 
+                                                  ctypes.c_uint]
 
         self.Api.otNodeSetNetworkIdTimeout.argtypes = [ctypes.c_void_p, 
                                                        ctypes.c_ubyte]
@@ -672,6 +692,9 @@ class Node:
 
         self.Api.otNodeSetRouterUpgradeThreshold.argtypes = [ctypes.c_void_p, 
                                                              ctypes.c_ubyte]
+
+        self.Api.otNodeSetRouterDowngradeThreshold.argtypes = [ctypes.c_void_p, 
+                                                               ctypes.c_ubyte]
 
         self.Api.otNodeReleaseRouterId.argtypes = [ctypes.c_void_p, 
                                                    ctypes.c_ubyte]

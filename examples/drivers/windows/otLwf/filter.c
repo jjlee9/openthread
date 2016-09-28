@@ -1024,6 +1024,12 @@ void otLwfStateChangedCallback(uint32_t aFlags, _In_ void *aContext)
         LogVerbose(DRIVER_DEFAULT, "Filter %p received OT_THREAD_CHILD_REMOVED", pFilter);
     }
 
+    if ((aFlags & OT_THREAD_NETDATA_UPDATED) != 0)
+    {
+        LogVerbose(DRIVER_DEFAULT, "Filter %p received OT_THREAD_NETDATA_UPDATED", pFilter);
+        // TODO - Invoke Slaac logic
+    }
+
     if ((aFlags & OT_IP6_ML_ADDR_CHANGED) != 0)
     {
         LogVerbose(DRIVER_DEFAULT, "Filter %p received OT_IP6_ML_ADDR_CHANGED", pFilter);
