@@ -412,10 +412,12 @@ void Dtls::HandleMbedtlsDebug(void *ctx, int level, const char *file, int line, 
 {
 #ifdef WINDOWS_LOGGING
     size_t strLen = strlen(str);
+
     if (strLen < 512)
     {
         otLogInfoMbedTls("%s", str);
     }
+
 #else
     otLogInfoMbedTls("%s:%04d: %s\n", file, line, str);
 #endif
