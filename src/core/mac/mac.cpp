@@ -84,7 +84,6 @@ void Mac::StartCsmaBackoff(void)
 }
 
 Mac::Mac(ThreadNetif &aThreadNetif):
-    mBeginTransmit(aThreadNetif.GetIp6().mTaskletScheduler, &Mac::HandleBeginTransmit, this),
     mMacTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleMacTimer, this),
     mBackoffTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleBeginTransmit, this),
     mReceiveTimer(aThreadNetif.GetIp6().mTimerScheduler, &Mac::HandleReceiveTimer, this),
@@ -229,8 +228,7 @@ void Mac::StartEnergyScan(void)
 
 void Mac::HandleEnergyScanSampleRssi(void *aContext)
 {
-    Mac *obj = static_cast<Mac *>(aContext);
-    obj->HandleEnergyScanSampleRssi();
+    static_cast<Mac *>(aContext)->HandleEnergyScanSampleRssi();
 }
 
 void Mac::HandleEnergyScanSampleRssi(void)
@@ -281,7 +279,11 @@ bool Mac::GetRxOnWhenIdle(void) const
 void Mac::SetRxOnWhenIdle(bool aRxOnWhenIdle)
 {
     mRxOnWhenIdle = aRxOnWhenIdle;
-    NextOperation();
+
+    if (mState == kStateIdle)
+    {
+        NextOperation();
+    }
 }
 
 const ExtAddress *Mac::GetExtAddress(void) const
@@ -340,6 +342,12 @@ uint8_t Mac::GetChannel(void) const
 ThreadError Mac::SetChannel(uint8_t aChannel)
 {
     mChannel = aChannel;
+
+    if (mState == kStateIdle)
+    {
+        NextOperation();
+    }
+
     return kThreadError_None;
 }
 
@@ -475,6 +483,8 @@ void Mac::ScheduleNextTransmission(void)
     {
         mState = kStateIdle;
     }
+
+    NextOperation();
 }
 
 void Mac::GenerateNonce(const ExtAddress &aAddress, uint32_t aFrameCounter, uint8_t aSecurityLevel, uint8_t *aNonce)
@@ -610,12 +620,6 @@ void Mac::HandleBeginTransmit(void)
     Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(mNetif.GetInstance())));
     ThreadError error = kThreadError_None;
 
-    if (otPlatRadioReceive(mNetif.GetInstance(), mChannel) != kThreadError_None)
-    {
-        mBeginTransmit.Post();
-        ExitNow();
-    }
-
     sendFrame.SetPower(mMaxTransmitPower);
 
     switch (mState)
@@ -652,7 +656,10 @@ void Mac::HandleBeginTransmit(void)
         sendFrame.SetPower(mMaxTransmitPower);
     }
 
-    SuccessOrExit(error = otPlatRadioTransmit(mNetif.GetInstance()));
+    error = otPlatRadioReceive(mNetif.GetInstance(), sendFrame.GetChannel());
+    assert(error == kThreadError_None);
+    error = otPlatRadioTransmit(mNetif.GetInstance());
+    assert(error == kThreadError_None);
 
     if (sendFrame.GetAckRequest() && !(otPlatRadioGetCaps(mNetif.GetInstance()) & kRadioCapsAckTimeout))
     {
@@ -662,6 +669,7 @@ void Mac::HandleBeginTransmit(void)
 
     if (mPcapCallback)
     {
+        sendFrame.mDidTX = true;
         mPcapCallback(&sendFrame, mPcapCallbackContext);
     }
 
@@ -720,7 +728,7 @@ void Mac::TransmitDoneTask(bool aRxPending, ThreadError aError)
     }
 
 exit:
-    NextOperation();
+    return;
 }
 
 void Mac::HandleMacTimer(void *aContext)
@@ -793,7 +801,7 @@ void Mac::HandleMacTimer(void)
     }
 
 exit:
-    NextOperation();
+    return;
 }
 
 void Mac::HandleReceiveTimer(void *aContext)
@@ -804,7 +812,11 @@ void Mac::HandleReceiveTimer(void *aContext)
 void Mac::HandleReceiveTimer(void)
 {
     otLogInfoMac("data poll timeout!\n");
-    NextOperation();
+
+    if (mState == kStateIdle)
+    {
+        NextOperation();
+    }
 }
 
 void Mac::SentFrame(ThreadError aError)
@@ -1045,6 +1057,7 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
 
     if (mPcapCallback)
     {
+        aFrame->mDidTX = false;
         mPcapCallback(aFrame, mPcapCallbackContext);
     }
 
@@ -1276,11 +1289,10 @@ void Mac::SetPromiscuous(bool aPromiscuous)
 {
     otPlatRadioSetPromiscuous(mNetif.GetInstance(), aPromiscuous);
 
-    SuccessOrExit(otPlatRadioReceive(mNetif.GetInstance(), mChannel));
-    NextOperation();
-
-exit:
-    return;
+    if (mState == kStateIdle)
+    {
+        NextOperation();
+    }
 }
 
 Whitelist &Mac::GetWhitelist(void)

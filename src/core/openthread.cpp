@@ -48,10 +48,12 @@
 #include <crypto/mbedtls.hpp>
 #include <net/icmp6.hpp>
 #include <net/ip6.hpp>
+#include <platform/radio.h>
 #include <platform/random.h>
 #include <platform/misc.h>
 #include <thread/thread_netif.hpp>
 #include <thread/thread_uris.hpp>
+#include <utils/global_address.hpp>
 #include <openthreadinstance.h>
 
 #ifdef WINDOWS_LOGGING
@@ -722,6 +724,16 @@ exit:
     return error;
 }
 
+ThreadError otGetNextNeighborInfo(otInstance *, otNeighborInfoIterator *aIterator, otNeighborInfo *aInfo)
+{
+    ThreadError error = kThreadError_NotImplemented;
+
+    (void)aIterator;
+    (void)aInfo;
+
+    return error;
+}
+
 otDeviceRole otGetDeviceRole(otInstance *aInstance)
 {
     otDeviceRole rval = kDeviceRoleDisabled;
@@ -890,6 +902,31 @@ ThreadError otRemoveUnicastAddress(otInstance *aInstance, const otIp6Address *ad
     return aInstance->mThreadNetif.RemoveExternalUnicastAddress(*static_cast<const Ip6::Address *>(address));
 }
 
+void otSlaacUpdate(otInstance *aInstance, otNetifAddress *aAddresses, uint32_t aNumAddresses,
+                   otSlaacIidCreate aIidCreate, void *aContext)
+{
+    Utils::Slaac::UpdateAddresses(aInstance, aAddresses, aNumAddresses, aIidCreate, aContext);
+}
+
+ThreadError otCreateRandomIid(otInstance *aInstance, otNetifAddress *aAddress, void *aContext)
+{
+    return Utils::Slaac::CreateRandomIid(aInstance, aAddress, aContext);
+}
+
+ThreadError otCreateMacIid(otInstance *aInstance, otNetifAddress *aAddress, void *)
+{
+    memcpy(&aAddress->mAddress.mFields.m8[OT_IP6_ADDRESS_SIZE - OT_IP6_IID_SIZE],
+           aInstance->mThreadNetif.GetMac().GetExtAddress(), OT_IP6_IID_SIZE);
+    aAddress->mAddress.mFields.m8[OT_IP6_ADDRESS_SIZE - OT_IP6_IID_SIZE] ^= 0x02;
+
+    return kThreadError_None;
+}
+
+ThreadError otCreateSemanticallyOpaqueIid(otInstance *aInstance, otNetifAddress *aAddress, void *aContext)
+{
+    return static_cast<Utils::SemanticallyOpaqueIidGenerator *>(aContext)->CreateIid(aInstance, aAddress);
+}
+
 void otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aCallbackContext)
 {
     aInstance->mNetifCallback.Set(aCallback, aCallbackContext);
@@ -920,6 +957,11 @@ uint32_t otGetPollPeriod(otInstance *aInstance)
 void otSetPollPeriod(otInstance *aInstance, uint32_t aPollPeriod)
 {
     aInstance->mThreadNetif.GetMeshForwarder().SetAssignPollPeriod(aPollPeriod);
+}
+
+ThreadError otSetPreferredRouterId(otInstance *aInstance, uint8_t aRouterId)
+{
+    return aInstance->mThreadNetif.GetMle().SetPreferredRouterId(aRouterId);
 }
 
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
@@ -1327,7 +1369,7 @@ ThreadError otGetActiveDataset(otInstance *aInstance, otOperationalDataset *aDat
 
     VerifyOrExit(aDataset != NULL, error = kThreadError_InvalidArgs);
 
-    aInstance->mThreadNetif.GetActiveDataset().Get(*aDataset);
+    aInstance->mThreadNetif.GetActiveDataset().GetLocal().Get(*aDataset);
 
 exit:
     return error;
@@ -1351,7 +1393,7 @@ ThreadError otGetPendingDataset(otInstance *aInstance, otOperationalDataset *aDa
 
     VerifyOrExit(aDataset != NULL, error = kThreadError_InvalidArgs);
 
-    aInstance->mThreadNetif.GetPendingDataset().Get(*aDataset);
+    aInstance->mThreadNetif.GetPendingDataset().GetLocal().Get(*aDataset);
 
 exit:
     return error;

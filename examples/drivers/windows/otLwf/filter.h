@@ -37,6 +37,7 @@
 
 // The maximum allowed addresses an OpenThread interface
 #define OT_MAX_ADDRESSES 10
+#define OT_MAX_AUTO_ADDRESSES (OT_MAX_ADDRESSES - 4)
 
 #define OTLWF_ALLOC_TAG 'mFto' // otFm
 
@@ -161,6 +162,7 @@ typedef struct _MS_FILTER
     IN6_ADDR                        otCachedAddr[OT_MAX_ADDRESSES];
     ULONG                           otCachedAddrCount;
     IN6_ADDR                        otLinkLocalAddr;
+    otNetifAddress                  otAutoAddresses[OT_MAX_AUTO_ADDRESSES];
     
     //
     // OpenThread radio variables

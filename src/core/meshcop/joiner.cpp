@@ -37,7 +37,6 @@
 #include <openthread-config.h>
 #endif
 
-#include <assert.h>
 #include <stdio.h>
 
 #include <common/code_utils.hpp>

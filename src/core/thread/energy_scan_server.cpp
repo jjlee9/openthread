@@ -35,6 +35,7 @@
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
 #include <common/logging.hpp>
+#include <platform/random.h>
 #include <thread/meshcop_tlvs.hpp>
 #include <thread/energy_scan_server.hpp>
 #include <thread/thread_netif.hpp>
@@ -59,6 +60,8 @@ EnergyScanServer::EnergyScanServer(ThreadNetif &aThreadNetif) :
 
     mCoapServer.AddResource(mEnergyScan);
     mSocket.Open(HandleUdpReceive, this);
+
+    mCoapMessageId = static_cast<uint8_t>(otPlatRandomGet());
 }
 
 void EnergyScanServer::HandleRequest(void *aContext, Coap::Header &aHeader, Message &aMessage,
@@ -235,8 +238,8 @@ ThreadError EnergyScanServer::SendReport(void)
     header.Init();
     header.SetType(Coap::Header::kTypeConfirmable);
     header.SetCode(Coap::Header::kCodePost);
-    header.SetMessageId(0);
-    header.SetToken(NULL, 0);
+    header.SetMessageId(++mCoapMessageId);
+    header.SetToken(mCoapToken, sizeof(mCoapToken));
     header.AppendUriPathOptions(OPENTHREAD_URI_ENERGY_REPORT);
     header.Finalize();
 
@@ -276,6 +279,7 @@ exit:
 
 void EnergyScanServer::HandleUdpReceive(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo)
 {
+    otLogInfoMeshCoP("received scan report response\r\n");
     (void)aContext;
     (void)aMessage;
     (void)aMessageInfo;
