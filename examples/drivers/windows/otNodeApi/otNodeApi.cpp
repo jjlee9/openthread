@@ -207,14 +207,13 @@ int Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
 
 typedef struct otPingHandler
 {
-    volatile LONG   mRefCount;
-    HANDLE          mhCleanUp;
     otNode*         mParentNode;
     bool            mActive;
     otIp6Address    mAddress;
     SOCKET          mSocket;
     CHAR            mRecvBuffer[1500];
     WSAOVERLAPPED   mOverlapped;
+    PTP_WAIT        mThreadpoolWait;
     WSABUF          mWSARecvBuffer;
     DWORD           mNumBytesReceived;
     SOCKADDR_IN6    mSourceAddr6;
@@ -258,16 +257,34 @@ const IN6_ADDR RealmLocalSpecialAddress    = { { 0xFF, 0x33, 0, 0x40, 0xfd, 0xde
 void
 CALLBACK 
 PingHandlerRecvCallback(
-    _In_ DWORD dwError,
+    _Inout_     PTP_CALLBACK_INSTANCE /* Instance */,
+    _Inout_opt_ PVOID                 Context,
+    _Inout_     PTP_WAIT              /* Wait */,
+    _In_        TP_WAIT_RESULT        /* WaitResult */
+    /*_In_ DWORD dwError,
     _In_ DWORD cbTransferred,
     _In_ LPWSAOVERLAPPED lpOverlapped,
-    _In_ DWORD dwFlags
+    _In_ DWORD dwFlags*/
     )
 {
-    if (dwError != ERROR_SUCCESS) return;
-
-    otPingHandler *aPingHandler = (otPingHandler*)lpOverlapped->hEvent;
-    InterlockedIncrement(&aPingHandler->mRefCount);
+    otPingHandler *aPingHandler = (otPingHandler*)Context;
+    
+    // Get the result of the IO operation
+    DWORD cbTransferred = 0;
+    DWORD dwFlags = 0;
+    if (!WSAGetOverlappedResult(
+            aPingHandler->mSocket,
+            &aPingHandler->mOverlapped,
+            &cbTransferred,
+            TRUE,
+            &dwFlags))
+    {
+        int result = WSAGetLastError();
+        // Only log if we are shutting down
+        if (result != WSAENOTSOCK && result != ERROR_OPERATION_ABORTED)
+            printf("WSAGetOverlappedResult failed, 0x%x\r\n", result);
+        return;
+    }
 
     int result;
 
@@ -308,6 +325,9 @@ PingHandlerRecvCallback(
             }
         }
     }
+    
+    // Start the otpool waiting on the overlapped event
+    SetThreadpoolWait(aPingHandler->mThreadpoolWait, aPingHandler->mOverlapped.hEvent, nullptr);
 
     // Post another recv
     dwFlags = MSG_PARTIAL;
@@ -317,11 +337,12 @@ PingHandlerRecvCallback(
             aPingHandler->mSocket, 
             &aPingHandler->mWSARecvBuffer, 1, &aPingHandler->mNumBytesReceived, &dwFlags, 
             (SOCKADDR*)&aPingHandler->mSourceAddr6, &aPingHandler->mSourceAddr6Len, 
-            &aPingHandler->mOverlapped, PingHandlerRecvCallback
+            &aPingHandler->mOverlapped, nullptr
             );
     if (result != SOCKET_ERROR)
     {
-        PingHandlerRecvCallback(NO_ERROR, aPingHandler->mNumBytesReceived, &aPingHandler->mOverlapped, dwFlags);
+        // Not pending, so manually trigger the event for the Threadpool to execute
+        SetEvent(aPingHandler->mOverlapped.hEvent);
     }
     else
     {
@@ -331,9 +352,6 @@ PingHandlerRecvCallback(
             printf("WSARecvFrom failed, 0x%x\r\n", result);
         }
     }
-
-    if (InterlockedDecrement(&aPingHandler->mRefCount) == 0)
-        SetEvent(aPingHandler->mhCleanUp);
 }
 
 void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
@@ -342,11 +360,15 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
     aPingHandler->mParentNode = aNode;
     aPingHandler->mAddress = *aAddress;
     aPingHandler->mSocket = INVALID_SOCKET;
-    aPingHandler->mOverlapped.hEvent = aPingHandler;
+    aPingHandler->mOverlapped.hEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
     aPingHandler->mWSARecvBuffer = { 1500, aPingHandler->mRecvBuffer };
     aPingHandler->mActive = true;
-    aPingHandler->mRefCount = 1;
-    aPingHandler->mhCleanUp = CreateEvent(NULL, TRUE, FALSE, NULL);
+    aPingHandler->mThreadpoolWait = 
+        CreateThreadpoolWait(
+            PingHandlerRecvCallback,
+            aPingHandler,
+            nullptr
+            );
     
     SOCKADDR_IN6 addr6 = { 0 };
     addr6.sin6_family = AF_INET6;
@@ -452,6 +474,9 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
             goto exit;
         }
     }
+    
+    // Start the otpool waiting on the overlapped event
+    SetThreadpoolWait(aPingHandler->mThreadpoolWait, aPingHandler->mOverlapped.hEvent, nullptr);
 
     // Start the receive
     Flag = MSG_PARTIAL;
@@ -461,11 +486,12 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
             aPingHandler->mSocket, 
             &aPingHandler->mWSARecvBuffer, 1, &aPingHandler->mNumBytesReceived, &Flag, 
             (SOCKADDR*)&aPingHandler->mSourceAddr6, &aPingHandler->mSourceAddr6Len, 
-            &aPingHandler->mOverlapped, PingHandlerRecvCallback
+            &aPingHandler->mOverlapped, nullptr
             );
     if (result != SOCKET_ERROR)
     {
-        PingHandlerRecvCallback(NO_ERROR, aPingHandler->mNumBytesReceived, &aPingHandler->mOverlapped, Flag);
+        // Not pending, so manually trigger the event for the Threadpool to execute
+        SetEvent(aPingHandler->mOverlapped.hEvent);
     }
     else
     {
@@ -493,6 +519,9 @@ exit:
     {
         if (aPingHandler->mSocket != INVALID_SOCKET) 
             closesocket(aPingHandler->mSocket);
+        WaitForThreadpoolWaitCallbacks(aPingHandler->mThreadpoolWait, TRUE);
+        CloseThreadpoolWait(aPingHandler->mThreadpoolWait);
+        CloseHandle(aPingHandler->mOverlapped.hEvent);
         delete aPingHandler;
     }
 }
@@ -536,9 +565,10 @@ void HandleAddressChanges(otNode *aNode)
                 
             shutdown(aPingHandler->mSocket, SD_BOTH);
             closesocket(aPingHandler->mSocket);
-
-            if (InterlockedDecrement(&aPingHandler->mRefCount) != 0)
-                WaitForSingleObject(aPingHandler->mhCleanUp, INFINITE);
+            
+            WaitForThreadpoolWaitCallbacks(aPingHandler->mThreadpoolWait, TRUE);
+            CloseThreadpoolWait(aPingHandler->mThreadpoolWait);
+            CloseHandle(aPingHandler->mOverlapped.hEvent);
 
             delete aPingHandler;
         }
