@@ -1751,7 +1751,12 @@ otGetUnicastAddresses(
     _In_ otInstance *aInstance
     )
 {
-    if (aInstance == nullptr) return nullptr;
+    otLogFuncEntry();
+    if (aInstance == nullptr)
+    {
+        otLogFuncExit();
+        return nullptr;
+    }
 
     // Put the current thead in the correct compartment
     bool RevertCompartmentOnExit = false;
@@ -1768,13 +1773,12 @@ otGetUnicastAddresses(
     }
 
     otNetifAddress *addrs = nullptr;
+    ULONG AddrCount = 0;
 
     // Query the current adapter addresses and format them in the proper output format
     PIP_ADAPTER_ADDRESSES pIAAList;
     if (GetAdapterAddresses(&pIAAList))
     {
-        ULONG AddrCount = 0;
-
         // Loop through all the interfaces
         for (auto pIAA = pIAAList; pIAA != nullptr; pIAA = pIAA->Next) 
         {
@@ -1791,6 +1795,9 @@ otGetUnicastAddresses(
 
             break;
         }
+
+        // If we didn't find any addresses, just break out
+        if (AddrCount == 0) goto error;
 
         // Allocate the addresses
         addrs = (otNetifAddress*)malloc(AddrCount * sizeof(otNetifAddress));
@@ -1847,7 +1854,8 @@ otGetUnicastAddresses(
     {
         (VOID)SetCurrentThreadCompartmentId(OriginalCompartmentID);
     }
-
+    
+    otLogFuncExitMsg("%d addrs", AddrCount);
     return addrs;
 }
 

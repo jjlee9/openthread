@@ -228,6 +228,7 @@ typedef struct otNode
     otInstance*             mInstance;
     HANDLE                  mEnergyScanEvent;
     HANDLE                  mPanIdConflictEvent;
+    CRITICAL_SECTION        mCS;
     vector<otPingHandler*>  mPingHandlers;
     vector<void*>           mMemoryToFree;
 } otNode;
@@ -261,10 +262,6 @@ PingHandlerRecvCallback(
     _Inout_opt_ PVOID                 Context,
     _Inout_     PTP_WAIT              /* Wait */,
     _In_        TP_WAIT_RESULT        /* WaitResult */
-    /*_In_ DWORD dwError,
-    _In_ DWORD cbTransferred,
-    _In_ LPWSAOVERLAPPED lpOverlapped,
-    _In_ DWORD dwFlags*/
     )
 {
     otPingHandler *aPingHandler = (otPingHandler*)Context;
@@ -528,7 +525,10 @@ exit:
 
 void HandleAddressChanges(otNode *aNode)
 {
+    otLogFuncEntry();
     auto addrs = otGetUnicastAddresses(aNode->mInstance);
+
+    EnterCriticalSection(&aNode->mCS);
         
     // Invalidate all handlers
     for (ULONG i = 0; i < aNode->mPingHandlers.size(); i++)
@@ -548,6 +548,8 @@ void HandleAddressChanges(otNode *aNode)
             }
         if (!found) AddPingHandler(aNode, &addr->mAddress);
     }
+
+    vector<otPingHandler*> pingHandlersToDelete;
         
     // Release all left over handlers
     for (int i = aNode->mPingHandlers.size() - 1; i >= 0; i--)
@@ -566,18 +568,28 @@ void HandleAddressChanges(otNode *aNode)
             shutdown(aPingHandler->mSocket, SD_BOTH);
             closesocket(aPingHandler->mSocket);
             
-            WaitForThreadpoolWaitCallbacks(aPingHandler->mThreadpoolWait, TRUE);
-            CloseThreadpoolWait(aPingHandler->mThreadpoolWait);
-            CloseHandle(aPingHandler->mOverlapped.hEvent);
-
-            delete aPingHandler;
+            pingHandlersToDelete.push_back(aPingHandler);
         }
 
+    LeaveCriticalSection(&aNode->mCS);
+
+    for each (auto aPingHandler in pingHandlersToDelete)
+    {
+        WaitForThreadpoolWaitCallbacks(aPingHandler->mThreadpoolWait, TRUE);
+        CloseThreadpoolWait(aPingHandler->mThreadpoolWait);
+        CloseHandle(aPingHandler->mOverlapped.hEvent);
+
+        delete aPingHandler;
+    }
+
     if (addrs) otFreeMemory(addrs);
+
+    otLogFuncExit();
 }
 
 void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
 {
+    otLogFuncEntry();
     otNode* aNode = (otNode*)aContext;
 
     if ((aFlags & OT_NET_ROLE) != 0)
@@ -590,6 +602,7 @@ void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
     {
         HandleAddressChanges(aNode);
     }
+    otLogFuncExit();
 }
 
 OTNODEAPI int32_t OTCALL otNodeLog(const char *aMessage)
@@ -695,6 +708,8 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     node->mEnergyScanEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
     node->mPanIdConflictEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
+    InitializeCriticalSection(&node->mCS);
+
     otSetStateChangedCallback(instance, otNodeStateChangedCallback, node);
 
     HandleAddressChanges(node);
@@ -728,6 +743,8 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
         HandleAddressChanges(aNode);
         assert(aNode->mPingHandlers.size() == 0);
         if (aNode->mPingHandlers.size() != 0) printf("%d left over ping handlers!!!", (int)aNode->mPingHandlers.size());
+        
+        DeleteCriticalSection(&aNode->mCS);
 
         // Delete the virtual bus
         otvmpRemoveVirtualBus(gVmpHandle, aNode->mBusIndex);

@@ -509,6 +509,9 @@ otLwfIndicateNotification(
 
         // Set next link
         Link = Link->Flink;
+        
+        KIRQL irql;
+        IoAcquireCancelSpinLock(&irql);
 
         // If there are other pending notifications or we don't have a pending IRP saved
         // then just go ahead and add the notification to the list
@@ -535,11 +538,17 @@ otLwfIndicateNotification(
         }
         else
         {
+            // Before we are allowed to complete the pending IRP, we must remove the cancel routine
+            IoSetCancelRoutine(DeviceClient->PendingNotificationIRP, NULL);
+
             IrpsToComplete[IrpOffset] = DeviceClient->PendingNotificationIRP;
             IrpOffset++;
 
             DeviceClient->PendingNotificationIRP = NULL;
         }
+        
+        // Release the cancel spin lock
+        IoReleaseCancelSpinLock(irql);
     }
 
     NdisReleaseSpinLock(&FilterDeviceExtension->Lock);
@@ -548,12 +557,6 @@ otLwfIndicateNotification(
     for (UCHAR i = 0; i < IrpOffset; i++)
     {
         PIRP IrpToComplete = IrpsToComplete[i];
-
-        // Before we are allowed to complete the pending IRP, we must remove the cancel routine
-        KIRQL irql;
-        IoAcquireCancelSpinLock(&irql);
-        IoSetCancelRoutine(IrpToComplete, NULL);
-        IoReleaseCancelSpinLock(irql);
 
         // Copy the notification payload
         PVOID IoBuffer = IrpToComplete->AssociatedIrp.SystemBuffer;
