@@ -31,6 +31,8 @@
  *   This file implements a multiplexed timer service on top of the alarm abstraction.
  */
 
+#define WPP_NAME "timer.tmh"
+
 #include <common/code_utils.hpp>
 #include <common/timer.hpp>
 #include <common/debug.hpp>
@@ -38,10 +40,6 @@
 #include <net/ip6.hpp>
 #include <platform/alarm.h>
 #include <openthreadinstance.h>
-
-#ifdef WINDOWS_LOGGING
-#include <timer.tmh>
-#endif
 
 namespace Thread {
 

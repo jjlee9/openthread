@@ -31,6 +31,8 @@
  *   This file implements the top-level interface to the OpenThread stack.
  */
 
+#define WPP_NAME "openthread.tmh"
+
 #ifdef OPENTHREAD_CONFIG_FILE
 #include OPENTHREAD_CONFIG_FILE
 #else
@@ -55,10 +57,6 @@
 #include <thread/thread_uris.hpp>
 #include <utils/global_address.hpp>
 #include <openthreadinstance.h>
-
-#ifdef WINDOWS_LOGGING
-#include "openthread.tmh"
-#endif
 
 #ifndef OPENTHREAD_MULTIPLE_INSTANCE
 static otDEFINE_ALIGNED_VAR(sInstanceRaw, sizeof(otInstance), uint64_t);
@@ -88,10 +86,10 @@ static void HandleActiveScanResult(void *aContext, Mac::Frame *aFrame);
 static void HandleEnergyScanResult(void *aContext, otEnergyScanResult *aResult);
 static void HandleMleDiscover(otActiveScanResult *aResult, void *aContext);
 
-void otProcessNextTasklet(otInstance *aInstance)
+void otProcessQueuedTasklets(otInstance *aInstance)
 {
     otLogFuncEntry();
-    aInstance->mIp6.mTaskletScheduler.RunNextTasklet();
+    aInstance->mIp6.mTaskletScheduler.ProcessQueuedTasklets();
     otLogFuncExit();
 }
 
@@ -724,13 +722,15 @@ exit:
     return error;
 }
 
-ThreadError otGetNextNeighborInfo(otInstance *, otNeighborInfoIterator *aIterator, otNeighborInfo *aInfo)
+ThreadError otGetNextNeighborInfo(otInstance *aInstance, otNeighborInfoIterator *aIterator, otNeighborInfo *aInfo)
 {
-    ThreadError error = kThreadError_NotImplemented;
+    ThreadError error = kThreadError_None;
 
-    (void)aIterator;
-    (void)aInfo;
+    VerifyOrExit((aInfo != NULL) && (aIterator != NULL), error = kThreadError_InvalidArgs);
 
+    error = aInstance->mThreadNetif.GetMle().GetNextNeighborInfo(*aIterator, *aInfo);
+
+exit:
     return error;
 }
 
@@ -1435,14 +1435,29 @@ ThreadError otSendPendingSet(otInstance *aInstance, const otOperationalDataset *
 
 #if OPENTHREAD_ENABLE_COMMISSIONER
 #include <commissioning/commissioner.h>
-ThreadError otCommissionerStart(otInstance *aInstance, const char *aPSKd, const char *aProvisioningUrl)
+ThreadError otCommissionerStart(otInstance *aInstance)
 {
-    return aInstance->mThreadNetif.GetCommissioner().Start(aPSKd, aProvisioningUrl);
+    return aInstance->mThreadNetif.GetCommissioner().Start();
 }
 
 ThreadError otCommissionerStop(otInstance *aInstance)
 {
     return aInstance->mThreadNetif.GetCommissioner().Stop();
+}
+
+ThreadError otCommissionerAddJoiner(otInstance *aInstance, const otExtAddress *aExtAddress, const char *aPSKd)
+{
+    return aInstance->mThreadNetif.GetCommissioner().AddJoiner(static_cast<const Mac::ExtAddress *>(aExtAddress), aPSKd);
+}
+
+ThreadError otCommissionerRemoveJoiner(otInstance *aInstance, const otExtAddress *aExtAddress)
+{
+    return aInstance->mThreadNetif.GetCommissioner().RemoveJoiner(static_cast<const Mac::ExtAddress *>(aExtAddress));
+}
+
+ThreadError otCommissionerSetProvisioningUrl(otInstance *aInstance, const char *aProvisioningUrl)
+{
+    return aInstance->mThreadNetif.GetCommissioner().SetProvisioningUrl(aProvisioningUrl);
 }
 
 ThreadError otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,

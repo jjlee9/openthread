@@ -490,6 +490,14 @@ typedef enum _OTLWF_NOTIF_TYPE
     OTLWF_CTL_CODE(166, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // uint8_t - aMaxChildren
+    
+#define IOCTL_OTLWF_OT_COMMISIONER_START \
+    OTLWF_CTL_CODE(167, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    
+#define IOCTL_OTLWF_OT_COMMISIONER_STOP \
+    OTLWF_CTL_CODE(168, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
 
 #define OPENTHREAD_PSK_MAX_LENGTH       32
 #define OPENTHREAD_PROV_URL_MAX_LENGTH  64
@@ -498,15 +506,6 @@ typedef struct otCommissionConfig
     uint8_t PSKd[OPENTHREAD_PSK_MAX_LENGTH + 1];
     uint8_t ProvisioningUrl[OPENTHREAD_PROV_URL_MAX_LENGTH + 1];
 } otCommissionConfig;
-    
-#define IOCTL_OTLWF_OT_COMMISIONER_START \
-    OTLWF_CTL_CODE(167, METHOD_BUFFERED, FILE_WRITE_DATA)
-    // GUID - InterfaceGuid
-    // otCommissionConfig - aConfig
-    
-#define IOCTL_OTLWF_OT_COMMISIONER_STOP \
-    OTLWF_CTL_CODE(168, METHOD_BUFFERED, FILE_WRITE_DATA)
-    // GUID - InterfaceGuid
     
 #define IOCTL_OTLWF_OT_JOINER_START \
     OTLWF_CTL_CODE(169, METHOD_BUFFERED, FILE_WRITE_DATA)
@@ -571,9 +570,25 @@ typedef struct otCommissionConfig
     // otIp6Address - aDestination
     // uint8_t - aCount
     // uint8_t[aCount] - aTlvTypes
+    
+#define IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER \
+    OTLWF_CTL_CODE(180, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // otExtAddress - aExtAddress
+    // char[OPENTHREAD_PSK_MAX_LENGTH + 1] - aPSKd
+    
+#define IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER \
+    OTLWF_CTL_CODE(181, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // otExtAddress - aExtAddress
+    
+#define IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL \
+    OTLWF_CTL_CODE(182, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // char[OPENTHREAD_PROV_URL_MAX_LENGTH + 1] - aProvisioningUrl
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 179
+#define MAX_OTLWF_IOCTL_FUNC_CODE 182
 
 #endif //__OTLWFIOCTL_H__

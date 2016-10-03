@@ -31,6 +31,8 @@
  *   This file implements IPv6 networking.
  */
 
+#define WPP_NAME "ip6.tmh"
+
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
 #include <common/logging.hpp>
@@ -44,10 +46,6 @@
 #include <net/udp6.hpp>
 #include <thread/mle.hpp>
 #include <openthreadinstance.h>
-
-#ifdef WINDOWS_LOGGING
-#include "ip6.tmh"
-#endif
 
 namespace Thread {
 namespace Ip6 {

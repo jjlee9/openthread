@@ -31,16 +31,14 @@
  *   This file implements the message buffer pool and message buffers.
  */
 
+#define WPP_NAME "message.tmh"
+
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
 #include <common/logging.hpp>
 #include <common/message.hpp>
 #include <common/logging.hpp>
 #include <net/ip6.hpp>
-
-#ifdef WINDOWS_LOGGING
-#include "message.tmh"
-#endif
 
 namespace Thread {
 
@@ -95,10 +93,9 @@ Buffer *MessagePool::NewBuffer(void)
 
     if (mFreeBuffers == NULL)
     {
-        otLogWarnMem("Ran out of buffers!\n");
+        otLogInfoMac("No available message buffer\n");
+        ExitNow();
     }
-
-    VerifyOrExit(mFreeBuffers != NULL, ;);
 
     buffer = mFreeBuffers;
     mFreeBuffers = mFreeBuffers->GetNextBuffer();

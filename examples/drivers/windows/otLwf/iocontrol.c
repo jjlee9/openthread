@@ -283,6 +283,9 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_JOINER_UDP_PORT",
     "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET",
     "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET",
+    "IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER",
+    "IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER",
+    "IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL",
 };
 
 static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
@@ -2755,20 +2758,13 @@ otLwfIoCtl_otCommissionerStart(
             PVOID           OutBuffer,
     _Inout_ PULONG          OutBufferLength
     )
-{
-    NTSTATUS status = STATUS_SUCCESS;
-    
+{    
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
     UNREFERENCED_PARAMETER(OutBuffer);
     *OutBufferLength = 0;
     
-    if (InBufferLength >= sizeof(otCommissionConfig))
-    {
-        otCommissionConfig *aConfig = (otCommissionConfig*)InBuffer;
-        status = ThreadErrorToNtstatus(otCommissionerStart(
-            pFilter->otCtx, (const char*)aConfig->PSKd, (const char*)aConfig->ProvisioningUrl));
-    }
-
-    return status;
+    return ThreadErrorToNtstatus(otCommissionerStart(pFilter->otCtx));
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)

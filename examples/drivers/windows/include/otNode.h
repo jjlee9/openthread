@@ -93,7 +93,12 @@ OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode);
 /**
  * Starts the commissioner logic
  */
-OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl);
+OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode);
+
+/**
+ * Adds a new joiner to the list for commissioning
+ */
+OTNODEAPI int32_t OTCALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *aExtAddr, const char *aPSKd);
 
 /**
  * Stops the commissioner logic

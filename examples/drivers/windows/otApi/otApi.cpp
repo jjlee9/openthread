@@ -3064,28 +3064,71 @@ OTAPI
 ThreadError 
 OTCALL
 otCommissionerStart(
-     _In_ otInstance *aInstance, 
-    const char *aPSKd, 
-    const char *aProvisioningUrl
+     _In_ otInstance *aInstance
     )
 {
-    if (aInstance == nullptr || aPSKd == nullptr) return kThreadError_InvalidArgs;
+    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_COMMISIONER_START));
+}
 
-    otCommissionConfig config = {0};
+OTAPI 
+ThreadError 
+OTCALL
+otCommissionerAddJoiner(
+     _In_ otInstance *aInstance, 
+    const otExtAddress *aExtAddress, 
+    const char *aPSKd
+    )
+{
+    if (aInstance == nullptr || aExtAddress == nullptr || aPSKd == nullptr) return kThreadError_InvalidArgs;
 
     size_t aPSKdLength = strlen(aPSKd);
-    size_t aProvisioningUrlLength = aProvisioningUrl == nullptr ? 0 : strlen(aProvisioningUrl);
-
-    if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH ||
-        aProvisioningUrlLength > OPENTHREAD_PROV_URL_MAX_LENGTH)
+    if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH)
     {
         return kThreadError_InvalidArgs;
     }
+    
+    BYTE Buffer[sizeof(GUID) + sizeof(otExtAddress) + OPENTHREAD_PSK_MAX_LENGTH + 1] = {0};
+    memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), aExtAddress, sizeof(otExtAddress));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otExtAddress), sizeof(Buffer) - sizeof(GUID) - sizeof(otExtAddress), aPSKd, aPSKdLength);
+    
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER, Buffer, sizeof(Buffer), nullptr, 0));
+}
 
-    memcpy_s(config.PSKd, sizeof(config.PSKd), aPSKd, aPSKdLength);
-    memcpy_s(config.ProvisioningUrl, sizeof(config.ProvisioningUrl), aProvisioningUrl, aProvisioningUrlLength);
+OTAPI 
+ThreadError 
+OTCALL
+otCommissionerRemoveJoiner(
+     _In_ otInstance *aInstance, 
+    const otExtAddress *aExtAddress
+    )
+{
+    if (aInstance == nullptr || aExtAddress == nullptr) return kThreadError_InvalidArgs;
+    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER, aExtAddress));
+}
 
-    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_COMMISIONER_START, (const otCommissionConfig*)&config));
+OTAPI 
+ThreadError 
+OTCALL
+otCommissionerSetProvisioningUrl(
+     _In_ otInstance *aInstance,
+    const char *aProvisioningUrl
+    )
+{
+    if (aInstance == nullptr || aProvisioningUrl == nullptr) return kThreadError_InvalidArgs;
+
+    size_t aProvisioningUrlLength = strlen(aProvisioningUrl);
+    if (aProvisioningUrlLength > OPENTHREAD_PROV_URL_MAX_LENGTH)
+    {
+        return kThreadError_InvalidArgs;
+    }
+    
+    BYTE Buffer[sizeof(GUID) + OPENTHREAD_PROV_URL_MAX_LENGTH + 1] = {0};
+    memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), aProvisioningUrl, aProvisioningUrlLength);
+    
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL, Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 

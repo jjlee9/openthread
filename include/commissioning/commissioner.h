@@ -60,22 +60,59 @@ extern "C" {
  * This function enables the Thread Commissioner role.
  *
  * @param[in]  aInstance         A pointer to an OpenThread instance.
- * @param[in]  aPSKd             A pointer to the PSKd.
- * @param[in]  aProvisioningUrl  A pointer to the Provisioning URL (may be NULL).
  *
- * @retval kThreadError_None         Successfully started the Commissioner role.
- * @retval kThreadError_InvalidArgs  @p aPSKd or @p aProvisioningUrl is invalid.
+ * @retval kThreadError_None     Successfully started the Commissioner role.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerStart(otInstance *aInstance, const char *aPSKd, const char *aProvisioningUrl);
+OTAPI ThreadError OTCALL otCommissionerStart(otInstance *aInstance);
 
 /**
  * This function disables the Thread Commissioner role.
  *
- * @param[in]  aInstance  A pointer to an OpenThread instance.
+ * @param[in]  aInstance         A pointer to an OpenThread instance.
+ *
+ * @retval kThreadError_None     Successfully started the Commissioner role.
  *
  */
 OTAPI ThreadError OTCALL otCommissionerStop(otInstance *aInstance);
+
+/**
+ * This function adds a Joiner entry.
+ *
+ * @param[in]  aInstance             A pointer to an OpenThread instance.
+ * @param[in]  aExtAddress           A pointer to the Joiner's extended address or NULL for any Joiner.
+ * @param[in]  aPSKd                 A pointer to the PSKd.
+ *
+ * @retval kThreadError_None         Successfully added the Joiner.
+ * @retval kThreadError_NoBufs       No buffers available to add the Joiner.
+ * @retval kThreadError_InvalidArgs  @p aExtAddress or @p aPSKd is invalid.
+ *
+ */
+OTAPI ThreadError OTCALL otCommissionerAddJoiner(otInstance *aInstance, const otExtAddress *aExtAddress, const char *aPSKd);
+
+/**
+ * This function removes a Joiner entry.
+ *
+ * @param[in]  aInstance             A pointer to an OpenThread instance.
+ * @param[in]  aExtAddress           A pointer to the Joiner's extended address or NULL for any Joiner.
+ *
+ * @retval kThreadError_None         Successfully added the Joiner.
+ * @retval kThreadError_NotFound     The Joiner specified by @p aExtAddress was not found.
+ * @retval kThreadError_InvalidArgs  @p aExtAddress is invalid.
+ *
+ */
+OTAPI ThreadError otCommissionerRemoveJoiner(otInstance *aIntsance, const otExtAddress *aExtAddress);
+
+/**
+ * This function sets the Provisioning URL.
+ *
+ * @param[in]  aProvisioningUrl  A pointer to the Provisioning URL (may be NULL).
+ *
+ * @retval kThreadError_None         Successfully added the Joiner.
+ * @retval kThreadError_InvalidArgs  @p aProvisioningUrl is invalid.
+ *
+ */
+OTAPI ThreadError OTCALL otCommissionerSetProvisioningUrl(otInstance *aInstance, const char *aProvisioningUrl);
 
 /**
  * This function pointer is called when the Commissioner receives an Energy Report.

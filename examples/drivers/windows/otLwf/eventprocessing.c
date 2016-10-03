@@ -876,20 +876,8 @@ otLwfEventWorkerThread(
         }
         else if (status == STATUS_WAIT_0 + 3) // EventWorkerThreadProcessTasklets fired
         {
-            ULONG Count = 0;
-            do
-            {
-                if (++Count > 10)
-                {
-                    // Break out, but set the event first, so we will come back in
-                    KeSetEvent(&pFilter->EventWorkerThreadProcessTasklets, IO_NO_INCREMENT, FALSE);
-                    break;
-                }
-
-                // Process all tasklets that were indicated to us from OpenThread
-                otProcessNextTasklet(pFilter->otCtx);
-
-            } while (otAreTaskletsPending(pFilter->otCtx) && !KeReadStateEvent(&pFilter->EventWorkerThreadStopEvent));
+            // Process all tasklets that were indicated to us from OpenThread
+            otProcessQueuedTasklets(pFilter->otCtx);
         }
         else if (status == STATUS_WAIT_0 + 4) // SendNetBufferListComplete fired
         {

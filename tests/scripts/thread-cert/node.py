@@ -175,13 +175,22 @@ class Node:
         else:    
             self.send_command('thread stop')
             self.pexpect.expect('Done')
-
-    def commissioner_start(self, pskd='', provisioning_url=''):
+            
+    def commissioner_start(self):
         if self.Api:
-            if self.Api.otNodeCommissionerStart(self.otNode, pskd.encode('utf-8'), provisioning_url.encode('utf-8')) != 0:
+            if self.Api.otNodeCommissionerStart(self.otNode) != 0:
                 raise OSError("otNodeCommissionerStart failed!")
         else:    
-            cmd = 'commissioner start ' + pskd + ' ' + provisioning_url
+            cmd = 'commissioner start'
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
+    def commissioner_add_joiner(self, addr, psk):
+        if self.Api:
+            if self.Api.otNodeCommissionerJoinerAdd(self.otNode, addr.encode('utf-8'), psk.encode('utf-8')) != 0:
+                raise OSError("otNodeCommissionerJoinerAdd failed!")
+        else:    
+            cmd = 'commissioner joiner add ' + addr + ' ' + psk
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
@@ -269,6 +278,14 @@ class Node:
                 addr64 = self.pexpect.match.groups()[0].decode("utf-8")
             self.pexpect.expect('Done')
             return addr64
+
+    def get_hashmacaddr(self):
+        self.send_command('hashmacaddr')
+        i = self.pexpect.expect('([0-9a-fA-F]{16})')
+        if i == 0:
+            addr = self.pexpect.match.groups()[0].decode("utf-8")
+        self.pexpect.expect('Done')
+        return addr
 
     def set_channel(self, channel):
         if self.Api:
@@ -632,9 +649,11 @@ class Node:
 
         self.Api.otNodeThreadStop.argtypes = [ctypes.c_void_p]
 
-        self.Api.otNodeCommissionerStart.argtypes = [ctypes.c_void_p, 
-                                                     ctypes.c_char_p,
-                                                     ctypes.c_char_p]
+        self.Api.otNodeCommissionerStart.argtypes = [ctypes.c_void_p]
+
+        self.Api.otNodeCommissionerJoinerAdd.argtypes = [ctypes.c_void_p, 
+                                                         ctypes.c_char_p,
+                                                         ctypes.c_char_p]
 
         self.Api.otNodeCommissionerStop.argtypes = [ctypes.c_void_p]
 

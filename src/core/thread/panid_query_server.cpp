@@ -31,6 +31,8 @@
  *   This file implements the PAN ID Query Server.
  */
 
+#define WPP_NAME "panid_query_server.tmh"
+
 #include <coap/coap_header.hpp>
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
@@ -40,10 +42,6 @@
 #include <thread/panid_query_server.hpp>
 #include <thread/thread_netif.hpp>
 #include <thread/thread_uris.hpp>
-
-#ifdef WINDOWS_LOGGING
-#include "panid_query_server.tmh"
-#endif
 
 namespace Thread {
 

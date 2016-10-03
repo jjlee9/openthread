@@ -839,12 +839,27 @@ OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl)
+OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode)
 {
-    otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aPSKd, aProvisioningUrl);
-    printf("%d: commissioner start %s %s\r\n", aNode->mId, aPSKd, aProvisioningUrl);
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: commissioner start\r\n", aNode->mId);
 
-    auto error = otCommissionerStart(aNode->mInstance, aPSKd, aProvisioningUrl);
+    auto error = otCommissionerStart(aNode->mInstance);
+    
+    otLogFuncExit();
+    return error;
+}
+
+OTNODEAPI int32_t OTCALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *aExtAddr, const char *aPSKd)
+{
+    otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aExtAddr, aPSKd);
+    printf("%d: commissioner joiner add %s %s\r\n", aNode->mId, aExtAddr, aPSKd);
+    
+    otExtAddress extAddr;
+    if (Hex2Bin(aExtAddr, extAddr.m8, sizeof(extAddr)) != sizeof(extAddr))
+        return kThreadError_Parse;
+
+    auto error = otCommissionerAddJoiner(aNode->mInstance, &extAddr, aPSKd);
     
     otLogFuncExit();
     return error;

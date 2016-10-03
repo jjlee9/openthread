@@ -31,6 +31,8 @@
  *   This file implements MLE functionality required for the Thread Child, Router and Leader roles.
  */
 
+#define WPP_NAME "mle.tmh"
+
 #include <thread/mle.hpp>
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
@@ -47,10 +49,6 @@
 #include <thread/key_manager.hpp>
 #include <thread/mle_router.hpp>
 #include <thread/thread_netif.hpp>
-
-#ifdef WINDOWS_LOGGING
-#include "mle.tmh"
-#endif
 
 using Thread::Encoding::BigEndian::HostSwap16;
 
@@ -1534,18 +1532,18 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     {
         if (keySequence == neighbor->mKeySequence)
         {
-            if (!(frameCounter >= neighbor->mValid.mMleFrameCounter))
+            if (frameCounter < neighbor->mValid.mMleFrameCounter)
             {
                 otLogDebgMle("mle frame reject 1\n");
-                goto exit;
+                ExitNow();
             }
         }
         else
         {
-            if (!(keySequence > neighbor->mKeySequence))
+            if (keySequence <= neighbor->mKeySequence)
             {
                 otLogDebgMle("mle frame reject 2\n");
-                goto exit;
+                ExitNow();
             }
 
             neighbor->mKeySequence = keySequence;
@@ -1566,7 +1564,7 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
               command == Header::kCommandChildUpdateRequest))
         {
             otLogDebgMle("mle sequence unknown! %d\n", command);
-            goto exit;
+            ExitNow();
         }
     }
 
