@@ -26,19 +26,37 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "platform-virtual.h"
+#include "platform-posix.h"
 
-#include <openthread-types.h>
-#include <platform/misc.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
 
-void otPlatReset(otInstance *aInstance)
+#include <openthread-config.h>
+#include <openthread.h>
+
+#include <platform/alarm.h>
+
+/**
+ * diagnostics mode flag.
+ *
+ */
+static bool sDiagMode = false;
+
+void otPlatDiagProcess(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen)
 {
-    // This function does nothing on the Posix platform.
-    (void)aInstance;
+    // no more diagnostics features for Posix platform
+    snprintf(aOutput, aOutputMaxLen, "diag feature '%s' is not supported\r\n", argv[0]);
+    (void)argc;
 }
 
-otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
+void otPlatDiagModeSet(bool aMode)
 {
-    (void)aInstance;
-    return kPlatResetReason_PowerOn;
+    sDiagMode = aMode;
+}
+
+bool otPlatDiagModeGet()
+{
+    return sDiagMode;
 }
