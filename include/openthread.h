@@ -114,11 +114,11 @@ extern "C" {
  */
 
 /**
- * Run the next queued tasklet in OpenThread.
+ * Run all queued OpenThread tasklets at the time this is called.
  *
  * @param[in] aInstance A pointer to an OpenThread instance.
  */
-void otProcessNextTasklet(otInstance *aInstance);
+void otProcessQueuedTasklets(otInstance *aInstance);
 
 /**
  * Indicates whether or not OpenThread has tasklets pending.
@@ -1703,8 +1703,9 @@ ThreadError otGetChildInfoByIndex(otInstance *aInstance, uint8_t aChildIndex, ot
                              it should be set to OT_NEIGHBOR_INFO_ITERATOR_INIT.
  * @param[out]    aInfo      A pointer to where the neighbor information will be placed.
  *
- * @retval kThreadError_None      Successfully found the next neighbor entry in table.
- * @retval kThreadError_NotFound  No subsequent neighbor entry exists in the table.
+ * @retval kThreadError_None         Successfully found the next neighbor entry in table.
+ * @retval kThreadError_NotFound     No subsequent neighbor entry exists in the table.
+ * @retval kThreadError_InvalidArgs  @p aIterator or @p aInfo was NULL.
  *
  */
 ThreadError otGetNextNeighborInfo(otInstance *aInstance, otNeighborInfoIterator *aIterator, otNeighborInfo *aInfo);
