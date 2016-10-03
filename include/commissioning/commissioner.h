@@ -88,7 +88,8 @@ OTAPI ThreadError OTCALL otCommissionerStop(otInstance *aInstance);
  * @retval kThreadError_InvalidArgs  @p aExtAddress or @p aPSKd is invalid.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerAddJoiner(otInstance *aInstance, const otExtAddress *aExtAddress, const char *aPSKd);
+OTAPI ThreadError OTCALL otCommissionerAddJoiner(otInstance *aInstance, const otExtAddress *aExtAddress,
+                                                 const char *aPSKd);
 
 /**
  * This function removes a Joiner entry.
@@ -101,7 +102,7 @@ OTAPI ThreadError OTCALL otCommissionerAddJoiner(otInstance *aInstance, const ot
  * @retval kThreadError_InvalidArgs  @p aExtAddress is invalid.
  *
  */
-OTAPI ThreadError otCommissionerRemoveJoiner(otInstance *aIntsance, const otExtAddress *aExtAddress);
+OTAPI ThreadError OTCALL otCommissionerRemoveJoiner(otInstance *aIntsance, const otExtAddress *aExtAddress);
 
 /**
  * This function sets the Provisioning URL.
