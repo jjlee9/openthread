@@ -26,92 +26,58 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file
- * @brief
- *   This file includes the platform-specific initializers.
- */
+#include "platform-posix.h"
 
-#include "platform-virtual.h"
-
-#include <assert.h>
-#include <errno.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <openthread.h>
-#include <platform/alarm.h>
 #include <platform/uart.h>
+#include <platform/spi-slave.h>
 
-uint32_t NODE_ID = 1;
-uint32_t WELLKNOWN_NODE_ID = 34;
+// Spi-slave stubs
 
-void PlatformInit(int argc, char *argv[])
+ThreadError otPlatSpiSlaveEnable(
+    otPlatSpiSlaveTransactionCompleteCallback aCallback,
+    void *aContext
+)
 {
-    char *endptr;
+    (void)aCallback;
+    (void)aContext;
 
-    if (argc != 2)
-    {
-        exit(EXIT_FAILURE);
-    }
+    fprintf(stderr, "\nNo SPI support for posix platform.");
+    exit(0);
 
-    NODE_ID = (uint32_t)strtol(argv[1], &endptr, 0);
-
-    if (*endptr != '\0')
-    {
-        fprintf(stderr, "Invalid NODE_ID: %s\n", argv[1]);
-        exit(EXIT_FAILURE);
-    }
-
-    platformAlarmInit();
-    platformRadioInit();
-    platformRandomInit();
+    return kThreadError_NotImplemented;
 }
 
-bool UartInitialized = false;
-
-void PlatformProcessDrivers(otInstance *aInstance)
+void otPlatSpiSlaveDisable(void)
 {
-    fd_set read_fds;
-    fd_set write_fds;
-    fd_set error_fds;
-    int max_fd = -1;
-    struct timeval timeout;
-    int rval;
-
-    if (!UartInitialized)
-    {
-        UartInitialized = true;
-        otPlatUartEnable();
-    }
-
-    FD_ZERO(&read_fds);
-    FD_ZERO(&write_fds);
-    FD_ZERO(&error_fds);
-
-#ifndef _WIN32
-    platformUartUpdateFdSet(&read_fds, &write_fds, &error_fds, &max_fd);
-#endif
-    platformRadioUpdateFdSet(&read_fds, &write_fds, &max_fd);
-    platformAlarmUpdateTimeout(&timeout);
-
-    if (!otAreTaskletsPending(aInstance))
-    {
-        rval = select(max_fd + 1, &read_fds, &write_fds, &error_fds, &timeout);
-
-        if ((rval < 0) && (errno != EINTR))
-        {
-            perror("select");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-#ifndef _WIN32
-    platformUartProcess();
-#endif
-    platformRadioProcess(aInstance);
-    platformAlarmProcess(aInstance);
 }
 
+ThreadError otPlatSpiSlavePrepareTransaction(
+    uint8_t *anOutputBuf,
+    uint16_t anOutputBufLen,
+    uint8_t *anInputBuf,
+    uint16_t anInputBufLen,
+    bool aRequestTransactionFlag
+)
+{
+    (void)anOutputBuf;
+    (void)anOutputBufLen;
+    (void)anInputBuf;
+    (void)anInputBufLen;
+    (void)aRequestTransactionFlag;
+
+    return kThreadError_NotImplemented;
+}
+
+// Uart
+
+void otPlatUartSendDone(void)
+{
+}
+
+void otPlatUartReceived(const uint8_t *aBuf, uint16_t aBufLength)
+{
+    (void)aBuf;
+    (void)aBufLength;
+}
