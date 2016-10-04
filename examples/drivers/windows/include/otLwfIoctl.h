@@ -588,9 +588,17 @@ typedef struct otCommissionConfig
     OTLWF_CTL_CODE(182, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // char[OPENTHREAD_PROV_URL_MAX_LENGTH + 1] - aProvisioningUrl (optional)
+    
+#define IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN \
+    OTLWF_CTL_CODE(183, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // uint32_t - aChannelMask
+    // uint8_t - aCount
+    // uint16_t - aPeriod
+    // otIp6Address - aAddress
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 182
+#define MAX_OTLWF_IOCTL_FUNC_CODE 183
 
 #endif //__OTLWFIOCTL_H__

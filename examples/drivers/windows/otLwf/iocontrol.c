@@ -286,6 +286,7 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER",
     "IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER",
     "IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL",
+    "IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN",
 };
 
 static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
@@ -571,6 +572,9 @@ otLwfCompleteOpenThreadIrp(
         break;
     case IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL:
         status = otLwfIoCtl_otCommissionerProvisioningUrl(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN:
+        status = otLwfIoCtl_otCommissionerAnnounceBegin(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
@@ -3167,6 +3171,46 @@ otLwfIoCtl_otCommissionerProvisioningUrl(
         {
             status = ThreadErrorToNtstatus(otCommissionerSetProvisioningUrl(
                 pFilter->otCtx, aProvisioningUrl));
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otCommissionerAnnounceBegin(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(otIp6Address))
+    {
+        uint32_t aChannelMask = *(uint32_t*)InBuffer;
+        uint8_t aCount = *(uint8_t*)(InBuffer + sizeof(uint32_t));
+        uint16_t aPeriod = *(uint16_t*)(InBuffer + sizeof(uint32_t) + sizeof(uint8_t));
+        const otIp6Address *aAddress = (otIp6Address*)(InBuffer + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t));
+
+        if (InBufferLength >= sizeof(otIp6Address) + sizeof(uint8_t) + aCount)
+        {
+            status = ThreadErrorToNtstatus(
+                otCommissionerAnnounceBegin(
+                    pFilter->otCtx,
+                    aChannelMask,
+                    aCount,
+                    aPeriod,
+                    aAddress)
+                );
         }
     }
 

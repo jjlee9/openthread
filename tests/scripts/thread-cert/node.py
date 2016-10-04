@@ -280,12 +280,15 @@ class Node:
             return addr64
 
     def get_hashmacaddr(self):
-        self.send_command('hashmacaddr')
-        i = self.pexpect.expect('([0-9a-fA-F]{16})')
-        if i == 0:
-            addr = self.pexpect.match.groups()[0].decode("utf-8")
-        self.pexpect.expect('Done')
-        return addr
+        if self.Api:
+            return self.Api.otNodeGetHashMacAddress(self.otNode).decode('utf-8')
+        else:
+            self.send_command('hashmacaddr')
+            i = self.pexpect.expect('([0-9a-fA-F]{16})')
+            if i == 0:
+                addr = self.pexpect.match.groups()[0].decode("utf-8")
+            self.pexpect.expect('Done')
+            return addr
 
     def set_channel(self, channel):
         if self.Api:
@@ -618,6 +621,44 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
+    def set_active_dataset(self, timestamp, panid=None, channel=None):
+        if self.Api:
+            if panid == None:
+                panid = 0
+            if channel == None:
+                channel = 0
+            if self.Api.otNodeSetActiveDataset(self.otNode, ctypes.c_ulonglong(timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel)) != 0:
+                raise OSError("otNodeSetActiveDataset failed!")
+        else:
+            self.send_command('dataset clear')
+            self.pexpect.expect('Done')
+
+            cmd = 'dataset activetimestamp %d' % timestamp
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
+            if panid != None:
+                cmd = 'dataset panid %d' % panid
+                self.send_command(cmd)
+                self.pexpect.expect('Done')
+
+            if channel != None:
+                cmd = 'dataset channel %d' % channel
+                self.send_command(cmd)
+                self.pexpect.expect('Done')
+
+            self.send_command('dataset commit active')
+            self.pexpect.expect('Done')
+
+    def announce_begin(self, mask, count, period, ipaddr):
+        if self.Api:
+            if self.Api.otNodeCommissionerAnnounceBegin(self.otNode, ctypes.c_uint(mask), ctypes.c_ubyte(count), ctypes.c_ushort(period), ipaddr.encode('utf-8')) != 0:
+                raise OSError("otNodeCommissionerAnnounceBegin failed!")
+        else:
+            cmd = 'commissioner announce ' + str(mask) + ' ' + str(count) + ' ' + str(period) + ' ' + ipaddr
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
     def log(self, message):
         if self.Api:
             self.Api.otNodeLog(message)
@@ -678,6 +719,9 @@ class Node:
         
         self.Api.otNodeGetAddr16.argtypes = [ctypes.c_void_p]
         self.Api.otNodeGetAddr16.restype = ctypes.c_ushort
+        
+        self.Api.otNodeGetHashMacAddress.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetHashMacAddress.restype = ctypes.c_ushort
         
         self.Api.otNodeGetAddr64.argtypes = [ctypes.c_void_p]
         self.Api.otNodeGetAddr64.restype = ctypes.c_char_p
@@ -789,37 +833,21 @@ class Node:
         self.Api.otNodeSetRouterSelectionJitter.argtypes = [ctypes.c_void_p, 
                                                             ctypes.c_ubyte]
 
+        self.Api.otNodeCommissionerAnnounceBegin.argtypes = [ctypes.c_void_p,
+                                                             ctypes.c_uint,
+                                                             ctypes.c_ubyte,
+                                                             ctypes.c_ushort,
+                                                             ctypes.c_char_p]
 
+        self.Api.otNodeSetActiveDataset.argtypes = [ctypes.c_void_p,
+                                                    ctypes.c_ulonglong,
+                                                    ctypes.c_ushort,
+                                                    ctypes.c_ushort]
+        
         # Initialize a new node
         self.otNode = self.Api.otNodeInit(ctypes.c_uint(nodeid))
         if self.otNode == None:
             raise OSError("otNodeInit failed!")
-
-    def set_active_dataset(self, timestamp, panid=None, channel=None):
-        self.send_command('dataset clear')
-        self.pexpect.expect('Done')
-
-        cmd = 'dataset activetimestamp %d' % timestamp
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
-
-        if panid != None:
-            cmd = 'dataset panid %d' % panid
-            self.send_command(cmd)
-            self.pexpect.expect('Done')
-
-        if channel != None:
-            cmd = 'dataset channel %d' % channel
-            self.send_command(cmd)
-            self.pexpect.expect('Done')
-
-        self.send_command('dataset commit active')
-        self.pexpect.expect('Done')
-
-    def announce_begin(self, mask, count, period, ipaddr):
-        cmd = 'commissioner announce ' + str(mask) + ' ' + str(count) + ' ' + str(period) + ' ' + ipaddr
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
 
 if __name__ == '__main__':
     unittest.main()

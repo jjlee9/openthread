@@ -3159,10 +3159,9 @@ otCommissionerAnnounceBegin(
     )
 {
     if (aInstance == nullptr || aAddress == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aChannelMask);
-    UNREFERENCED_PARAMETER(aCount);
-    UNREFERENCED_PARAMETER(aPeriod);
-    return kThreadError_NotImplemented;
+
+    PackedBuffer5<GUID,uint32_t,uint8_t,uint16_t,otIp6Address> Buffer(aInstance->InterfaceGuid, aChannelMask, aCount, aPeriod, *aAddress);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 

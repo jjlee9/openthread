@@ -167,5 +167,6 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticReset;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAddJoiner;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerRemoveJoiner;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerProvisioningUrl;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAnnounceBegin;
 
 #endif // _IOCONTROL_H

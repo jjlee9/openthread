@@ -984,6 +984,20 @@ OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode)
     return result;
 }
 
+OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    otExtAddress aHashMacAddress = {};
+    otGetHashMacAddress(aNode->mInstance, &aHashMacAddress);
+    char* str = (char*)malloc(18);
+    aNode->mMemoryToFree.push_back(str);
+    for (int i = 0; i < 8; i++)
+        sprintf_s(str + i * 2, 18 - (2 * i), "%02x", aHashMacAddress.m8[i]);
+    printf("%d: hashmacaddr\r\n%s\r\n", aNode->mId, str);
+    otLogFuncExit();
+    return str;
+}
+
 OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
@@ -1708,4 +1722,45 @@ OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t a
     otSetRouterSelectionJitter(aNode->mInstance, aRouterJitter);
     otLogFuncExit();
     return 0;
+}
+
+OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const char *aAddr)
+{
+    otLogFuncEntryMsg("[%d] 0x%08x %d %d %s", aNode->mId, aChannelMask, aCount, aPeriod, aAddr);
+    printf("%d: commissioner announce 0x%08x %d %d %s\r\n", aNode->mId, aChannelMask, aCount, aPeriod, aAddr);
+
+    otIp6Address aAddress;
+    auto error = otIp6AddressFromString(aAddr, &aAddress);
+    if (error != kThreadError_None) return error;
+
+    auto result = otCommissionerAnnounceBegin(aNode->mInstance, aChannelMask, aCount, aPeriod, &aAddress);
+    otLogFuncExit();
+    return result;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel)
+{
+    otLogFuncEntryMsg("[%d] 0x%llX %d %d", aNode->mId, aTimestamp, aPanId, aChannel);
+    printf("%d: dataset set active 0x%llX %d %d\r\n", aNode->mId, aTimestamp, aPanId, aChannel);
+
+    otOperationalDataset aDataset = {};
+
+    aDataset.mActiveTimestamp = aTimestamp;
+    aDataset.mIsActiveTimestampSet = true;
+
+    if (aPanId != 0)
+    {
+        aDataset.mPanId = aPanId;
+        aDataset.mIsPanIdSet = true;
+    }
+
+    if (aChannel != 0)
+    {
+        aDataset.mChannel = aChannel;
+        aDataset.mIsChannelSet = true;
+    }
+
+    auto result = otSetActiveDataset(aNode->mInstance, &aDataset);
+    otLogFuncExit();
+    return result;
 }

@@ -146,6 +146,11 @@ OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode);
 OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode);
 
 /**
+ * Gets the node's hash mac address
+ */
+OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode);
+
+/**
  * Sets the channel for the node
  */
 OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel);
@@ -304,6 +309,16 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
  * Sets the router selection jitter value for a node
  */
 OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter);
+
+/**
+ * Sends the announce message for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const char *aAddr);
+
+/**
+ * Sets the active dataset for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0);
 
 #ifdef __cplusplus
 }  // extern "C"
