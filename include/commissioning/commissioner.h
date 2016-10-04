@@ -128,7 +128,8 @@ OTAPI ThreadError OTCALL otCommissionerSetProvisioningUrl(otInstance *aInstance,
  * @retval kThreadError_NoBufs  Insufficient buffers to generate an Announce Begin message.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerAnnounceBegin(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod,
+OTAPI ThreadError OTCALL otCommissionerAnnounceBegin(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
+                                                     uint16_t aPeriod,
                                                      const otIp6Address *aAddress);
 
 /**
