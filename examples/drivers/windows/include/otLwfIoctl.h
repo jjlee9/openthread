@@ -574,18 +574,20 @@ typedef struct otCommissionConfig
 #define IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER \
     OTLWF_CTL_CODE(180, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
-    // otExtAddress - aExtAddress
+    // uint8_t - aExtAddressValid
+    // otExtAddress - aExtAddress (optional)
     // char[OPENTHREAD_PSK_MAX_LENGTH + 1] - aPSKd
     
 #define IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER \
     OTLWF_CTL_CODE(181, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
-    // otExtAddress - aExtAddress
+    // uint8_t - aExtAddressValid
+    // otExtAddress - aExtAddress (optional)
     
 #define IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL \
     OTLWF_CTL_CODE(182, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
     // GUID - InterfaceGuid
-    // char[OPENTHREAD_PROV_URL_MAX_LENGTH + 1] - aProvisioningUrl
+    // char[OPENTHREAD_PROV_URL_MAX_LENGTH + 1] - aProvisioningUrl (optional)
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100

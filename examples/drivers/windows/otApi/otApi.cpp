@@ -3080,20 +3080,25 @@ otCommissionerAddJoiner(
     const char *aPSKd
     )
 {
-    if (aInstance == nullptr || aExtAddress == nullptr || aPSKd == nullptr) return kThreadError_InvalidArgs;
+    if (aInstance == nullptr || aPSKd == nullptr) return kThreadError_InvalidArgs;
 
-    size_t aPSKdLength = strlen(aPSKd);
+    size_t aPSKdLength = strnlen(aPSKd, OPENTHREAD_PSK_MAX_LENGTH + 1);
     if (aPSKdLength > OPENTHREAD_PSK_MAX_LENGTH)
     {
         return kThreadError_InvalidArgs;
     }
+
+    uint8_t aExtAddressValid = aExtAddress ? 1 : 0;
     
-    BYTE Buffer[sizeof(GUID) + sizeof(otExtAddress) + OPENTHREAD_PSK_MAX_LENGTH + 1] = {0};
+    const ULONG BufferLength = sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress) + aPSKdLength + 1;
+    BYTE Buffer[sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress) + OPENTHREAD_PSK_MAX_LENGTH + 1] = {0};
     memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), aExtAddress, sizeof(otExtAddress));
-    memcpy_s(Buffer + sizeof(GUID) + sizeof(otExtAddress), sizeof(Buffer) - sizeof(GUID) - sizeof(otExtAddress), aPSKd, aPSKdLength);
+    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), &aExtAddressValid, sizeof(aExtAddressValid));
+    if (aExtAddressValid)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(uint8_t), sizeof(Buffer) - sizeof(GUID) - sizeof(uint8_t), aExtAddress, sizeof(otExtAddress));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress), sizeof(Buffer) - sizeof(GUID) - sizeof(uint8_t) - sizeof(otExtAddress), aPSKd, aPSKdLength);
     
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER, Buffer, sizeof(Buffer), nullptr, 0));
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER, Buffer, BufferLength, nullptr, 0));
 }
 
 OTAPI 
@@ -3104,8 +3109,17 @@ otCommissionerRemoveJoiner(
     const otExtAddress *aExtAddress
     )
 {
-    if (aInstance == nullptr || aExtAddress == nullptr) return kThreadError_InvalidArgs;
-    return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER, aExtAddress));
+    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+
+    uint8_t aExtAddressValid = aExtAddress ? 1 : 0;
+    
+    BYTE Buffer[sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress)] = {0};
+    memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), &aExtAddressValid, sizeof(aExtAddressValid));
+    if (aExtAddressValid)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(uint8_t), sizeof(Buffer) - sizeof(GUID) - sizeof(uint8_t), aExtAddress, sizeof(otExtAddress));
+
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER, Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 
@@ -3116,19 +3130,21 @@ otCommissionerSetProvisioningUrl(
     const char *aProvisioningUrl
     )
 {
-    if (aInstance == nullptr || aProvisioningUrl == nullptr) return kThreadError_InvalidArgs;
+    if (aInstance == nullptr) return kThreadError_InvalidArgs;
 
-    size_t aProvisioningUrlLength = strlen(aProvisioningUrl);
+    size_t aProvisioningUrlLength = aProvisioningUrl ? strnlen(aProvisioningUrl, OPENTHREAD_PROV_URL_MAX_LENGTH + 1) : 0;
     if (aProvisioningUrlLength > OPENTHREAD_PROV_URL_MAX_LENGTH)
     {
         return kThreadError_InvalidArgs;
     }
     
+    const ULONG BufferLength = sizeof(GUID) + aProvisioningUrlLength + 1;
     BYTE Buffer[sizeof(GUID) + OPENTHREAD_PROV_URL_MAX_LENGTH + 1] = {0};
     memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
-    memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), aProvisioningUrl, aProvisioningUrlLength);
+    if (aProvisioningUrlLength > 0)
+        memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), aProvisioningUrl, aProvisioningUrlLength);
     
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL, Buffer, sizeof(Buffer), nullptr, 0));
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL, Buffer, BufferLength, nullptr, 0));
 }
 
 OTAPI 

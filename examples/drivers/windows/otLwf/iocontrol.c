@@ -563,6 +563,15 @@ otLwfCompleteOpenThreadIrp(
     case IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET:
         status = otLwfIoCtl_otSendDiagnosticReset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
+    case IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER:
+        status = otLwfIoCtl_otCommissionerAddJoiner(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER:
+        status = otLwfIoCtl_otCommissionerRemoveJoiner(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL:
+        status = otLwfIoCtl_otCommissionerProvisioningUrl(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
         OutBufferLength = 0;
@@ -3058,6 +3067,106 @@ otLwfIoCtl_otSendDiagnosticReset(
                     aTlvTypes,
                     aCount)
                 );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otCommissionerAddJoiner(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    
+    UNREFERENCED_PARAMETER(OutBuffer);
+    *OutBufferLength = 0;
+    
+    if (InBufferLength >= sizeof(uint8_t) + sizeof(otExtAddress))
+    {
+        const ULONG aPSKdBufferLength = InBufferLength - sizeof(otExtAddress) - sizeof(otExtAddress);
+
+        if (aPSKdBufferLength <= OPENTHREAD_PSK_MAX_LENGTH + 1)
+        {
+            uint8_t aExtAddressValid = *(uint8_t*)InBuffer;
+            const otExtAddress *aExtAddress = aExtAddressValid == 0 ? NULL : (otExtAddress*)(InBuffer + sizeof(uint8_t));
+            char *aPSKd = (char*)(InBuffer + sizeof(uint8_t) + sizeof(otExtAddress));
+
+            // Ensure aPSKd is NULL terminated in the buffer
+            if (strnlen(aPSKd, aPSKdBufferLength) < aPSKdBufferLength)
+            {
+                status = ThreadErrorToNtstatus(otCommissionerAddJoiner(
+                    pFilter->otCtx, aExtAddress, aPSKd));
+            }
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otCommissionerRemoveJoiner(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    
+    UNREFERENCED_PARAMETER(OutBuffer);
+    *OutBufferLength = 0;
+    
+    if (InBufferLength >= sizeof(uint8_t) + sizeof(otExtAddress))
+    {
+        uint8_t aExtAddressValid = *(uint8_t*)InBuffer;
+        const otExtAddress *aExtAddress = aExtAddressValid == 0 ? NULL : (otExtAddress*)(InBuffer + sizeof(uint8_t));
+        status = ThreadErrorToNtstatus(otCommissionerRemoveJoiner(
+            pFilter->otCtx, aExtAddress));
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otCommissionerProvisioningUrl(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_SUCCESS;
+    
+    UNREFERENCED_PARAMETER(OutBuffer);
+    *OutBufferLength = 0;
+    
+    if (InBufferLength <= OPENTHREAD_PROV_URL_MAX_LENGTH + 1)
+    {
+        char *aProvisioningUrl = InBufferLength > 1 ? (char*)InBuffer : NULL;
+
+        // Ensure aProvisioningUrl is empty or NULL terminated in the buffer
+        if (aProvisioningUrl == NULL ||
+            strnlen(aProvisioningUrl, InBufferLength) < InBufferLength)
+        {
+            status = ThreadErrorToNtstatus(otCommissionerSetProvisioningUrl(
+                pFilter->otCtx, aProvisioningUrl));
         }
     }
 

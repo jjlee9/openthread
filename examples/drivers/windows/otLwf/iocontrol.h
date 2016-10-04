@@ -164,5 +164,8 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterSelectionJitter;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otJoinerUdpPort;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticGet;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticReset;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAddJoiner;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerRemoveJoiner;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerProvisioningUrl;
 
 #endif // _IOCONTROL_H
