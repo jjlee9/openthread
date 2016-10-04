@@ -56,6 +56,16 @@
 namespace Thread {
 namespace Mac {
 
+static const uint8_t sMode2Key[] =
+{
+    0x78, 0x58, 0x16, 0x86, 0xfd, 0xb4, 0x58, 0x0f, 0xb0, 0x92, 0x54, 0x6a, 0xec, 0xbd, 0x15, 0x66
+};
+
+static const otExtAddress sMode2ExtAddress =
+{
+    { 0x35, 0x06, 0xfe, 0xb8, 0x23, 0xd4, 0x87, 0x12 },
+};
+
 static const uint8_t sExtendedPanidInit[] = {0xde, 0xad, 0x00, 0xbe, 0xef, 0x00, 0xca, 0xfe};
 static const char sNetworkNameInit[] = "OpenThread";
 
@@ -569,6 +579,7 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
     uint8_t tagLength;
     Crypto::AesCcm aesCcm;
     const uint8_t *key = NULL;
+    const ExtAddress *extAddress = NULL;
 
     if (aFrame.GetSecurityEnabled() == false)
     {
@@ -582,6 +593,7 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
     case Frame::kKeyIdMode0:
         key = mKeyManager.GetKek();
         frameCounter = mKeyManager.GetKekFrameCounter();
+        extAddress = &mExtAddress;
         break;
 
     case Frame::kKeyIdMode1:
@@ -589,6 +601,14 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
         frameCounter = mKeyManager.GetMacFrameCounter();
         mKeyManager.IncrementMacFrameCounter();
         aFrame.SetKeyId((mKeyManager.GetCurrentKeySequence() & 0x7f) + 1);
+        extAddress = &mExtAddress;
+        break;
+
+    case Frame::kKeyIdMode2:
+        key = sMode2Key;
+        frameCounter = 0xffffffff;
+        aFrame.SetKeyId(0xff);
+        extAddress = static_cast<const ExtAddress *>(&sMode2ExtAddress);
         break;
 
     default:
@@ -599,7 +619,7 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
     aFrame.GetSecurityLevel(securityLevel);
     aFrame.SetFrameCounter(frameCounter);
 
-    GenerateNonce(mExtAddress, frameCounter, securityLevel, nonce);
+    GenerateNonce(*extAddress, frameCounter, securityLevel, nonce);
 
     aesCcm.SetKey(key, 16);
     tagLength = aFrame.GetFooterLength() - Frame::kFcsSize;
@@ -925,6 +945,7 @@ ThreadError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, 
     uint8_t keyid;
     uint32_t keySequence = 0;
     const uint8_t *macKey;
+    const ExtAddress *extAddress;
     Crypto::AesCcm aesCcm;
 
     aFrame.SetSecurityValid(false);
@@ -944,6 +965,7 @@ ThreadError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, 
     {
     case Frame::kKeyIdMode0:
         VerifyOrExit((macKey = mKeyManager.GetKek()) != NULL, error = kThreadError_Security);
+        extAddress = &aSrcAddr.mExtAddress;
         break;
 
     case Frame::kKeyIdMode1:
@@ -980,6 +1002,13 @@ ThreadError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, 
                       (frameCounter >= aNeighbor->mValid.mLinkFrameCounter)),
                      error = kThreadError_Security);
 
+        extAddress = &aSrcAddr.mExtAddress;
+
+        break;
+
+    case Frame::kKeyIdMode2:
+        macKey = sMode2Key;
+        extAddress = static_cast<const ExtAddress *>(&sMode2ExtAddress);
         break;
 
     default:
@@ -987,7 +1016,7 @@ ThreadError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, 
         break;
     }
 
-    GenerateNonce(aSrcAddr.mExtAddress, frameCounter, securityLevel, nonce);
+    GenerateNonce(*extAddress, frameCounter, securityLevel, nonce);
     tagLength = aFrame.GetFooterLength() - Frame::kFcsSize;
 
     aesCcm.SetKey(macKey, 16);

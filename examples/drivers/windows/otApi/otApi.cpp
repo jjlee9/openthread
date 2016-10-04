@@ -3147,6 +3147,24 @@ otCommissionerSetProvisioningUrl(
     return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL, Buffer, BufferLength, nullptr, 0));
 }
 
+OTAPI
+ThreadError
+OTCALL
+otCommissionerAnnounceBegin(
+    otInstance *aInstance,
+    uint32_t aChannelMask,
+    uint8_t aCount,
+    uint16_t aPeriod,
+    const otIp6Address *aAddress
+    )
+{
+    if (aInstance == nullptr || aAddress == nullptr) return kThreadError_InvalidArgs;
+    UNREFERENCED_PARAMETER(aChannelMask);
+    UNREFERENCED_PARAMETER(aCount);
+    UNREFERENCED_PARAMETER(aPeriod);
+    return kThreadError_NotImplemented;
+}
+
 OTAPI 
 ThreadError 
 OTCALL

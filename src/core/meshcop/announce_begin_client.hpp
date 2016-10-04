@@ -28,65 +28,62 @@
 
 /**
  * @file
- * @brief
- *  This file defines the structure of the variables required for all instances of OpenThread API.
+ *   This file includes definitions for responding to Announce Requests.
  */
 
-#ifndef OPENTHREADINSTANCE_H_
-#define OPENTHREADINSTANCE_H_
+#ifndef ANNOUNCE_BEGIN_CLIENT_HPP_
+#define ANNOUNCE_BEGIN_CLIENT_HPP_
 
-#include <stdint.h>
-#include <stdbool.h>
-
+#include <openthread-core-config.h>
 #include <openthread-types.h>
-#include <crypto/mbedtls.hpp>
-#include <net/ip6.hpp>
-#include <thread/thread_netif.hpp>
+#include <commissioning/commissioner.h>
+#include <coap/coap_server.hpp>
+#include <net/ip6_address.hpp>
+#include <net/udp6.hpp>
+
+namespace Thread {
+
+class ThreadNetif;
 
 /**
- * This type represents all the static / global variables used by OpenThread allocated in one place.
+ * This class implements handling Announce Begin Requests.
+ *
  */
-typedef struct otInstance
+class AnnounceBeginClient
 {
-    //
-    // Callbacks
-    //
+public:
+    /**
+     * This constructor initializes the object.
+     *
+     */
+    AnnounceBeginClient(ThreadNetif &aThreadNetif);
 
-    Thread::Ip6::NetifCallback mNetifCallback;
+    /**
+     * This method sends a Announce Begin message.
+     *
+     * @param[in]  aChannelMask   The channel mask value.
+     * @param[in]  aCount         The number of energy measurements per channel.
+     * @param[in]  aPeriod        The time between energy measurements (milliseconds).
+     *
+     * @retval kThreadError_None    Successfully enqueued the Announce Begin message.
+     * @retval kThreadError_NoBufs  Insufficient buffers to generate a Announce Begin message.
+     *
+     */
+    ThreadError SendRequest(uint32_t aChannelMask, uint8_t aCount, uint16_t mPeriod, const Ip6::Address &aAddress);
 
-    otReceiveIp6DatagramCallback mReceiveIp6DatagramCallback;
-    void *mReceiveIp6DatagramCallbackContext;
+private:
+    static void HandleUdpReceive(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo);
 
-    otHandleActiveScanResult mActiveScanCallback;
-    void *mActiveScanCallbackContext;
+    Ip6::UdpSocket mSocket;
+    uint8_t mCoapToken[2];
+    uint16_t mCoapMessageId;
+    ThreadNetif &mNetif;
+};
 
-    otHandleEnergyScanResult mEnergyScanCallback;
-    void *mEnergyScanCallbackContext;
+/**
+ * @}
+ */
 
-    otHandleActiveScanResult mDiscoverCallback;
-    void *mDiscoverCallbackContext;
+}  // namespace Thread
 
-    //
-    // State
-    //
-
-    Thread::Crypto::MbedTls mMbedTls;
-    Thread::Ip6::Ip6 mIp6;
-    Thread::ThreadNetif mThreadNetif;
-
-    // Constructor
-    otInstance(void);
-
-} otInstance;
-
-static inline otInstance *otInstanceFromIp6(Thread::Ip6::Ip6 *aIp6)
-{
-    return (otInstance *)CONTAINING_RECORD(aIp6, otInstance, mIp6);
-}
-
-static inline otInstance *otInstanceFromThreadNetif(Thread::ThreadNetif *aThreadNetif)
-{
-    return (otInstance *)CONTAINING_RECORD(aThreadNetif, otInstance, mThreadNetif);
-}
-
-#endif  // OPENTHREADINSTANCE_H_
+#endif  // ANNOUNCE_BEGIN_CLIENT_HPP_
