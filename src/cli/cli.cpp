@@ -50,7 +50,7 @@
 #include <commissioning/joiner.h>
 
 #ifndef OTDLL
-#include <openthreadinstance.h>
+#include <openthread-instance.h>
 #include <openthread-diag.h>
 
 #include <common/encoding.hpp>
