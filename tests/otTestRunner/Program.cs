@@ -146,6 +146,7 @@ namespace otTestRunner
         }
 
         static bool VerboseOutput = false;
+        static int RetiresOnFailure = 0;
         static bool AppVeyorMode = false;
         static string AppVeyorApiUrl = null;
         static string ResultsFolder = "Results_" + DateTime.Now.ToString("yyyyMMdd_HH.mm.ss");
@@ -219,12 +220,20 @@ namespace otTestRunner
                 }
             }
 
-            Stopwatch Timer = new Stopwatch();
-            Timer.Start();
+            int tries = 0;
+            Stopwatch Timer;
+            TestResults Results;
 
-            TestResults Results = await ExecuteAsync(pythonPath, file, 30 * 60 * 1000, index);
+            do
+            {
+                Timer = new Stopwatch();
+                Timer.Start();
 
-            Timer.Stop();
+                Results = await ExecuteAsync(pythonPath, file, 30 * 60 * 1000, index);
+
+                Timer.Stop();
+
+            } while (++tries < RetiresOnFailure + 1 && Results.Pass == false);
 
             if (VerboseOutput)
             {
@@ -272,6 +281,8 @@ namespace otTestRunner
             {
                 if (args[i].StartsWith("parallel:"))
                     NumberOfTestsToRunInParallel = int.Parse(args[i].Substring(9));
+                else if (args[i].StartsWith("retry:"))
+                    RetiresOnFailure = int.Parse(args[i].Substring(6));
                 else if (args[i].StartsWith("verbose"))
                     VerboseOutput = true;
                 else if (args[i].StartsWith("appveyor"))
