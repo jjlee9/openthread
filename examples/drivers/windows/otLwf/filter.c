@@ -998,6 +998,8 @@ otLwfProcessRoleStateChange(
 
 void otLwfStateChangedCallback(uint32_t aFlags, _In_ void *aContext)
 {
+    LogFuncEntry(DRIVER_DEFAULT);
+
     PMS_FILTER pFilter = (PMS_FILTER)aContext;
     PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
 
@@ -1067,6 +1069,8 @@ void otLwfStateChangedCallback(uint32_t aFlags, _In_ void *aContext)
 
         otLwfIndicateNotification(NotifEntry);
     }
+
+    LogFuncExit(DRIVER_DEFAULT);
 }
 
 void otLwfActiveScanCallback(_In_ otActiveScanResult *aResult, _In_ void *aContext)

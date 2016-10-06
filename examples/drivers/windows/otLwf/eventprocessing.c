@@ -85,14 +85,9 @@ otLwfEventProcessingStart(
         goto error;
     }
 
-    // Make sure all events are reset
+    // Make sure to reset the necessary events
     KeResetEvent(&pFilter->EventWorkerThreadStopEvent);
-    KeResetEvent(&pFilter->EventWorkerThreadProcessNBLs);
-    KeResetEvent(&pFilter->EventWorkerThreadWaitTimeUpdated);
-    KeResetEvent(&pFilter->EventWorkerThreadProcessTasklets);
     KeResetEvent(&pFilter->SendNetBufferListComplete);
-    KeResetEvent(&pFilter->EventWorkerThreadProcessIrp);
-    KeResetEvent(&pFilter->EventWorkerThreadProcessAddressChanges);
     KeResetEvent(&pFilter->EventWorkerThreadEnergyScanComplete);
 
     // Start the worker thread
@@ -215,7 +210,7 @@ otLwfEventProcessingStop(
         
         // Before we are allowed to complete the pending IRP, we must remove the cancel routine
         KIRQL irql;
-        IoAcquireCancelSpinLock(&irql); // TODO - Should we do this outside of EventsLock ???
+        IoAcquireCancelSpinLock(&irql);
         IoSetCancelRoutine(Irp, NULL);
         IoReleaseCancelSpinLock(irql);
 
