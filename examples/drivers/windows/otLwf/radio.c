@@ -68,6 +68,13 @@ otLwfRadioInit(
 {
     LogFuncEntry(DRIVER_DEFAULT);
 
+    NT_ASSERT(pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO);
+
+    // Initialize the OpenThread radio capability flags
+    pFilter->otRadioCapabilities = kRadioCapsNone;
+    if ((pFilter->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0)
+        pFilter->otRadioCapabilities |= kRadioCapsAckTimeout;
+
     pFilter->otPhyState = kStateDisabled;
     pFilter->otCurrentListenChannel = 0xFF;
     pFilter->otPromiscuous = false;
@@ -112,9 +119,9 @@ void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
 
     // Validate the return header
     if (bytesProcessed != SIZEOF_OT_FACTORY_EXTENDED_ADDRESS_REVISION_1 ||
-        pFilter->MiniportCapabilities.Header.Type != NDIS_OBJECT_TYPE_DEFAULT ||
-        pFilter->MiniportCapabilities.Header.Revision != OT_FACTORY_EXTENDED_ADDRESS_REVISION_1 ||
-        pFilter->MiniportCapabilities.Header.Size != SIZEOF_OT_FACTORY_EXTENDED_ADDRESS_REVISION_1)
+        OidBuffer.Header.Type != NDIS_OBJECT_TYPE_DEFAULT ||
+        OidBuffer.Header.Revision != OT_FACTORY_EXTENDED_ADDRESS_REVISION_1 ||
+        OidBuffer.Header.Size != SIZEOF_OT_FACTORY_EXTENDED_ADDRESS_REVISION_1)
     {
         LogError(DRIVER_DEFAULT, "Query for OID_OT_FACTORY_EXTENDED_ADDRESS returned invalid data");
         return;
@@ -419,10 +426,7 @@ int8_t otPlatRadioGetRssi(_In_ otInstance *otCtx)
 otRadioCaps otPlatRadioGetCaps(_In_ otInstance *otCtx)
 {
     NT_ASSERT(otCtx);
-    return 
-        ((otCtxToFilter(otCtx)->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0) ? 
-            kRadioCapsAckTimeout : 
-            kRadioCapsNone;
+    return otCtxToFilter(otCtx)->otRadioCapabilities;
 }
 
 int otPlatRadioGetPromiscuous(_In_ otInstance *otCtx)
@@ -804,4 +808,32 @@ void otPlatRadioClearSrcMatchExtEntries(_In_ otInstance *otCtx)
     // Set the new value and update the miniport
     pFilter->otPendingExtendedAddressCount = 0;
     otPlatRadioSendPendingMacOffload(pFilter);
+}
+
+ThreadError otPlatRadioEnergyScan(_In_ otInstance *otCtx, uint8_t aScanChannel, uint16_t aScanDuration)
+{
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    NDIS_STATUS status;
+    ULONG bytesProcessed;
+    OT_ENERGY_SCAN OidBuffer = { {NDIS_OBJECT_TYPE_DEFAULT, OT_ENERGY_SCAN_REVISION_1, SIZEOF_OT_ENERGY_SCAN_REVISION_1}, aScanChannel, aScanDuration };
+    
+    LogInfo(DRIVER_DEFAULT, "Filter %p starting energy scan on channel %d (%d ms).", pFilter, aScanChannel, aScanDuration);
+
+    // Indicate to the miniport
+    status = 
+        otLwfSendInternalRequest(
+            pFilter,
+            NdisRequestSetInformation,
+            OID_OT_ENERGY_SCAN,
+            &OidBuffer,
+            sizeof(OidBuffer),
+            &bytesProcessed
+            );
+    if (status != NDIS_STATUS_SUCCESS)
+    {
+        LogError(DRIVER_DEFAULT, "Set for OID_OT_ENERGY_SCAN failed, %!NDIS_STATUS!", status);
+    }
+
+    return NT_SUCCESS(status) ? kThreadError_None : kThreadError_Failed;
 }

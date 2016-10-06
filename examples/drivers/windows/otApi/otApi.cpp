@@ -3090,7 +3090,7 @@ otCommissionerAddJoiner(
 
     uint8_t aExtAddressValid = aExtAddress ? 1 : 0;
     
-    const ULONG BufferLength = sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress) + aPSKdLength + 1;
+    const ULONG BufferLength = sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress) + (ULONG)aPSKdLength + 1;
     BYTE Buffer[sizeof(GUID) + sizeof(uint8_t) + sizeof(otExtAddress) + OPENTHREAD_PSK_MAX_LENGTH + 1] = {0};
     memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
     memcpy_s(Buffer + sizeof(GUID), sizeof(Buffer) - sizeof(GUID), &aExtAddressValid, sizeof(aExtAddressValid));
@@ -3138,7 +3138,7 @@ otCommissionerSetProvisioningUrl(
         return kThreadError_InvalidArgs;
     }
     
-    const ULONG BufferLength = sizeof(GUID) + aProvisioningUrlLength + 1;
+    const ULONG BufferLength = sizeof(GUID) + (ULONG)aProvisioningUrlLength + 1;
     BYTE Buffer[sizeof(GUID) + OPENTHREAD_PROV_URL_MAX_LENGTH + 1] = {0};
     memcpy_s(Buffer, sizeof(Buffer), &aInstance->InterfaceGuid, sizeof(GUID));
     if (aProvisioningUrlLength > 0)

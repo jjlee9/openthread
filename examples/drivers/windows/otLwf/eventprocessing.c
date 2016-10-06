@@ -85,6 +85,16 @@ otLwfEventProcessingStart(
         goto error;
     }
 
+    // Make sure all events are reset
+    KeResetEvent(&pFilter->EventWorkerThreadStopEvent);
+    KeResetEvent(&pFilter->EventWorkerThreadProcessNBLs);
+    KeResetEvent(&pFilter->EventWorkerThreadWaitTimeUpdated);
+    KeResetEvent(&pFilter->EventWorkerThreadProcessTasklets);
+    KeResetEvent(&pFilter->SendNetBufferListComplete);
+    KeResetEvent(&pFilter->EventWorkerThreadProcessIrp);
+    KeResetEvent(&pFilter->EventWorkerThreadProcessAddressChanges);
+    KeResetEvent(&pFilter->EventWorkerThreadEnergyScanComplete);
+
     // Start the worker thread
     status = PsCreateSystemThread(
                 &threadHandle,                  // ThreadHandle
@@ -572,6 +582,25 @@ otLwfEventProcessingNextIrp(
     LogFuncExit(DRIVER_IOCTL);
 }
 
+// Indicates a energy scan was completed
+_IRQL_requires_max_(DISPATCH_LEVEL)
+VOID
+otLwfEventProcessingIndicateEnergyScanResult(
+    _In_ PMS_FILTER pFilter,
+    _In_ CHAR       MaxRssi
+    )
+{
+    LogFuncEntry(DRIVER_IOCTL);
+
+    // Cache the Rssi
+    pFilter->otLastEnergyScanMaxRssi = MaxRssi;
+    
+    // Set the event to indicate we should indicate the state back to OpenThread
+    KeSetEvent(&pFilter->EventWorkerThreadEnergyScanComplete, 0, FALSE);
+
+    LogFuncExit(DRIVER_IOCTL);
+}
+
 // Helper function to copy data out of a NET_BUFFER
 __forceinline
 NTSTATUS
@@ -649,7 +678,8 @@ otLwfEventWorkerThread(
         &pFilter->EventWorkerThreadProcessTasklets,
         &pFilter->SendNetBufferListComplete,
         &pFilter->EventWorkerThreadProcessIrp,
-        &pFilter->EventWorkerThreadProcessAddressChanges
+        &pFilter->EventWorkerThreadProcessAddressChanges,
+        &pFilter->EventWorkerThreadEnergyScanComplete
     };
 
     KWAIT_BLOCK WaitBlocks[ARRAYSIZE(WaitEvents)] = { 0 };
@@ -916,6 +946,11 @@ otLwfEventWorkerThread(
                 NdisFreeMemory(Event, 0, 0);
             }
         }
+        else if (status == STATUS_WAIT_0 + 7) // EventWorkerThreadEnergyScanComplete fired
+        {
+            // Indicate energy scan complete
+            //otPlatRadioEnergyScanDone(pFilter->otCtx, pFilter->otLastEnergyScanMaxRssi);
+        }
         else
         {
             LogWarning(DRIVER_DEFAULT, "Unexpected wait result, %!STATUS!", status);
@@ -929,6 +964,8 @@ otLwfEventWorkerThread(
     }
 
     LogFuncExit(DRIVER_DEFAULT);
+
+    FILTER_FREE_MEM(MessageBuffer);
 
     PsTerminateSystemThread(STATUS_SUCCESS);
 }

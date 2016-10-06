@@ -50,6 +50,17 @@
 #define OT_DEFINE_OID(Seq,o,m)  ((0xD0000000U) | ((o) << 16) | ((m) << 8) | (Seq))
 
 //
+// OpenThread Status Indication codes (and associated payload types)
+//
+
+#define NDIS_STATUS_OT_ENERGY_SCAN_RESULT           ((NDIS_STATUS)0x40050000L)
+    typedef struct _OT_ENERGY_SCAN_RESULT
+    {
+        NDIS_STATUS         Status;
+        CHAR                MaxRssi;
+    } OT_ENERGY_SCAN_RESULT, * POT_ENERGY_SCAN_RESULT;
+
+//
 // General OID Definitions
 //
 
@@ -170,7 +181,7 @@
 #define SIZEOF_OT_CURRENT_CHANNEL_REVISION_1 \
     RTL_SIZEOF_THROUGH_FIELD(OT_CURRENT_CHANNEL, Channel)
 
-// Used to query the current RSSI (not currently used?)
+// Used to query the current RSSI for the current channel
 #define OID_OT_RSSI                                 OT_DEFINE_OID(107, OT_OPERATIONAL_OID, OT_MANDATORY_OID)
     typedef struct _OT_RSSI
     {
@@ -202,6 +213,19 @@
 
 #define COMPLETE_SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1(ShortAddressCount, ExtendedAddressCount) \
     (SIZEOF_OT_PENDING_MAC_OFFLOAD_REVISION_1 + sizeof(USHORT) * ShortAddressCount + sizeof(ULONGLONG) * ExtendedAddressCount)
+
+// Used to issue an energy scan request for the given channel
+#define OID_OT_ENERGY_SCAN                          OT_DEFINE_OID(109, OT_OPERATIONAL_OID, OT_MANDATORY_OID)
+    typedef struct _OT_ENERGY_SCAN
+    {
+        #define OT_ENERGY_SCAN_REVISION_1 1
+        NDIS_OBJECT_HEADER Header;
+        UCHAR              Channel;
+        USHORT             DurationMs;
+    } OT_ENERGY_SCAN, * POT_ENERGY_SCAN;
+
+#define SIZEOF_OT_ENERGY_SCAN_REVISION_1 \
+    RTL_SIZEOF_THROUGH_FIELD(OT_ENERGY_SCAN, DurationMs)
 
 //
 // Thread Mode OIDs

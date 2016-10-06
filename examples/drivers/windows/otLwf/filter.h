@@ -141,6 +141,7 @@ typedef struct _MS_FILTER
     UCHAR                           EventTimerState;
     LIST_ENTRY                      EventIrpListHead;
     KEVENT                          EventWorkerThreadProcessIrp;
+    KEVENT                          EventWorkerThreadEnergyScanComplete;
 
     //
     // Data Path Synchronization
@@ -167,12 +168,14 @@ typedef struct _MS_FILTER
     //
     // OpenThread radio variables
     //
+    otRadioCaps                     otRadioCapabilities;
     PhyState                        otPhyState;
     uint8_t                         otCurrentListenChannel;
     uint8_t                         otReceiveMessage[kMaxPHYPacketSize];
     uint8_t                         otTransmitMessage[kMaxPHYPacketSize];
     RadioPacket                     otReceiveFrame;
     RadioPacket                     otTransmitFrame;
+    CHAR                            otLastEnergyScanMaxRssi;
 
     BOOLEAN                         otPromiscuous;
     uint16_t                        otPanID;
@@ -180,10 +183,8 @@ typedef struct _MS_FILTER
     uint16_t                        otShortAddress;
 
     BOOLEAN                         otPendingMacOffloadEnabled;
-    
     uint8_t                         otPendingShortAddressCount;
     uint16_t                        otPendingShortAddresses[MAX_PENDING_MAC_SIZE];
-
     uint8_t                         otPendingExtendedAddressCount;
     uint64_t                        otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
 
@@ -192,7 +193,6 @@ typedef struct _MS_FILTER
     //
     otInstance*                     otCtx;
     PUCHAR                          otInstanceBuffer;
-
 
 } MS_FILTER, * PMS_FILTER;
 
@@ -310,6 +310,13 @@ VOID
 otLwfEventProcessingIndicateIrp(
     _In_ PMS_FILTER pFilter,
     _In_ PIRP       Irp
+    );
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+VOID
+otLwfEventProcessingIndicateEnergyScanResult(
+    _In_ PMS_FILTER pFilter,
+    _In_ CHAR       MaxRssi
     );
 
 //

@@ -283,6 +283,11 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
             SynchronizationEvent, // auto-clearing event
             FALSE                 // event initially non-signalled
             );
+        KeInitializeEvent(
+            &pFilter->EventWorkerThreadEnergyScanComplete,
+            SynchronizationEvent, // auto-clearing event
+            FALSE                 // event initially non-signalled
+            );
         pFilter->EventHighPrecisionTimer = 
             ExAllocateTimer(
                 otLwfEventProcessingTimer, 
@@ -742,6 +747,20 @@ NOTE: called at <= DISPATCH_LEVEL
         // Cache the link state from the miniport
         memcpy(&pFilter->MiniportLinkState, LinkState, sizeof(NDIS_LINK_STATE));
     }
+    else if (StatusIndication->StatusCode == NDIS_STATUS_OT_ENERGY_SCAN_RESULT)
+    {
+        NT_ASSERT(StatusIndication->StatusBufferSize == sizeof(OT_ENERGY_SCAN_RESULT));
+        if (StatusIndication->StatusBufferSize != sizeof(OT_ENERGY_SCAN_RESULT)) goto exit;
+
+        POT_ENERGY_SCAN_RESULT ScanResult = (POT_ENERGY_SCAN_RESULT)StatusIndication->StatusBuffer;
+
+        LogInfo(DRIVER_DEFAULT, "Filter: %p, completed energy scan: Rssi:%d, Status:%!NDIS_STATUS!", FilterModuleContext, ScanResult->MaxRssi, ScanResult->Status);
+
+        // Marshal to OpenThread worker to indicate back
+        otLwfEventProcessingIndicateEnergyScanResult(pFilter, ScanResult->MaxRssi);
+    }
+
+exit:
 
     NdisFIndicateStatus(pFilter->FilterHandle, StatusIndication);
     
