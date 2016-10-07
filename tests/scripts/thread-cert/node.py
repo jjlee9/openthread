@@ -372,7 +372,7 @@ class Node:
             self.send_command('panid')
             i = self.pexpect.expect('([0-9a-fA-F]{16})')
             if i == 0:
-                panid = self.pexpect.match.groups()[0]
+                panid = int(self.pexpect.match.groups()[0], 16)
             self.pexpect.expect('Done')
             return panid
 
