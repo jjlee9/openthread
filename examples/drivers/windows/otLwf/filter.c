@@ -940,6 +940,19 @@ otLwfRevertCompartment(
     }
 }
 
+void *otPlatAlloc(size_t aNum, size_t aSize)
+{
+    size_t totalSize = aNum * aSize;
+    PVOID mem = ExAllocatePoolWithTag(NonPagedPool, totalSize, 'OTDM');
+    if (mem) RtlZeroMemory(mem, totalSize);
+    return mem;
+}
+
+void otPlatFree(void *aPtr)
+{
+    ExFreePoolWithTag(aPtr, 'OTDM');
+}
+
 uint32_t otPlatRandomGet()
 {
     LARGE_INTEGER Counter = KeQueryPerformanceCounter(NULL);
