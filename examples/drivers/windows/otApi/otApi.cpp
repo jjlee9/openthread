@@ -101,6 +101,7 @@ public:
 
 typedef otCallback<otDeviceAvailabilityChangedCallback> otApiDeviceAvailabilityCallback;
 typedef otCallback<otHandleActiveScanResult> otApiActiveScanCallback;
+typedef otCallback<otHandleEnergyScanResult> otApiEnergyScanCallback;
 typedef otCallback<otStateChangedCallback> otApiStateChangeCallback;
 typedef otCallback<otCommissionerEnergyReportCallback> otApiCommissionerEnergyReportCallback;
 typedef otCallback<otCommissionerPanIdConflictCallback> otApiCommissionerPanIdConflictCallback;
@@ -121,6 +122,7 @@ typedef struct otApiInstance
     // Callbacks
     otApiDeviceAvailabilityCallback*    DeviceAvailabilityCallbacks;
     vector<otApiActiveScanCallback*>    ActiveScanCallbacks;
+    vector<otApiEnergyScanCallback*>    EnergyScanCallbacks;
     vector<otApiActiveScanCallback*>    DiscoverCallbacks;
     vector<otApiStateChangeCallback*>   StateChangedCallbacks;
     vector<otApiCommissionerEnergyReportCallback*>  CommissionerEnergyReportCallbacks;
@@ -341,6 +343,9 @@ otApiFinalize(
         vector<otApiActiveScanCallback*> ActiveScanCallbacks(aApitInstance->ActiveScanCallbacks);
         aApitInstance->ActiveScanCallbacks.clear();
 
+        vector<otApiEnergyScanCallback*> EnergyScanCallbacks(aApitInstance->EnergyScanCallbacks);
+        aApitInstance->EnergyScanCallbacks.clear();
+
         vector<otApiActiveScanCallback*> DiscoverCallbacks(aApitInstance->DiscoverCallbacks);
         aApitInstance->DiscoverCallbacks.clear();
 
@@ -373,6 +378,11 @@ otApiFinalize(
         {
             ActiveScanCallbacks[i]->Release(true);
             delete ActiveScanCallbacks[i];
+        }
+        for (size_t i = 0; i < EnergyScanCallbacks.size(); i++)
+        {
+            EnergyScanCallbacks[i]->Release(true);
+            delete EnergyScanCallbacks[i];
         }
         for (size_t i = 0; i < DiscoverCallbacks.size(); i++)
         {
@@ -552,6 +562,34 @@ ProcessNotification(
         {
             Callback->Callback(
                 Notif->ActiveScanPayload.Valid ? &Notif->ActiveScanPayload.Results : nullptr, 
+                Callback->CallbackContext);
+
+            Callback->Release();
+        }
+    }
+    else if (Notif->NotifType == OTLWF_NOTIF_ENERGY_SCAN)
+    {
+        otCallback<otHandleEnergyScanResult>* Callback = nullptr;
+
+        EnterCriticalSection(&aApitInstance->CallbackLock);
+
+        for (size_t i = 0; i < aApitInstance->EnergyScanCallbacks.size(); i++)
+        {
+            if (aApitInstance->EnergyScanCallbacks[i]->InterfaceGuid == Notif->InterfaceGuid)
+            {
+                aApitInstance->EnergyScanCallbacks[i]->AddRef();
+                Callback = aApitInstance->EnergyScanCallbacks[i];
+                break;
+            }
+        }
+
+        LeaveCriticalSection(&aApitInstance->CallbackLock);
+        
+        // Invoke the callback outside the lock and release ref when done
+        if (Callback)
+        {
+            Callback->Callback(
+                Notif->EnergyScanPayload.Valid ? &Notif->EnergyScanPayload.Results : nullptr, 
                 Callback->CallbackContext);
 
             Callback->Release();
@@ -1183,7 +1221,7 @@ otActiveScan(
     uint32_t aScanChannels, 
     uint16_t aScanDuration,
     otHandleActiveScanResult aCallback,
-    void *aCallbackContext
+    _In_ void *aCallbackContext
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
@@ -1206,6 +1244,40 @@ otIsActiveScanInProgress(
 {
     BOOLEAN Result = FALSE;
     if (aInstance) (void)QueryIOCTL(aInstance, IOCTL_OTLWF_OT_ACTIVE_SCAN, &Result);
+    return Result != FALSE;
+}
+
+OTAPI 
+ThreadError 
+OTCALL 
+otEnergyScan(
+    _In_ otInstance *aInstance, 
+    uint32_t aScanChannels, 
+    uint16_t aScanDuration,
+    _In_ otHandleEnergyScanResult aCallback, 
+    _In_ void *aCallbackContext
+    )
+{
+    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+
+    aInstance->ApiHandle->SetCallback(
+        aInstance->ApiHandle->EnergyScanCallbacks,
+        aInstance->InterfaceGuid, aCallback, aCallbackContext
+        );
+    
+    PackedBuffer3<GUID,uint32_t,uint16_t> Buffer(aInstance->InterfaceGuid, aScanChannels, aScanDuration);
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ACTIVE_SCAN, &Buffer, sizeof(Buffer), nullptr, 0));
+}
+
+OTAPI 
+bool 
+OTCALL 
+otIsEnergyScanInProgress(
+    _In_ otInstance *aInstance
+    )
+{
+    BOOLEAN Result = FALSE;
+    if (aInstance) (void)QueryIOCTL(aInstance, IOCTL_OTLWF_OT_ENERGY_SCAN, &Result);
     return Result != FALSE;
 }
 

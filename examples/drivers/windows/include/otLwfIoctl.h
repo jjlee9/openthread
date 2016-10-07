@@ -57,6 +57,7 @@ typedef enum _OTLWF_NOTIF_TYPE
     OTLWF_NOTIF_STATE_CHANGE,
     OTLWF_NOTIF_DISCOVER,
     OTLWF_NOTIF_ACTIVE_SCAN,
+    OTLWF_NOTIF_ENERGY_SCAN,
     OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT,
     OTLWF_NOTIF_COMMISSIONER_PANID_QUERY
 
@@ -99,6 +100,13 @@ typedef enum _OTLWF_NOTIF_TYPE
                 BOOLEAN                 Valid;
                 otActiveScanResult      Results;
             } ActiveScanPayload;
+
+            // Payload for OTLWF_NOTIF_ENERGY_SCAN
+            struct
+            {
+                BOOLEAN                 Valid;
+                otEnergyScanResult      Results;
+            } EnergyScanPayload;
 
             // Payload for OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT
             struct
@@ -596,9 +604,15 @@ typedef struct otCommissionConfig
     // uint8_t - aCount
     // uint16_t - aPeriod
     // otIp6Address - aAddress
+    
+#define IOCTL_OTLWF_OT_ENERGY_SCAN \
+    OTLWF_CTL_CODE(184, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // uint32_t - aScanChannels
+    // uint16_t - aScanDuration
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 183
+#define MAX_OTLWF_IOCTL_FUNC_CODE 184
 
 #endif //__OTLWFIOCTL_H__

@@ -1101,6 +1101,34 @@ void otLwfActiveScanCallback(_In_ otActiveScanResult *aResult, _In_ void *aConte
     LogFuncExit(DRIVER_DEFAULT);
 }
 
+void otLwfEnergyScanCallback(_In_ otEnergyScanResult *aResult, _In_ void *aContext)
+{
+    LogFuncEntry(DRIVER_DEFAULT);
+
+    PMS_FILTER pFilter = (PMS_FILTER)aContext;
+    PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
+    if (NotifEntry)
+    {
+        RtlZeroMemory(NotifEntry, sizeof(FILTER_NOTIFICATION_ENTRY));
+        NotifEntry->Notif.InterfaceGuid = pFilter->InterfaceGuid;
+        NotifEntry->Notif.NotifType = OTLWF_NOTIF_ENERGY_SCAN;
+
+        if (aResult)
+        {
+            NotifEntry->Notif.EnergyScanPayload.Valid = TRUE;
+            NotifEntry->Notif.EnergyScanPayload.Results = *aResult;
+        }
+        else
+        {
+            NotifEntry->Notif.EnergyScanPayload.Valid = FALSE;
+        }
+        
+        otLwfIndicateNotification(NotifEntry);
+    }
+
+    LogFuncExit(DRIVER_DEFAULT);
+}
+
 void otLwfDiscoverCallback(_In_ otActiveScanResult *aResult, _In_ void *aContext)
 {
     LogFuncEntry(DRIVER_DEFAULT);

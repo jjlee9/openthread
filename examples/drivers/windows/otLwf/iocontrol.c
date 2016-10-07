@@ -287,6 +287,7 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER",
     "IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL",
     "IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN",
+    "IOCTL_OTLWF_OT_ENERGY_SCAN",
 };
 
 static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
@@ -576,6 +577,9 @@ otLwfCompleteOpenThreadIrp(
     case IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN:
         status = otLwfIoCtl_otCommissionerAnnounceBegin(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
+    case IOCTL_OTLWF_OT_ENERGY_SCAN:
+        status = otLwfIoCtl_otEnergyScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
         OutBufferLength = 0;
@@ -706,6 +710,48 @@ otLwfIoCtl_otActiveScan(
     else if (*OutBufferLength >= sizeof(BOOLEAN))
     {
         *(BOOLEAN*)OutBuffer = otIsActiveScanInProgress(pFilter->otCtx) ? TRUE : FALSE;
+        *OutBufferLength = sizeof(BOOLEAN);
+        status = STATUS_SUCCESS;
+    }
+    else
+    {
+        *OutBufferLength = 0;
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otEnergyScan(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(uint32_t) + sizeof(uint16_t))
+    {
+        uint32_t aScanChannels = *(uint32_t*)InBuffer;
+        uint16_t aScanDuration = *(uint16_t*)(InBuffer + sizeof(uint32_t));
+        status = ThreadErrorToNtstatus(
+            otEnergyScan(
+                pFilter->otCtx, 
+                aScanChannels, 
+                aScanDuration, 
+                otLwfEnergyScanCallback,
+                pFilter)
+            );
+        *OutBufferLength = 0;
+    }
+    else if (*OutBufferLength >= sizeof(BOOLEAN))
+    {
+        *(BOOLEAN*)OutBuffer = otIsEnergyScanInProgress(pFilter->otCtx) ? TRUE : FALSE;
         *OutBufferLength = sizeof(BOOLEAN);
         status = STATUS_SUCCESS;
     }

@@ -168,5 +168,6 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAddJoiner;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerRemoveJoiner;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerProvisioningUrl;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAnnounceBegin;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otEnergyScan;
 
 #endif // _IOCONTROL_H
