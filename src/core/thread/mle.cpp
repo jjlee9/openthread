@@ -204,6 +204,8 @@ ThreadError Mle::Start(void)
     mNetif.SetStateChangedFlags(OT_NET_ROLE);
     SetStateDetached();
 
+    mKeyManager.Start();
+
     if (GetRloc16() == Mac::kShortAddrInvalid)
     {
         BecomeChild(kMleAttachAnyPartition);
@@ -227,6 +229,7 @@ exit:
 ThreadError Mle::Stop(void)
 {
     otLogFuncEntry();
+    mKeyManager.Stop();
     SetStateDetached();
     mNetif.RemoveUnicastAddress(mLinkLocal16);
     mNetif.RemoveUnicastAddress(mMeshLocal16);
@@ -1870,23 +1873,31 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
     // Active Dataset
     if (activeTimestamp.GetLength() > 0)
     {
-        aMessage.Read(activeDatasetOffset, sizeof(tlv), &tlv);
-        mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, activeDatasetOffset + sizeof(tlv), tlv.GetLength());
+        if (activeDatasetOffset > 0)
+        {
+            aMessage.Read(activeDatasetOffset, sizeof(tlv), &tlv);
+            mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, activeDatasetOffset + sizeof(tlv),
+                                          tlv.GetLength());
+        }
     }
     else
     {
-        mNetif.GetActiveDataset().GetNetwork().Clear();
+        mNetif.GetActiveDataset().Clear();
     }
 
     // Pending Dataset
     if (pendingTimestamp.GetLength() > 0)
     {
-        aMessage.Read(pendingDatasetOffset, sizeof(tlv), &tlv);
-        mNetif.GetPendingDataset().Set(pendingTimestamp, aMessage, pendingDatasetOffset + sizeof(tlv), tlv.GetLength());
+        if (pendingDatasetOffset > 0)
+        {
+            aMessage.Read(pendingDatasetOffset, sizeof(tlv), &tlv);
+            mNetif.GetPendingDataset().Set(pendingTimestamp, aMessage, pendingDatasetOffset + sizeof(tlv),
+                                           tlv.GetLength());
+        }
     }
     else
     {
-        mNetif.GetPendingDataset().GetNetwork().Clear();
+        mNetif.GetPendingDataset().Clear();
     }
 
     mRetrieveNewNetworkData = false;
@@ -2009,6 +2020,8 @@ ThreadError Mle::HandleParentResponse(const Message &aMessage, const Ip6::Messag
         switch (mParentRequestMode)
         {
         case kMleAttachAnyPartition:
+            VerifyOrExit(leaderData.GetPartitionId() != mLeaderData.GetPartitionId() ||
+                         static_cast<int8_t>(connectivity.GetIdSequence() - mMleRouter.GetRouterIdSequence()) > 0,);
             break;
 
         case kMleAttachSamePartition:
@@ -2141,6 +2154,10 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
             mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
         }
     }
+    else
+    {
+        mNetif.GetActiveDataset().Clear();
+    }
 
     // Pending Timestamp
     if (Tlv::GetTlv(aMessage, Tlv::kPendingTimestamp, sizeof(pendingTimestamp), pendingTimestamp) == kThreadError_None)
@@ -2153,6 +2170,10 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
             aMessage.Read(offset, sizeof(tlv), &tlv);
             mNetif.GetPendingDataset().Set(pendingTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
         }
+    }
+    else
+    {
+        mNetif.GetPendingDataset().Clear();
     }
 
     // Parent Attach Success
@@ -2197,7 +2218,7 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
             (mDeviceMode & ModeTlv::kModeFFD) &&
             (numRouters < mMleRouter.GetRouterUpgradeThreshold()))
         {
-            mRouterSelectionJitterTimeout = otPlatRandomGet() % mRouterSelectionJitter;
+            mRouterSelectionJitterTimeout = (otPlatRandomGet() % mRouterSelectionJitter) + 1;
         }
     }
 

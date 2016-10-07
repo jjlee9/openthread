@@ -944,7 +944,7 @@ otLwfEventWorkerThread(
         else if (status == STATUS_WAIT_0 + 7) // EventWorkerThreadEnergyScanComplete fired
         {
             // Indicate energy scan complete
-            //otPlatRadioEnergyScanDone(pFilter->otCtx, pFilter->otLastEnergyScanMaxRssi);
+            otPlatRadioEnergyScanDone(pFilter->otCtx, pFilter->otLastEnergyScanMaxRssi);
         }
         else
         {

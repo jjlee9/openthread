@@ -71,7 +71,7 @@ otLwfRadioInit(
     NT_ASSERT(pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO);
 
     // Initialize the OpenThread radio capability flags
-    pFilter->otRadioCapabilities = kRadioCapsNone;
+    pFilter->otRadioCapabilities = kRadioCapsEnergyScan;
     if ((pFilter->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0)
         pFilter->otRadioCapabilities |= kRadioCapsAckTimeout;
 
