@@ -945,6 +945,7 @@ void *otPlatAlloc(size_t aNum, size_t aSize)
     size_t totalSize = aNum * aSize;
     PVOID mem = ExAllocatePoolWithTag(NonPagedPool, totalSize, 'OTDM');
     if (mem) RtlZeroMemory(mem, totalSize);
+    //LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = %p", (ULONG)totalSize, mem);
     return mem;
 }
 
