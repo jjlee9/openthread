@@ -370,7 +370,7 @@ class Node:
             return int(self.Api.otNodeGetPanId(self.otNode))
         else:
             self.send_command('panid')
-            i = self.pexpect.expect('([0-9a-fA-F]{16})')
+            i = self.pexpect.expect('([0-9a-fA-F]{4})')
             if i == 0:
                 panid = int(self.pexpect.match.groups()[0], 16)
             self.pexpect.expect('Done')
