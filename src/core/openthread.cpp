@@ -70,8 +70,6 @@ otInstance::otInstance(void) :
     mActiveScanCallbackContext(NULL),
     mDiscoverCallback(NULL),
     mDiscoverCallbackContext(NULL),
-    mMbedTls(),
-    mIp6(),
     mThreadNetif(mIp6)
 {
 }
@@ -1037,6 +1035,7 @@ void otInstanceFinalize(otInstance *aInstance)
     (void)otInterfaceDown(aInstance);
 
     // Nothing to actually free, since the caller supplied the buffer
+    delete aInstance;
 
 #ifndef OPENTHREAD_MULTIPLE_INSTANCE
     sInstance = NULL;
