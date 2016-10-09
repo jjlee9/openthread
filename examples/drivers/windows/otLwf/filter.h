@@ -188,6 +188,14 @@ typedef struct _MS_FILTER
     uint8_t                         otPendingExtendedAddressCount;
     uint64_t                        otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
 
+#if DBG
+    // Used for tracking memory allocations
+    HANDLE                          otThreadId;
+    volatile LONG                   otOutstandingAllocationCount;
+    volatile LONG                   otOutstandingMemoryAllocated;
+    LIST_ENTRY                      otOutStandingAllocations;
+#endif
+
     //
     // OpenThread context buffer
     //
@@ -396,6 +404,23 @@ otLogBuffer(
     _In_reads_bytes_(BufferLength) PUCHAR Buffer,
     _In_                           ULONG  BufferLength
     );
+#endif
+
+//
+// Debug Helpers
+//
+
+#if DBG
+
+typedef struct _OT_ALLOC
+{
+    LIST_ENTRY Link;
+    LONG Length;
+} OT_ALLOC;
+
+PMS_FILTER
+otLwfFindFromCurrentThread();
+
 #endif
 
 #endif  //_FILT_H

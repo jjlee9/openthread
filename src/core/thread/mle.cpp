@@ -1444,7 +1444,7 @@ ThreadError Mle::SendMessage(Message &aMessage, const Ip6::Address &aDestination
 
         tagLength = sizeof(tag);
         aesCcm.Finalize(tag, &tagLength);
-        SuccessOrExit(aMessage.Append(tag, tagLength));
+        SuccessOrExit(error = aMessage.Append(tag, tagLength));
 
         mKeyManager.IncrementMleFrameCounter();
     }

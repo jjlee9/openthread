@@ -95,7 +95,6 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
     ULONG                   Size;
     PNET_BUFFER             SendNetBuffer;
     ULONG                   bytesProcessed = 0;
-    size_t                  otInstanceSize = 0;
     COMPARTMENT_ID          OriginalCompartmentID;
 
     LogFuncEntry(DRIVER_DEFAULT);
@@ -341,58 +340,6 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
         // Query the compartment ID for this interface to use for the IP stack
         pFilter->InterfaceCompartmentID = GetInterfaceCompartmentID(&pFilter->InterfaceLuid);
         LogVerbose(DRIVER_DEFAULT, "Interface %!GUID! is in Compartment %u", &pFilter->InterfaceGuid, (ULONG)pFilter->InterfaceCompartmentID);
-
-        // Initialize the radio layer
-        otLwfRadioInit(pFilter);
-
-        // Calculate the size of the otInstance and allocate it
-        (VOID)otInstanceInit(NULL, &otInstanceSize);
-        NT_ASSERT(otInstanceSize != 0);
-
-        // Add space for a pointer back to the filter
-        otInstanceSize += sizeof(PMS_FILTER);
-
-        // Allocate the buffer
-        pFilter->otInstanceBuffer = (PUCHAR)FILTER_ALLOC_MEM(NdisFilterHandle, (ULONG)otInstanceSize);
-        if (pFilter == NULL)
-        {
-            LogWarning(DRIVER_DEFAULT, "Failed to allocate otInstance buffer, 0x%x bytes", (ULONG)otInstanceSize);
-            Status = NDIS_STATUS_RESOURCES;
-            break;
-        }
-        RtlZeroMemory(pFilter->otInstanceBuffer, otInstanceSize);
-
-        // Store the pointer and decrement the size
-        memcpy(pFilter->otInstanceBuffer, &pFilter, sizeof(PMS_FILTER));
-        otInstanceSize -= sizeof(PMS_FILTER);
-
-        // Initialize the OpenThread library
-        pFilter->otCachedRole = kDeviceRoleDisabled;
-        pFilter->otCtx = otInstanceInit(pFilter->otInstanceBuffer + sizeof(PMS_FILTER), &otInstanceSize);
-        NT_ASSERT(pFilter->otCtx);
-        if (pFilter->otCtx == NULL)
-        {
-            LogError(DRIVER_DEFAULT, "otInstanceInit failed, otInstanceSize = %u bytes", (ULONG)otInstanceSize);
-            Status = NDIS_STATUS_RESOURCES;
-            break;
-        }
-
-        // Make sure our helper function returns the right pointer for the filter, given the openthread instance
-        NT_ASSERT(otCtxToFilter(pFilter->otCtx) == pFilter);
-
-        // Disable Icmp (ping) handling
-        otSetIcmpEchoEnabled(pFilter->otCtx, FALSE);
-
-        // Register callbacks with OpenThread
-        otSetStateChangedCallback(pFilter->otCtx, otLwfStateChangedCallback, pFilter);
-        otSetReceiveIp6DatagramCallback(pFilter->otCtx, otLwfReceiveIp6DatagramCallback, pFilter);
-
-        // Initialize the event processing thread
-        if (!NT_SUCCESS(otLwfEventProcessingStart(pFilter)))
-        {
-            Status = NDIS_STATUS_RESOURCES;
-            break;
-        }
     
         // Make sure we are in the right compartment
         (VOID)otLwfSetCompartment(pFilter, &OriginalCompartmentID);
@@ -422,6 +369,16 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
         InsertTailList(&FilterModuleList, &pFilter->FilterModuleLink);
         NdisReleaseSpinLock(&FilterListLock);
 
+        // Initialize the event processing thread
+        if (!NT_SUCCESS(otLwfEventProcessingStart(pFilter)))
+        {
+            NdisAcquireSpinLock(&FilterListLock);
+            RemoveEntryList(&pFilter->FilterModuleLink);
+            NdisReleaseSpinLock(&FilterListLock);
+            Status = NDIS_STATUS_RESOURCES;
+            break;
+        }
+
         LogVerbose(DRIVER_DEFAULT, "Created Filter: %p", pFilter);
 
     } while (FALSE);
@@ -435,20 +392,9 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
                 CancelMibChangeNotify2(pFilter->AddressChangeHandle);
                 pFilter->AddressChangeHandle = NULL;
             }
-
-            if (pFilter->otCtx != NULL)
-            {
-                // Stop event processing thread
-                otLwfEventProcessingStop(pFilter);
-
-                otInstanceFinalize(pFilter->otCtx);
-                pFilter->otCtx = NULL;
-            }
-
-            if (pFilter->otInstanceBuffer != NULL)
-            {
-                NdisFreeMemory(pFilter->otInstanceBuffer, 0, 0);
-            }
+            
+            // Stop event processing thread
+            otLwfEventProcessingStop(pFilter);
 
             if (pFilter->EventHighPrecisionTimer) ExDeleteTimer(pFilter->EventHighPrecisionTimer, TRUE, FALSE, NULL);
             NdisFreeMemory(pFilter, 0, 0);
@@ -517,12 +463,6 @@ NOTE: Called at PASSIVE_LEVEL and the filter is in paused state
 
     // Stop event processing thread
     otLwfEventProcessingStop(pFilter);
-    
-    // Free OpenThread context memory
-    otInstanceFinalize(pFilter->otCtx);
-    pFilter->otCtx = NULL;
-    NdisFreeMemory(pFilter->otInstanceBuffer, 0, 0);
-    pFilter->otInstanceBuffer = NULL;
 
     // Free NBL & Pools
     NdisAdvanceNetBufferDataStart(NET_BUFFER_LIST_FIRST_NB(pFilter->SendNetBufferList), kMaxPHYPacketSize, TRUE, NULL);
@@ -940,17 +880,71 @@ otLwfRevertCompartment(
     }
 }
 
+#if DBG
+PMS_FILTER
+otLwfFindFromCurrentThread()
+{
+    PMS_FILTER pOutput = NULL;
+    HANDLE CurThreadId = PsGetCurrentThreadId();
+
+    NdisAcquireSpinLock(&FilterListLock);
+
+    for (PLIST_ENTRY Link = FilterModuleList.Flink; Link != &FilterModuleList; Link = Link->Flink)
+    {
+        PMS_FILTER pFilter = CONTAINING_RECORD(Link, MS_FILTER, FilterModuleLink);
+
+        if (pFilter->otThreadId == CurThreadId)
+        {
+            pOutput = pFilter;
+            break;
+        }
+    }
+
+    NdisReleaseSpinLock(&FilterListLock);
+
+    NT_ASSERT(pOutput);
+    return pOutput;
+}
+#endif
+
 void *otPlatAlloc(size_t aNum, size_t aSize)
 {
     size_t totalSize = aNum * aSize;
-    PVOID mem = ExAllocatePoolWithTag(NonPagedPool, totalSize, 'OTDM');
-    if (mem) RtlZeroMemory(mem, totalSize);
-    //LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = %p", (ULONG)totalSize, mem);
+#if DBG
+    totalSize += sizeof(OT_ALLOC);
+#endif
+    PVOID mem = ExAllocatePoolWithTag(NonPagedPoolNx, totalSize, 'OTDM');
+    if (mem)
+    {
+        RtlZeroMemory(mem, totalSize);
+#if DBG
+        LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = %p", (ULONG)totalSize, mem);
+        OT_ALLOC* AllocHeader = (OT_ALLOC*)mem;
+        mem = (PUCHAR)(mem) + sizeof(OT_ALLOC);
+
+        PMS_FILTER pFilter = otLwfFindFromCurrentThread();
+        AllocHeader->Length = (LONG)totalSize;
+        InsertTailList(&pFilter->otOutStandingAllocations, &AllocHeader->Link);
+
+        InterlockedIncrement(&pFilter->otOutstandingAllocationCount);
+        InterlockedAdd(&pFilter->otOutstandingMemoryAllocated, AllocHeader->Length);
+#endif
+    }
     return mem;
 }
 
 void otPlatFree(void *aPtr)
 {
+#if DBG
+    aPtr = (PUCHAR)(aPtr) - sizeof(OT_ALLOC);
+    LogVerbose(DRIVER_DEFAULT, "otPlatFree(%p)", aPtr);
+    OT_ALLOC* AllocHeader = (OT_ALLOC*)aPtr;
+
+    PMS_FILTER pFilter = otLwfFindFromCurrentThread();
+    InterlockedDecrement(&pFilter->otOutstandingAllocationCount);
+    InterlockedAdd(&pFilter->otOutstandingMemoryAllocated, -AllocHeader->Length);
+    RemoveEntryList(&AllocHeader->Link);
+#endif
     ExFreePoolWithTag(aPtr, 'OTDM');
 }
 

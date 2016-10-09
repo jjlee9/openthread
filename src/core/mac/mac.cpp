@@ -357,8 +357,8 @@ const ExtAddress *Mac::GetExtAddress(void) const
 
 ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
 {
-    ThreadError error;
-    uint8_t buf[8];
+    ThreadError error = kThreadError_None;
+    uint8_t buf[sizeof(aExtAddress)];
 
     VerifyOrExit(!aExtAddress.IsGroup(), error = kThreadError_InvalidArgs);
 
@@ -367,7 +367,7 @@ ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
         buf[i] = aExtAddress.m8[7 - i];
     }
 
-    SuccessOrExit(error = otPlatRadioSetExtendedAddress(mNetif.GetInstance(), buf));
+    otPlatRadioSetExtendedAddress(mNetif.GetInstance(), buf);
     mExtAddress = aExtAddress;
 
 exit:
@@ -396,7 +396,8 @@ ShortAddress Mac::GetShortAddress(void) const
 ThreadError Mac::SetShortAddress(ShortAddress aShortAddress)
 {
     mShortAddress = aShortAddress;
-    return otPlatRadioSetShortAddress(mNetif.GetInstance(), aShortAddress);
+    otPlatRadioSetShortAddress(mNetif.GetInstance(), aShortAddress);
+    return kThreadError_None;
 }
 
 uint8_t Mac::GetChannel(void) const
@@ -456,7 +457,8 @@ PanId Mac::GetPanId(void) const
 ThreadError Mac::SetPanId(PanId aPanId)
 {
     mPanId = aPanId;
-    return otPlatRadioSetPanId(mNetif.GetInstance(), mPanId);
+    otPlatRadioSetPanId(mNetif.GetInstance(), mPanId);
+    return kThreadError_None;
 }
 
 const uint8_t *Mac::GetExtendedPanId(void) const

@@ -132,16 +132,13 @@ void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
     memcpy(aIeeeEui64, &OidBuffer.ExtendedAddress, sizeof(ULONGLONG));
 }
 
-ThreadError otPlatRadioSetPanId(_In_ otInstance *otCtx, uint16_t panid)
+void otPlatRadioSetPanId(_In_ otInstance *otCtx, uint16_t panid)
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
     OT_PAND_ID OidBuffer = { {NDIS_OBJECT_TYPE_DEFAULT, OT_PAND_ID_REVISION_1, SIZEOF_OT_PAND_ID_REVISION_1}, panid };
-    
-    NT_ASSERT(pFilter->otPhyState != kStateTransmit);
-    if (pFilter->otPhyState == kStateTransmit) return kThreadError_Busy;
 
     LogInfo(DRIVER_DEFAULT, "Interface %!GUID! set PanID: %X", &pFilter->InterfaceGuid, panid);
 
@@ -161,20 +158,15 @@ ThreadError otPlatRadioSetPanId(_In_ otInstance *otCtx, uint16_t panid)
     {
         LogError(DRIVER_DEFAULT, "Set for OID_OT_PAND_ID failed, %!NDIS_STATUS!", status);
     }
-
-    return kThreadError_None;
 }
 
-ThreadError otPlatRadioSetExtendedAddress(_In_ otInstance *otCtx, uint8_t *address)
+void otPlatRadioSetExtendedAddress(_In_ otInstance *otCtx, uint8_t *address)
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
     OT_EXTENDED_ADDRESS OidBuffer = { {NDIS_OBJECT_TYPE_DEFAULT, OT_EXTENDED_ADDRESS_REVISION_1, SIZEOF_OT_EXTENDED_ADDRESS_REVISION_1} };
-    
-    NT_ASSERT(pFilter->otPhyState != kStateTransmit);
-    if (pFilter->otPhyState == kStateTransmit) return kThreadError_Busy;
 
     LogInfo(DRIVER_DEFAULT, "Interface %!GUID! set Extended Mac Address: %llX", &pFilter->InterfaceGuid, *(ULONGLONG*)address);
 
@@ -195,20 +187,15 @@ ThreadError otPlatRadioSetExtendedAddress(_In_ otInstance *otCtx, uint8_t *addre
     {
         LogError(DRIVER_DEFAULT, "Set for OID_OT_EXTENDED_ADDRESS failed, %!NDIS_STATUS!", status);
     }
-
-    return kThreadError_None;
 }
 
-ThreadError otPlatRadioSetShortAddress(_In_ otInstance *otCtx, uint16_t address)
+void otPlatRadioSetShortAddress(_In_ otInstance *otCtx, uint16_t address)
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
     OT_SHORT_ADDRESS OidBuffer = { {NDIS_OBJECT_TYPE_DEFAULT, OT_SHORT_ADDRESS_REVISION_1, SIZEOF_OT_SHORT_ADDRESS_REVISION_1}, address };
-    
-    //NT_ASSERT(pFilter->otPhyState != kStateTransmit);
-    //if (pFilter->otPhyState == kStateTransmit) return kThreadError_Busy;
 
     LogInfo(DRIVER_DEFAULT, "Interface %!GUID! set Short Mac Address: %X", &pFilter->InterfaceGuid, address);
 
@@ -228,8 +215,6 @@ ThreadError otPlatRadioSetShortAddress(_In_ otInstance *otCtx, uint16_t address)
     {
         LogError(DRIVER_DEFAULT, "Set for OID_OT_SHORT_ADDRESS failed, %!NDIS_STATUS!", status);
     }
-
-    return kThreadError_None;
 }
 
 void otPlatRadioSetPromiscuous(_In_ otInstance *otCtx, int aEnable)

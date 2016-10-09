@@ -661,6 +661,7 @@ otLwfEventWorkerThread(
     )
 {
     PMS_FILTER pFilter = (PMS_FILTER)Context;
+    size_t otInstanceSize = 0;
     NT_ASSERT(pFilter);
 
     LogFuncEntry(DRIVER_DEFAULT);
@@ -687,6 +688,57 @@ otLwfEventWorkerThread(
         LogError(DRIVER_DATA_PATH, "Failed to allocate 1500 bytes for MessageBuffer!");
         return;
     }
+
+#if DBG
+    // Initialize the list head for allocations
+    InitializeListHead(&pFilter->otOutStandingAllocations);
+
+    // Cache the Thread ID
+    pFilter->otThreadId = PsGetCurrentThreadId();
+#endif
+
+    // Initialize the radio layer
+    otLwfRadioInit(pFilter);
+
+    // Calculate the size of the otInstance and allocate it
+    (VOID)otInstanceInit(NULL, &otInstanceSize);
+    NT_ASSERT(otInstanceSize != 0);
+
+    // Add space for a pointer back to the filter
+    otInstanceSize += sizeof(PMS_FILTER);
+
+    // Allocate the buffer
+    pFilter->otInstanceBuffer = (PUCHAR)FILTER_ALLOC_MEM(pFilter->FilterHandle, (ULONG)otInstanceSize);
+    if (pFilter == NULL)
+    {
+        LogWarning(DRIVER_DEFAULT, "Failed to allocate otInstance buffer, 0x%x bytes", (ULONG)otInstanceSize);
+        goto exit;
+    }
+    RtlZeroMemory(pFilter->otInstanceBuffer, otInstanceSize);
+
+    // Store the pointer and decrement the size
+    memcpy(pFilter->otInstanceBuffer, &pFilter, sizeof(PMS_FILTER));
+    otInstanceSize -= sizeof(PMS_FILTER);
+
+    // Initialize the OpenThread library
+    pFilter->otCachedRole = kDeviceRoleDisabled;
+    pFilter->otCtx = otInstanceInit(pFilter->otInstanceBuffer + sizeof(PMS_FILTER), &otInstanceSize);
+    NT_ASSERT(pFilter->otCtx);
+    if (pFilter->otCtx == NULL)
+    {
+        LogError(DRIVER_DEFAULT, "otInstanceInit failed, otInstanceSize = %u bytes", (ULONG)otInstanceSize);
+        goto exit;
+    }
+
+    // Make sure our helper function returns the right pointer for the filter, given the openthread instance
+    NT_ASSERT(otCtxToFilter(pFilter->otCtx) == pFilter);
+
+    // Disable Icmp (ping) handling
+    otSetIcmpEchoEnabled(pFilter->otCtx, FALSE);
+
+    // Register callbacks with OpenThread
+    otSetStateChangedCallback(pFilter->otCtx, otLwfStateChangedCallback, pFilter);
+    otSetReceiveIp6DatagramCallback(pFilter->otCtx, otLwfReceiveIp6DatagramCallback, pFilter);
 
     // Query the current addresses from TCPIP and cache them
     (void)otLwfInitializeAddresses(pFilter);
@@ -956,6 +1008,34 @@ otLwfEventWorkerThread(
         {
             otLwfRadioTransmitFrame(pFilter);
         }
+    }
+
+exit:
+
+    if (pFilter->otCtx != NULL)
+    {
+        otInstanceFinalize(pFilter->otCtx);
+        pFilter->otCtx = NULL;
+        
+#if DBG
+        {
+            NT_ASSERT(pFilter->otOutstandingAllocationCount == 0);
+            NT_ASSERT(pFilter->otOutstandingMemoryAllocated == 0);
+            PLIST_ENTRY Link = pFilter->otOutStandingAllocations.Flink;
+            while (Link != &pFilter->otOutStandingAllocations)
+            {
+                OT_ALLOC* AllocHeader = CONTAINING_RECORD(Link, OT_ALLOC, Link);
+                Link = Link->Flink;
+            
+                ExFreePoolWithTag(AllocHeader, 'OTDM');
+            }
+        }
+#endif
+    }
+
+    if (pFilter->otInstanceBuffer != NULL)
+    {
+        NdisFreeMemory(pFilter->otInstanceBuffer, 0, 0);
     }
 
     LogFuncExit(DRIVER_DEFAULT);
