@@ -1026,6 +1026,8 @@ exit:
             {
                 OT_ALLOC* AllocHeader = CONTAINING_RECORD(Link, OT_ALLOC, Link);
                 Link = Link->Flink;
+
+                LogVerbose(DRIVER_DEFAULT, "Leaked Alloc ID:%u", AllocHeader->ID);
             
                 ExFreePoolWithTag(AllocHeader, 'OTDM');
             }

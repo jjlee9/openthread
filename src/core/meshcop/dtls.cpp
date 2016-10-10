@@ -57,6 +57,14 @@ Dtls::Dtls(ThreadNetif &aNetif):
     mProvisioningUrl.Init();
 }
 
+Dtls::~Dtls(void)
+{
+    if (mStarted)
+    {
+        Close();
+    }
+}
+
 ThreadError Dtls::Start(bool aClient, ReceiveHandler aReceiveHandler, SendHandler aSendHandler, void *aContext)
 {
     static const int ciphersuites[2] = {0xC0FF, 0}; // EC-JPAKE cipher suite
@@ -138,6 +146,12 @@ void Dtls::Close(void)
     mbedtls_ctr_drbg_free(&mCtrDrbg);
     mbedtls_entropy_free(&mEntropy);
     mbedtls_ssl_cookie_free(&mCookieCtx);
+#if DBG
+    memset(&mSsl, 0, sizeof(mSsl));
+    memset(&mConf, 0, sizeof(mConf));
+    memset(&mCtrDrbg, 0, sizeof(mCtrDrbg));
+    memset(&mCookieCtx, 0, sizeof(mCookieCtx));
+#endif
 }
 
 bool Dtls::IsStarted(void)

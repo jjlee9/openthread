@@ -194,6 +194,7 @@ typedef struct _MS_FILTER
     volatile LONG                   otOutstandingAllocationCount;
     volatile LONG                   otOutstandingMemoryAllocated;
     LIST_ENTRY                      otOutStandingAllocations;
+    ULONG                           otAllocationID;
 #endif
 
     //
@@ -416,6 +417,7 @@ typedef struct _OT_ALLOC
 {
     LIST_ENTRY Link;
     LONG Length;
+    ULONG ID;
 } OT_ALLOC;
 
 PMS_FILTER

@@ -442,11 +442,6 @@ NOTE: Called at PASSIVE_LEVEL and the filter is in paused state
     // Detach must not fail, so do not put any code here that can possibly fail.
     //
 
-    // Remove this Filter from the global list
-    NdisAcquireSpinLock(&FilterListLock);
-    RemoveEntryList(&pFilter->FilterModuleLink);
-    NdisReleaseSpinLock(&FilterListLock);
-
     // Release IoControl reference and wait for shutdown if there are active refernces
     NdisResetEvent(&pFilter->IoControlShutdownComplete);
     if (!RtlDecrementReferenceCount(&pFilter->IoControlReferences))
@@ -463,6 +458,11 @@ NOTE: Called at PASSIVE_LEVEL and the filter is in paused state
 
     // Stop event processing thread
     otLwfEventProcessingStop(pFilter);
+
+    // Remove this Filter from the global list
+    NdisAcquireSpinLock(&FilterListLock);
+    RemoveEntryList(&pFilter->FilterModuleLink);
+    NdisReleaseSpinLock(&FilterListLock);
 
     // Free NBL & Pools
     NdisAdvanceNetBufferDataStart(NET_BUFFER_LIST_FIRST_NB(pFilter->SendNetBufferList), kMaxPHYPacketSize, TRUE, NULL);
@@ -918,16 +918,18 @@ void *otPlatAlloc(size_t aNum, size_t aSize)
     {
         RtlZeroMemory(mem, totalSize);
 #if DBG
-        LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = %p", (ULONG)totalSize, mem);
-        OT_ALLOC* AllocHeader = (OT_ALLOC*)mem;
-        mem = (PUCHAR)(mem) + sizeof(OT_ALLOC);
-
         PMS_FILTER pFilter = otLwfFindFromCurrentThread();
+        LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = ID:%u %p", (ULONG)totalSize, pFilter->otAllocationID, mem);
+
+        OT_ALLOC* AllocHeader = (OT_ALLOC*)mem;
         AllocHeader->Length = (LONG)totalSize;
+        AllocHeader->ID = pFilter->otAllocationID++;
         InsertTailList(&pFilter->otOutStandingAllocations, &AllocHeader->Link);
 
         InterlockedIncrement(&pFilter->otOutstandingAllocationCount);
         InterlockedAdd(&pFilter->otOutstandingMemoryAllocated, AllocHeader->Length);
+        
+        mem = (PUCHAR)(mem) + sizeof(OT_ALLOC);
 #endif
     }
     return mem;
@@ -935,6 +937,7 @@ void *otPlatAlloc(size_t aNum, size_t aSize)
 
 void otPlatFree(void *aPtr)
 {
+    if (aPtr == NULL) return;
 #if DBG
     aPtr = (PUCHAR)(aPtr) - sizeof(OT_ALLOC);
     LogVerbose(DRIVER_DEFAULT, "otPlatFree(%p)", aPtr);
