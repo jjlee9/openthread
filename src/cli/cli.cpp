@@ -1934,7 +1934,7 @@ exit:
     AppendResult(error);
 }
 
-void OT_CALL Interpreter::s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext)
+void OTCALL Interpreter::s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandleActiveScanResult(aResult);
 }
@@ -2321,7 +2321,7 @@ exit:
     AppendResult(error);
 }
 
-void OT_CALL Interpreter::s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList,
+void OTCALL Interpreter::s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList,
                                               uint8_t aEnergyListLength,
                                               void *aContext)
 {
@@ -2340,7 +2340,7 @@ void Interpreter::HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEner
     sServer->OutputFormat("\r\n");
 }
 
-void OT_CALL Interpreter::s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
+void OTCALL Interpreter::s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandlePanIdConflict(aPanId, aChannelMask);
 }
@@ -2583,7 +2583,7 @@ exit:
     return;
 }
 
-void OT_CALL Interpreter::s_HandleNetifStateChanged(uint32_t aFlags, void *aContext)
+void OTCALL Interpreter::s_HandleNetifStateChanged(uint32_t aFlags, void *aContext)
 {
 #ifdef OTDLL
     otCliContext *aCliContext = static_cast<otCliContext *>(aContext);
