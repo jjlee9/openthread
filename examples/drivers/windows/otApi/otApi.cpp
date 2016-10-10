@@ -41,7 +41,7 @@ const DWORD c_MaxOverlappedWaitTimeMS = 10 * 1000;
 const char c_Version[] = "Windows"; // TODO - What should we really put here?
 
 template<class CallbackT>
-class otCallback
+class OT_CALLback
 {
 public:
     RTL_REFERENCE_COUNT CallbackRefCount;
@@ -50,7 +50,7 @@ public:
     CallbackT           Callback;
     PVOID               CallbackContext;
 
-    otCallback(
+    OT_CALLback(
         CallbackT _Callback,
         PVOID _CallbackContext
         ) : 
@@ -61,7 +61,7 @@ public:
     {
     }
 
-    otCallback(
+    OT_CALLback(
         const GUID& _InterfaceGuid,
         CallbackT _Callback,
         PVOID _CallbackContext
@@ -74,7 +74,7 @@ public:
     {
     }
 
-    ~otCallback()
+    ~OT_CALLback()
     {
         if (CallbackCompleteEvent) CloseHandle(CallbackCompleteEvent);
     }
@@ -99,12 +99,12 @@ public:
     }
 };
 
-typedef otCallback<otDeviceAvailabilityChangedCallback> otApiDeviceAvailabilityCallback;
-typedef otCallback<otHandleActiveScanResult> otApiActiveScanCallback;
-typedef otCallback<otHandleEnergyScanResult> otApiEnergyScanCallback;
-typedef otCallback<otStateChangedCallback> otApiStateChangeCallback;
-typedef otCallback<otCommissionerEnergyReportCallback> otApiCommissionerEnergyReportCallback;
-typedef otCallback<otCommissionerPanIdConflictCallback> otApiCommissionerPanIdConflictCallback;
+typedef OT_CALLback<otDeviceAvailabilityChangedCallback> otApiDeviceAvailabilityCallback;
+typedef OT_CALLback<otHandleActiveScanResult> otApiActiveScanCallback;
+typedef OT_CALLback<otHandleEnergyScanResult> otApiEnergyScanCallback;
+typedef OT_CALLback<otStateChangedCallback> otApiStateChangeCallback;
+typedef OT_CALLback<otCommissionerEnergyReportCallback> otApiCommissionerEnergyReportCallback;
+typedef OT_CALLback<otCommissionerPanIdConflictCallback> otApiCommissionerPanIdConflictCallback;
 
 typedef struct otApiInstance
 {
@@ -147,14 +147,14 @@ typedef struct otApiInstance
     template<class CallbackT>
     bool 
     SetCallback(
-        vector<otCallback<CallbackT>*> &Callbacks, 
+        vector<OT_CALLback<CallbackT>*> &Callbacks, 
         const GUID& InterfaceGuid,
         CallbackT Callback,
         PVOID CallbackContext
         )
     {
         bool alreadyExists = false;
-        otCallback<CallbackT>* CallbackToRelease = nullptr;
+        OT_CALLback<CallbackT>* CallbackToRelease = nullptr;
 
         EnterCriticalSection(&CallbackLock);
 
@@ -183,7 +183,7 @@ typedef struct otApiInstance
 
             if (!alreadyExists)
             {
-                Callbacks.push_back(new otCallback<CallbackT>(InterfaceGuid, Callback, CallbackContext));
+                Callbacks.push_back(new OT_CALLback<CallbackT>(InterfaceGuid, Callback, CallbackContext));
             }
         }
 
@@ -221,7 +221,7 @@ otIoComplete(
 
 OTAPI 
 otApiInstance *
-OTCALL
+OT_CALL
 otApiInit(
     )
 {
@@ -319,7 +319,7 @@ error:
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otApiFinalize(
     _In_ otApiInstance *aApitInstance
 )
@@ -443,7 +443,7 @@ otApiFinalize(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otFreeMemory(
     _In_ const void *mem
     )
@@ -460,7 +460,7 @@ ProcessNotification(
 {
     if (Notif->NotifType == OTLWF_NOTIF_DEVICE_AVAILABILITY)
     {
-        otCallback<otDeviceAvailabilityChangedCallback>* Callback = nullptr;
+        OT_CALLback<otDeviceAvailabilityChangedCallback>* Callback = nullptr;
         
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -485,7 +485,7 @@ ProcessNotification(
     }
     else if (Notif->NotifType == OTLWF_NOTIF_STATE_CHANGE)
     {
-        otCallback<otStateChangedCallback>* Callback = nullptr;
+        OT_CALLback<otStateChangedCallback>* Callback = nullptr;
 
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -513,7 +513,7 @@ ProcessNotification(
     }
     else if (Notif->NotifType == OTLWF_NOTIF_DISCOVER)
     {
-        otCallback<otHandleActiveScanResult>* Callback = nullptr;
+        OT_CALLback<otHandleActiveScanResult>* Callback = nullptr;
 
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -541,7 +541,7 @@ ProcessNotification(
     }
     else if (Notif->NotifType == OTLWF_NOTIF_ACTIVE_SCAN)
     {
-        otCallback<otHandleActiveScanResult>* Callback = nullptr;
+        OT_CALLback<otHandleActiveScanResult>* Callback = nullptr;
 
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -569,7 +569,7 @@ ProcessNotification(
     }
     else if (Notif->NotifType == OTLWF_NOTIF_ENERGY_SCAN)
     {
-        otCallback<otHandleEnergyScanResult>* Callback = nullptr;
+        OT_CALLback<otHandleEnergyScanResult>* Callback = nullptr;
 
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -597,7 +597,7 @@ ProcessNotification(
     }
     else if (Notif->NotifType == OTLWF_NOTIF_COMMISSIONER_ENERGY_REPORT)
     {
-        otCallback<otCommissionerEnergyReportCallback>* Callback = nullptr;
+        OT_CALLback<otCommissionerEnergyReportCallback>* Callback = nullptr;
 
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -627,7 +627,7 @@ ProcessNotification(
     }
     else if (Notif->NotifType == OTLWF_NOTIF_COMMISSIONER_PANID_QUERY)
     {
-        otCallback<otCommissionerPanIdConflictCallback>* Callback = nullptr;
+        OT_CALLback<otCommissionerPanIdConflictCallback>* Callback = nullptr;
 
         EnterCriticalSection(&aApitInstance->CallbackLock);
 
@@ -916,7 +916,7 @@ DwordToThreadError(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetDeviceAvailabilityChangedCallback(
     _In_ otApiInstance *aApitInstance,
     _In_ otDeviceAvailabilityChangedCallback aCallback,
@@ -950,7 +950,7 @@ otSetDeviceAvailabilityChangedCallback(
 
 OTAPI 
 otDeviceList* 
-OTCALL
+OT_CALL
 otEnumerateDevices(
     _In_ otApiInstance *aApitInstance
     )
@@ -1060,7 +1060,7 @@ error:
     
 OTAPI 
 otInstance *
-OTCALL
+OT_CALL
 otInstanceInit(
     _In_ otApiInstance *aApitInstance, 
     _In_ const GUID *aDeviceGuid
@@ -1101,7 +1101,7 @@ otInstanceInit(
 
 OTAPI 
 GUID 
-OTCALL
+OT_CALL
 otGetDeviceGuid(
     otInstance *aInstance
     )
@@ -1112,7 +1112,7 @@ otGetDeviceGuid(
 
 OTAPI 
 uint32_t 
-OTCALL
+OT_CALL
 otGetDeviceIfIndex(
     otInstance *aInstance
     )
@@ -1123,7 +1123,7 @@ otGetDeviceIfIndex(
 
 OTAPI 
 uint32_t 
-OTCALL
+OT_CALL
 otGetCompartmentId(
     _In_ otInstance *aInstance
     )
@@ -1134,7 +1134,7 @@ otGetCompartmentId(
 
 OTAPI 
 const char *
-OTCALL
+OT_CALL
 otGetVersionString()
 {
     char* szVersion = (char*)malloc(sizeof(c_Version));
@@ -1147,7 +1147,7 @@ otGetVersionString()
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otInterfaceUp(
     _In_ otInstance *aInstance
     )
@@ -1158,7 +1158,7 @@ otInterfaceUp(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otInterfaceDown(
     _In_ otInstance *aInstance
     )
@@ -1169,7 +1169,7 @@ otInterfaceDown(
 
 OTAPI 
 bool 
-OTCALL
+OT_CALL
 otIsInterfaceUp(
     _In_ otInstance *aInstance
     )
@@ -1181,7 +1181,7 @@ otIsInterfaceUp(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otThreadStart(
     _In_ otInstance *aInstance
     )
@@ -1192,7 +1192,7 @@ otThreadStart(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otThreadStop(
     _In_ otInstance *aInstance
     )
@@ -1203,7 +1203,7 @@ otThreadStop(
 
 OTAPI 
 bool 
-OTCALL
+OT_CALL
 otIsSingleton(
     _In_ otInstance *aInstance
     )
@@ -1215,7 +1215,7 @@ otIsSingleton(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otActiveScan(
     _In_ otInstance *aInstance, 
     uint32_t aScanChannels, 
@@ -1237,7 +1237,7 @@ otActiveScan(
 
 OTAPI 
 bool 
-OTCALL
+OT_CALL
 otIsActiveScanInProgress(
     _In_ otInstance *aInstance
     )
@@ -1249,7 +1249,7 @@ otIsActiveScanInProgress(
 
 OTAPI 
 ThreadError 
-OTCALL 
+OT_CALL 
 otEnergyScan(
     _In_ otInstance *aInstance, 
     uint32_t aScanChannels, 
@@ -1271,7 +1271,7 @@ otEnergyScan(
 
 OTAPI 
 bool 
-OTCALL 
+OT_CALL 
 otIsEnergyScanInProgress(
     _In_ otInstance *aInstance
     )
@@ -1283,7 +1283,7 @@ otIsEnergyScanInProgress(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otDiscover(
     _In_ otInstance *aInstance, 
     uint32_t aScanChannels, 
@@ -1306,7 +1306,7 @@ otDiscover(
 
 OTAPI 
 bool 
-OTCALL
+OT_CALL
 otIsDiscoverInProgress(
     _In_ otInstance *aInstance
     )
@@ -1318,7 +1318,7 @@ otIsDiscoverInProgress(
 
 OTAPI 
 uint8_t 
-OTCALL
+OT_CALL
 otGetChannel(
     _In_ otInstance *aInstance
     )
@@ -1330,7 +1330,7 @@ otGetChannel(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSetChannel(
     _In_ otInstance *aInstance, 
     uint8_t aChannel
@@ -1342,7 +1342,7 @@ otSetChannel(
 
 OTAPI 
 uint8_t 
-OTCALL
+OT_CALL
 otGetMaxAllowedChildren(
     _In_ otInstance *aInstance
     )
@@ -1354,7 +1354,7 @@ otGetMaxAllowedChildren(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSetMaxAllowedChildren(
     _In_ otInstance *aInstance, 
     uint8_t aMaxChildren
@@ -1366,7 +1366,7 @@ otSetMaxAllowedChildren(
 
 OTAPI 
 uint32_t 
-OTCALL
+OT_CALL
 otGetChildTimeout(
     _In_ otInstance *aInstance
     )
@@ -1378,7 +1378,7 @@ otGetChildTimeout(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetChildTimeout(
     _In_ otInstance *aInstance, 
     uint32_t aTimeout
@@ -1391,7 +1391,7 @@ otSetChildTimeout(
 OTAPI 
 const 
 uint8_t *
-OTCALL
+OT_CALL
 otGetExtendedAddress(
     _In_ otInstance *aInstance
     )
@@ -1409,7 +1409,7 @@ otGetExtendedAddress(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSetExtendedAddress(
     _In_ otInstance *aInstance, 
     const otExtAddress *aExtendedAddress
@@ -1421,7 +1421,7 @@ otSetExtendedAddress(
 
 OTAPI 
 const uint8_t *
-OTCALL
+OT_CALL
 otGetExtendedPanId(
     _In_ otInstance *aInstance
     )
@@ -1439,7 +1439,7 @@ otGetExtendedPanId(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetExtendedPanId(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtendedPanId
@@ -1450,7 +1450,7 @@ otSetExtendedPanId(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otGetFactoryAssignedIeeeEui64(
     _In_ otInstance *aInstance, 
     _Out_ otExtAddress *aEui64
@@ -1462,7 +1462,7 @@ otGetFactoryAssignedIeeeEui64(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otGetHashMacAddress(
     _In_ otInstance *aInstance, 
     _Out_ otExtAddress *aHashMacAddress
@@ -1474,7 +1474,7 @@ otGetHashMacAddress(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otGetLeaderRloc(
     _In_ otInstance *aInstance, 
     _Out_ otIp6Address *aLeaderRloc
@@ -1486,7 +1486,7 @@ otGetLeaderRloc(
 
 OTAPI 
 otLinkModeConfig 
-OTCALL
+OT_CALL
 otGetLinkMode(
     _In_ otInstance *aInstance
     )
@@ -1499,7 +1499,7 @@ otGetLinkMode(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSetLinkMode(
     _In_ otInstance *aInstance, 
     otLinkModeConfig aConfig
@@ -1512,7 +1512,7 @@ otSetLinkMode(
 
 OTAPI 
 const uint8_t *
-OTCALL
+OT_CALL
 otGetMasterKey(
     _In_ otInstance *aInstance, 
     _Out_ uint8_t *aKeyLength
@@ -1543,7 +1543,7 @@ otGetMasterKey(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSetMasterKey(
     _In_ otInstance *aInstance, 
     const uint8_t *aKey, 
@@ -1562,7 +1562,7 @@ otSetMasterKey(
 
 OTAPI 
 int8_t 
-OTCALL
+OT_CALL
 otGetMaxTransmitPower(
     _In_ otInstance *aInstance
     )
@@ -1574,7 +1574,7 @@ otGetMaxTransmitPower(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetMaxTransmitPower(
     _In_ otInstance *aInstance, 
     int8_t aPower
@@ -1585,7 +1585,7 @@ otSetMaxTransmitPower(
 
 OTAPI
 const otIp6Address *
-OTCALL
+OT_CALL
 otGetMeshLocalEid(
     _In_ otInstance *aInstance
     )
@@ -1601,7 +1601,7 @@ otGetMeshLocalEid(
 
 OTAPI
 const uint8_t *
-OTCALL
+OT_CALL
 otGetMeshLocalPrefix(
     _In_ otInstance *aInstance
     )
@@ -1619,7 +1619,7 @@ otGetMeshLocalPrefix(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSetMeshLocalPrefix(
     _In_ otInstance *aInstance, 
     const uint8_t *aMeshLocalPrefix
@@ -1631,7 +1631,7 @@ otSetMeshLocalPrefix(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetNetworkDataLeader(
     _In_ otInstance *aInstance, 
     bool aStable, 
@@ -1649,7 +1649,7 @@ otGetNetworkDataLeader(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetNetworkDataLocal(
     _In_ otInstance *aInstance, 
     bool aStable, 
@@ -1667,7 +1667,7 @@ otGetNetworkDataLocal(
 
 OTAPI
 const char *
-OTCALL
+OT_CALL
 otGetNetworkName(
     _In_ otInstance *aInstance
     )
@@ -1685,7 +1685,7 @@ otGetNetworkName(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSetNetworkName(
     _In_ otInstance *aInstance, 
     _In_ const char *aNetworkName
@@ -1700,7 +1700,7 @@ otSetNetworkName(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otGetNextOnMeshPrefix(
     _In_ otInstance *aInstance, 
     bool _aLocal, 
@@ -1737,7 +1737,7 @@ otGetNextOnMeshPrefix(
 
 OTAPI
 otPanId 
-OTCALL
+OT_CALL
 otGetPanId(
     _In_ otInstance *aInstance
     )
@@ -1749,7 +1749,7 @@ otGetPanId(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSetPanId(
     _In_ otInstance *aInstance, 
     otPanId aPanId
@@ -1761,7 +1761,7 @@ otSetPanId(
 
 OTAPI
 bool 
-OTCALL
+OT_CALL
 otIsRouterRoleEnabled(
     _In_ otInstance *aInstance
     )
@@ -1773,7 +1773,7 @@ otIsRouterRoleEnabled(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetRouterRoleEnabled(
     _In_ otInstance *aInstance, 
     bool aEnabled
@@ -1784,7 +1784,7 @@ otSetRouterRoleEnabled(
 
 OTAPI
 otShortAddress 
-OTCALL
+OT_CALL
 otGetShortAddress(
     _In_ otInstance *aInstance
     )
@@ -1818,7 +1818,7 @@ GetAdapterAddresses(
 
 OTAPI
 const otNetifAddress *
-OTCALL
+OT_CALL
 otGetUnicastAddresses(
     _In_ otInstance *aInstance
     )
@@ -1933,7 +1933,7 @@ otGetUnicastAddresses(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otAddUnicastAddress(
     _In_ otInstance *aInstance, 
     const otNetifAddress *aAddress
@@ -2000,7 +2000,7 @@ otAddUnicastAddress(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otRemoveUnicastAddress(
     _In_ otInstance *aInstance, 
     const otIp6Address *aAddress
@@ -2050,7 +2050,7 @@ otRemoveUnicastAddress(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetStateChangedCallback(
     _In_ otInstance *aInstance, 
     _In_ otStateChangedCallback aCallback, 
@@ -2066,7 +2066,7 @@ otSetStateChangedCallback(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetActiveDataset(
     _In_ otInstance *aInstance, 
     _Out_ otOperationalDataset *aDataset
@@ -2078,7 +2078,7 @@ otGetActiveDataset(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSetActiveDataset(
     _In_ otInstance *aInstance, 
     const otOperationalDataset *aDataset
@@ -2090,7 +2090,7 @@ otSetActiveDataset(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetPendingDataset(
     _In_ otInstance *aInstance, 
     _Out_ otOperationalDataset *aDataset
@@ -2102,7 +2102,7 @@ otGetPendingDataset(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSetPendingDataset(
     _In_ otInstance *aInstance, 
     const otOperationalDataset *aDataset
@@ -2114,7 +2114,7 @@ otSetPendingDataset(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSendActiveGet(
     _In_ otInstance *aInstance, 
     const uint8_t *aTlvTypes, 
@@ -2130,7 +2130,7 @@ otSendActiveGet(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSendActiveSet(
     _In_ otInstance *aInstance, 
     const otOperationalDataset *aDataset, 
@@ -2148,7 +2148,7 @@ otSendActiveSet(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSendPendingGet(
     _In_ otInstance *aInstance, 
     const uint8_t *aTlvTypes, 
@@ -2164,7 +2164,7 @@ otSendPendingGet(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otSendPendingSet(
     _In_ otInstance *aInstance, 
     const otOperationalDataset *aDataset, 
@@ -2182,7 +2182,7 @@ otSendPendingSet(
 
 OTAPI 
 uint32_t 
-OTCALL
+OT_CALL
 otGetPollPeriod(
     _In_ otInstance *aInstance
     )
@@ -2194,7 +2194,7 @@ otGetPollPeriod(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetPollPeriod(
     _In_ otInstance *aInstance, 
     uint32_t aPollPeriod
@@ -2205,7 +2205,7 @@ otSetPollPeriod(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetLocalLeaderWeight(
     _In_ otInstance *aInstance
     )
@@ -2217,7 +2217,7 @@ otGetLocalLeaderWeight(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetLocalLeaderWeight(
     _In_ otInstance *aInstance, 
     uint8_t aWeight
@@ -2228,7 +2228,7 @@ otSetLocalLeaderWeight(
 
 OTAPI 
 uint32_t 
-OTCALL
+OT_CALL
 otGetLocalLeaderPartitionId(
     _In_ otInstance *aInstance
     )
@@ -2240,7 +2240,7 @@ otGetLocalLeaderPartitionId(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetLocalLeaderPartitionId(
     _In_ otInstance *aInstance, 
     uint32_t aPartitionId
@@ -2251,7 +2251,7 @@ otSetLocalLeaderPartitionId(
 
 OTAPI 
 uint16_t 
-OTCALL 
+OT_CALL 
 otGetJoinerUdpPort(
     _In_ otInstance *aInstance
 )
@@ -2263,7 +2263,7 @@ otGetJoinerUdpPort(
 
 OTAPI 
 ThreadError 
-OTCALL 
+OT_CALL 
 otSetJoinerUdpPort(
     _In_ otInstance *aInstance, 
     uint16_t aJoinerUdpPort
@@ -2275,7 +2275,7 @@ otSetJoinerUdpPort(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otAddBorderRouter(
     _In_ otInstance *aInstance, 
     const otBorderRouterConfig *aConfig
@@ -2287,7 +2287,7 @@ otAddBorderRouter(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otRemoveBorderRouter(
     _In_ otInstance *aInstance, 
     const otIp6Prefix *aPrefix
@@ -2299,7 +2299,7 @@ otRemoveBorderRouter(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otAddExternalRoute(
     _In_ otInstance *aInstance, 
     const otExternalRouteConfig *aConfig
@@ -2311,7 +2311,7 @@ otAddExternalRoute(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otRemoveExternalRoute(
     _In_ otInstance *aInstance, 
     const otIp6Prefix *aPrefix
@@ -2323,7 +2323,7 @@ otRemoveExternalRoute(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otSendServerData(
     _In_ otInstance *aInstance
     )
@@ -2334,7 +2334,7 @@ otSendServerData(
 
 OTAPI
 uint32_t 
-OTCALL
+OT_CALL
 otGetContextIdReuseDelay(
     _In_ otInstance *aInstance
     )
@@ -2346,7 +2346,7 @@ otGetContextIdReuseDelay(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetContextIdReuseDelay(
     _In_ otInstance *aInstance, 
     uint32_t aDelay
@@ -2357,7 +2357,7 @@ otSetContextIdReuseDelay(
 
 OTAPI
 uint32_t 
-OTCALL
+OT_CALL
 otGetKeySequenceCounter(
     _In_ otInstance *aInstance
     )
@@ -2369,7 +2369,7 @@ otGetKeySequenceCounter(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetKeySequenceCounter(
     _In_ otInstance *aInstance, 
     uint32_t aKeySequenceCounter
@@ -2380,7 +2380,7 @@ otSetKeySequenceCounter(
 
 OTAPI
 uint8_t
-OTCALL
+OT_CALL
 otGetNetworkIdTimeout(
     _In_ otInstance *aInstance
     )
@@ -2392,7 +2392,7 @@ otGetNetworkIdTimeout(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetNetworkIdTimeout(
     _In_ otInstance *aInstance, 
     uint8_t aTimeout
@@ -2403,7 +2403,7 @@ otSetNetworkIdTimeout(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetRouterUpgradeThreshold(
     _In_ otInstance *aInstance
     )
@@ -2415,7 +2415,7 @@ otGetRouterUpgradeThreshold(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otSetRouterUpgradeThreshold(
     _In_ otInstance *aInstance, 
     uint8_t aThreshold
@@ -2426,7 +2426,7 @@ otSetRouterUpgradeThreshold(
 
 OTAPI 
 uint8_t 
-OTCALL
+OT_CALL
 otGetRouterDowngradeThreshold(
     _In_ otInstance *aInstance
     )
@@ -2438,7 +2438,7 @@ otGetRouterDowngradeThreshold(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetRouterDowngradeThreshold(
     _In_ otInstance *aInstance, 
     uint8_t aThreshold
@@ -2449,7 +2449,7 @@ otSetRouterDowngradeThreshold(
 
 OTAPI 
 uint8_t 
-OTCALL
+OT_CALL
 otGetRouterSelectionJitter(
     _In_ otInstance *aInstance
     )
@@ -2461,7 +2461,7 @@ otGetRouterSelectionJitter(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetRouterSelectionJitter(
     _In_ otInstance *aInstance, 
     uint8_t aRouterJitter
@@ -2472,7 +2472,7 @@ otSetRouterSelectionJitter(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otReleaseRouterId(
     _In_ otInstance *aInstance, 
     uint8_t aRouterId
@@ -2484,7 +2484,7 @@ otReleaseRouterId(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otAddMacWhitelist(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtAddr
@@ -2496,7 +2496,7 @@ otAddMacWhitelist(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otAddMacWhitelistRssi(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtAddr, 
@@ -2511,7 +2511,7 @@ otAddMacWhitelistRssi(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otRemoveMacWhitelist(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtAddr
@@ -2522,7 +2522,7 @@ otRemoveMacWhitelist(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetMacWhitelistEntry(
     _In_ otInstance *aInstance, 
     uint8_t aIndex, 
@@ -2535,7 +2535,7 @@ otGetMacWhitelistEntry(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otClearMacWhitelist(
     _In_ otInstance *aInstance
     )
@@ -2545,7 +2545,7 @@ otClearMacWhitelist(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otDisableMacWhitelist(
     _In_ otInstance *aInstance
     )
@@ -2555,7 +2555,7 @@ otDisableMacWhitelist(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otEnableMacWhitelist(
     _In_ otInstance *aInstance
     )
@@ -2565,7 +2565,7 @@ otEnableMacWhitelist(
 
 OTAPI
 bool 
-OTCALL
+OT_CALL
 otIsMacWhitelistEnabled(
     _In_ otInstance *aInstance
     )
@@ -2577,7 +2577,7 @@ otIsMacWhitelistEnabled(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otBecomeDetached(
     _In_ otInstance *aInstance
     )
@@ -2588,7 +2588,7 @@ otBecomeDetached(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otBecomeChild(
     _In_ otInstance *aInstance, 
     otMleAttachFilter aFilter
@@ -2605,7 +2605,7 @@ otBecomeChild(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otBecomeRouter(
     _In_ otInstance *aInstance
     )
@@ -2616,7 +2616,7 @@ otBecomeRouter(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otBecomeLeader(
     _In_ otInstance *aInstance
     )
@@ -2627,7 +2627,7 @@ otBecomeLeader(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otAddMacBlacklist(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtAddr
@@ -2639,7 +2639,7 @@ otAddMacBlacklist(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otRemoveMacBlacklist(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtAddr
@@ -2650,7 +2650,7 @@ otRemoveMacBlacklist(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetMacBlacklistEntry(
     _In_ otInstance *aInstance, 
     uint8_t aIndex, 
@@ -2663,7 +2663,7 @@ otGetMacBlacklistEntry(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otClearMacBlacklist(
     _In_ otInstance *aInstance
     )
@@ -2673,7 +2673,7 @@ otClearMacBlacklist(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otDisableMacBlacklist(
     _In_ otInstance *aInstance
     )
@@ -2683,7 +2683,7 @@ otDisableMacBlacklist(
 
 OTAPI
 void 
-OTCALL
+OT_CALL
 otEnableMacBlacklist(
     _In_ otInstance *aInstance
     )
@@ -2693,7 +2693,7 @@ otEnableMacBlacklist(
 
 OTAPI
 bool 
-OTCALL
+OT_CALL
 otIsMacBlacklistEnabled(
     _In_ otInstance *aInstance
     )
@@ -2705,7 +2705,7 @@ otIsMacBlacklistEnabled(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otGetAssignLinkQuality(
     _In_ otInstance *aInstance, 
     const uint8_t *aExtAddr, 
@@ -2718,7 +2718,7 @@ otGetAssignLinkQuality(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otSetAssignLinkQuality(
     _In_ otInstance *aInstance,
     const uint8_t *aExtAddr, 
@@ -2732,7 +2732,7 @@ otSetAssignLinkQuality(
 
 OTAPI 
 void 
-OTCALL
+OT_CALL
 otPlatformReset(
     _In_ otInstance *aInstance
     )
@@ -2742,7 +2742,7 @@ otPlatformReset(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetChildInfoById(
     _In_ otInstance *aInstance, 
     uint16_t aChildId, 
@@ -2755,7 +2755,7 @@ otGetChildInfoById(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetChildInfoByIndex(
     _In_ otInstance *aInstance, 
     uint8_t aChildIndex, 
@@ -2768,7 +2768,7 @@ otGetChildInfoByIndex(
 
 OTAPI
 otDeviceRole 
-OTCALL
+OT_CALL
 otGetDeviceRole(
     _In_ otInstance *aInstance
     )
@@ -2780,7 +2780,7 @@ otGetDeviceRole(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetEidCacheEntry(
     _In_ otInstance *aInstance, 
     uint8_t aIndex, 
@@ -2793,7 +2793,7 @@ otGetEidCacheEntry(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetLeaderData(
     _In_ otInstance *aInstance, 
     _Out_ otLeaderData *aLeaderData
@@ -2805,7 +2805,7 @@ otGetLeaderData(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetLeaderRouterId(
     _In_ otInstance *aInstance
     )
@@ -2817,7 +2817,7 @@ otGetLeaderRouterId(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetLeaderWeight(
     _In_ otInstance *aInstance
     )
@@ -2829,7 +2829,7 @@ otGetLeaderWeight(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetNetworkDataVersion(
     _In_ otInstance *aInstance
     )
@@ -2841,7 +2841,7 @@ otGetNetworkDataVersion(
 
 OTAPI
 uint32_t 
-OTCALL
+OT_CALL
 otGetPartitionId(
     _In_ otInstance *aInstance
     )
@@ -2853,7 +2853,7 @@ otGetPartitionId(
 
 OTAPI
 uint16_t 
-OTCALL
+OT_CALL
 otGetRloc16(
     _In_ otInstance *aInstance
     )
@@ -2865,7 +2865,7 @@ otGetRloc16(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetRouterIdSequence(
     _In_ otInstance *aInstance
     )
@@ -2877,7 +2877,7 @@ otGetRouterIdSequence(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otGetRouterInfo(
     _In_ otInstance *aInstance, 
     uint16_t aRouterId, 
@@ -2890,7 +2890,7 @@ otGetRouterInfo(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otGetParentInfo(
     _In_ otInstance *aInstance, 
     _Out_ otRouterInfo *aParentInfo
@@ -2903,7 +2903,7 @@ otGetParentInfo(
 
 OTAPI
 uint8_t 
-OTCALL
+OT_CALL
 otGetStableNetworkDataVersion(
     _In_ otInstance *aInstance
     )
@@ -2915,7 +2915,7 @@ otGetStableNetworkDataVersion(
 
 OTAPI
 const otMacCounters*
-OTCALL
+OT_CALL
 otGetMacCounters(
     _In_ otInstance *aInstance
     )
@@ -2936,7 +2936,7 @@ otGetMacCounters(
 
 OTAPI
 bool 
-OTCALL
+OT_CALL
 otIsIp6AddressEqual(
     const otIp6Address *a, 
     const otIp6Address *b
@@ -2947,7 +2947,7 @@ otIsIp6AddressEqual(
 
 OTAPI
 ThreadError 
-OTCALL
+OT_CALL
 otIp6AddressFromString(
     const char *str, 
     otIp6Address *address
@@ -3042,7 +3042,7 @@ exit:
 
 OTAPI 
 uint8_t 
-OTCALL
+OT_CALL
 otIp6PrefixMatch(
     const otIp6Address *aFirst, 
     const otIp6Address *aSecond
@@ -3076,7 +3076,7 @@ otIp6PrefixMatch(
 
 OTAPI 
 ThreadError 
-OTCALL 
+OT_CALL 
 otSendDiagnosticGet(
     _In_ otInstance *aInstance, 
     const otIp6Address *aDestination, 
@@ -3105,7 +3105,7 @@ otSendDiagnosticGet(
 
 OTAPI 
 ThreadError 
-OTCALL 
+OT_CALL 
 otSendDiagnosticReset(
     _In_ otInstance *aInstance, 
     const otIp6Address *aDestination, 
@@ -3134,7 +3134,7 @@ otSendDiagnosticReset(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerStart(
      _In_ otInstance *aInstance
     )
@@ -3145,7 +3145,7 @@ otCommissionerStart(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerAddJoiner(
      _In_ otInstance *aInstance, 
     const otExtAddress *aExtAddress, 
@@ -3175,7 +3175,7 @@ otCommissionerAddJoiner(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerRemoveJoiner(
      _In_ otInstance *aInstance, 
     const otExtAddress *aExtAddress
@@ -3196,7 +3196,7 @@ otCommissionerRemoveJoiner(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerSetProvisioningUrl(
      _In_ otInstance *aInstance,
     const char *aProvisioningUrl
@@ -3221,7 +3221,7 @@ otCommissionerSetProvisioningUrl(
 
 OTAPI
 ThreadError
-OTCALL
+OT_CALL
 otCommissionerAnnounceBegin(
     otInstance *aInstance,
     uint32_t aChannelMask,
@@ -3238,7 +3238,7 @@ otCommissionerAnnounceBegin(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerStop(
      _In_ otInstance *aInstance
     )
@@ -3249,7 +3249,7 @@ otCommissionerStop(
 
 OTAPI
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerEnergyScan(
      _In_ otInstance *aInstance, 
     uint32_t aChannelMask, 
@@ -3274,7 +3274,7 @@ otCommissionerEnergyScan(
 
 OTAPI
 ThreadError 
-OTCALL
+OT_CALL
 otCommissionerPanIdQuery(
      _In_ otInstance *aInstance, 
     uint16_t aPanId, 
@@ -3297,7 +3297,7 @@ otCommissionerPanIdQuery(
 
 OTAPI 
 ThreadError 
-OTCALL 
+OT_CALL 
 otSendMgmtCommissionerGet(
      _In_ otInstance *aInstance, 
     const uint8_t *aTlvs, 
@@ -3312,7 +3312,7 @@ otSendMgmtCommissionerGet(
 
 OTAPI 
 ThreadError 
-OTCALL 
+OT_CALL 
 otSendMgmtCommissionerSet(
      _In_ otInstance *aInstance,
     const otCommissioningDataset *aDataset,
@@ -3329,7 +3329,7 @@ otSendMgmtCommissionerSet(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otJoinerStart(
      _In_ otInstance *aInstance,
     const char *aPSKd, 
@@ -3357,7 +3357,7 @@ otJoinerStart(
 
 OTAPI 
 ThreadError 
-OTCALL
+OT_CALL
 otJoinerStop(
      _In_ otInstance *aInstance
     )

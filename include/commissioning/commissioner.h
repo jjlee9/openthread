@@ -35,14 +35,14 @@
 #ifndef OPENTHREAD_COMMISSIONER_H_
 #define OPENTHREAD_COMMISSIONER_H_
 
+#include <platform/toolchain.h>
+
 #ifdef OTDLL
 #ifndef OTAPI
 #define OTAPI __declspec(dllimport)
 #endif
-#define OTCALL WINAPI
 #else
 #define OTAPI
-#define OTCALL
 #endif
 
 #ifdef __cplusplus
@@ -64,7 +64,7 @@ extern "C" {
  * @retval kThreadError_None     Successfully started the Commissioner role.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerStart(otInstance *aInstance);
+OTAPI ThreadError OT_CALL otCommissionerStart(otInstance *aInstance);
 
 /**
  * This function disables the Thread Commissioner role.
@@ -74,7 +74,7 @@ OTAPI ThreadError OTCALL otCommissionerStart(otInstance *aInstance);
  * @retval kThreadError_None     Successfully started the Commissioner role.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerStop(otInstance *aInstance);
+OTAPI ThreadError OT_CALL otCommissionerStop(otInstance *aInstance);
 
 /**
  * This function adds a Joiner entry.
@@ -88,7 +88,7 @@ OTAPI ThreadError OTCALL otCommissionerStop(otInstance *aInstance);
  * @retval kThreadError_InvalidArgs  @p aExtAddress or @p aPSKd is invalid.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerAddJoiner(otInstance *aInstance, const otExtAddress *aExtAddress,
+OTAPI ThreadError OT_CALL otCommissionerAddJoiner(otInstance *aInstance, const otExtAddress *aExtAddress,
                                                  const char *aPSKd);
 
 /**
@@ -102,7 +102,7 @@ OTAPI ThreadError OTCALL otCommissionerAddJoiner(otInstance *aInstance, const ot
  * @retval kThreadError_InvalidArgs  @p aExtAddress is invalid.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerRemoveJoiner(otInstance *aIntsance, const otExtAddress *aExtAddress);
+OTAPI ThreadError OT_CALL otCommissionerRemoveJoiner(otInstance *aIntsance, const otExtAddress *aExtAddress);
 
 /**
  * This function sets the Provisioning URL.
@@ -113,7 +113,7 @@ OTAPI ThreadError OTCALL otCommissionerRemoveJoiner(otInstance *aIntsance, const
  * @retval kThreadError_InvalidArgs  @p aProvisioningUrl is invalid.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerSetProvisioningUrl(otInstance *aInstance, const char *aProvisioningUrl);
+OTAPI ThreadError OT_CALL otCommissionerSetProvisioningUrl(otInstance *aInstance, const char *aProvisioningUrl);
 
 /**
  * This function sends an Announce Begin message.
@@ -128,7 +128,7 @@ OTAPI ThreadError OTCALL otCommissionerSetProvisioningUrl(otInstance *aInstance,
  * @retval kThreadError_NoBufs  Insufficient buffers to generate an Announce Begin message.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerAnnounceBegin(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
+OTAPI ThreadError OT_CALL otCommissionerAnnounceBegin(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
                                                      uint16_t aPeriod,
                                                      const otIp6Address *aAddress);
 
@@ -141,7 +141,7 @@ OTAPI ThreadError OTCALL otCommissionerAnnounceBegin(otInstance *aInstance, uint
  * @param[in]  aContext           A pointer to application-specific context.
  *
  */
-typedef void (OTCALL *otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const uint8_t *aEnergyList,
+typedef void (OT_CALL *otCommissionerEnergyReportCallback)(uint32_t aChannelMask, const uint8_t *aEnergyList,
                                                           uint8_t aEnergyListLength, void *aContext);
 
 /**
@@ -160,7 +160,7 @@ typedef void (OTCALL *otCommissionerEnergyReportCallback)(uint32_t aChannelMask,
  * @retval kThreadError_NoBufs  Insufficient buffers to generate an Energy Scan Query message.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
+OTAPI ThreadError OT_CALL otCommissionerEnergyScan(otInstance *aInstance, uint32_t aChannelMask, uint8_t aCount,
                                                   uint16_t aPeriod, uint16_t aScanDuration, const otIp6Address *aAddress,
                                                   otCommissionerEnergyReportCallback aCallback, void *aContext);
 
@@ -172,7 +172,7 @@ OTAPI ThreadError OTCALL otCommissionerEnergyScan(otInstance *aInstance, uint32_
  * @param[in]  aContext           A pointer to application-specific context.
  *
  */
-typedef void (OTCALL *otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
+typedef void (OT_CALL *otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint32_t aChannelMask, void *aContext);
 
 /**
  * This function sends a PAN ID Query message.
@@ -188,7 +188,7 @@ typedef void (OTCALL *otCommissionerPanIdConflictCallback)(uint16_t aPanId, uint
  * @retval kThreadError_NoBufs  Insufficient buffers to generate a PAN ID Query message.
  *
  */
-OTAPI ThreadError OTCALL otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
+OTAPI ThreadError OT_CALL otCommissionerPanIdQuery(otInstance *aInstance, uint16_t aPanId, uint32_t aChannelMask,
                                                   const otIp6Address *aAddress,
                                                   otCommissionerPanIdConflictCallback aCallback, void *aContext);
 
@@ -203,7 +203,7 @@ OTAPI ThreadError OTCALL otCommissionerPanIdQuery(otInstance *aInstance, uint16_
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError OTCALL otSendMgmtCommissionerGet(otInstance *, const uint8_t *aTlvs, uint8_t aLength);
+OTAPI ThreadError OT_CALL otSendMgmtCommissionerGet(otInstance *, const uint8_t *aTlvs, uint8_t aLength);
 
 /**
  * This function sends MGMT_COMMISSIONER_SET.
@@ -217,7 +217,7 @@ OTAPI ThreadError OTCALL otSendMgmtCommissionerGet(otInstance *, const uint8_t *
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError OTCALL otSendMgmtCommissionerSet(otInstance *, const otCommissioningDataset *aDataset,
+OTAPI ThreadError OT_CALL otSendMgmtCommissionerSet(otInstance *, const otCommissioningDataset *aDataset,
                                                    const uint8_t *aTlvs, uint8_t aLength);
 
 /**

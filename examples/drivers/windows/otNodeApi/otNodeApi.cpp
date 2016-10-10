@@ -587,7 +587,7 @@ void HandleAddressChanges(otNode *aNode)
     otLogFuncExit();
 }
 
-void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
+void OT_CALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
 {
     otLogFuncEntry();
     otNode* aNode = (otNode*)aContext;
@@ -605,13 +605,13 @@ void OTCALL otNodeStateChangedCallback(uint32_t aFlags, void *aContext)
     otLogFuncExit();
 }
 
-OTNODEAPI int32_t OTCALL otNodeLog(const char *aMessage)
+OTNODEAPI int32_t OT_CALL otNodeLog(const char *aMessage)
 {
     LogInfo(OT_API, "%s", aMessage);
     return 0;
 }
 
-OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
+OTNODEAPI otNode* OT_CALL otNodeInit(uint32_t id)
 {
     otLogFuncEntry();
 
@@ -719,7 +719,7 @@ OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id)
     return node;
 }
 
-OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeFinalize(otNode* aNode)
 {
     otLogFuncEntry();
     if (aNode != nullptr)
@@ -760,7 +760,7 @@ OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
+OTNODEAPI int32_t OT_CALL otNodeSetMode(otNode* aNode, const char *aMode)
 {
     otLogFuncEntryMsg("[%d] %s", aNode->mId, aMode);
     printf("%d: mode %s\r\n", aNode->mId, aMode);
@@ -795,7 +795,7 @@ OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeInterfaceUp(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeInterfaceUp(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: ifconfig up\r\n", aNode->mId);
@@ -806,7 +806,7 @@ OTNODEAPI int32_t OTCALL otNodeInterfaceUp(otNode* aNode)
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeInterfaceDown(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeInterfaceDown(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: ifconfig down\r\n", aNode->mId);
@@ -817,7 +817,7 @@ OTNODEAPI int32_t OTCALL otNodeInterfaceDown(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeThreadStart(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeThreadStart(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: thread start\r\n", aNode->mId);
@@ -828,7 +828,7 @@ OTNODEAPI int32_t OTCALL otNodeThreadStart(otNode* aNode)
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeThreadStop(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: thread stop\r\n", aNode->mId);
@@ -839,7 +839,7 @@ OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeCommissionerStart(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: commissioner start\r\n", aNode->mId);
@@ -850,7 +850,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode)
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *aExtAddr, const char *aPSKd)
+OTNODEAPI int32_t OT_CALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *aExtAddr, const char *aPSKd)
 {
     otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aExtAddr, aPSKd);
     printf("%d: commissioner joiner add %s %s\r\n", aNode->mId, aExtAddr, aPSKd);
@@ -874,7 +874,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeCommissionerStop(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeCommissionerStop(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: commissioner stop\r\n", aNode->mId);
@@ -885,7 +885,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerStop(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl)
+OTNODEAPI int32_t OT_CALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl)
 {
     otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aPSKd, aProvisioningUrl);
     printf("%d: joiner start %s %s\r\n", aNode->mId, aPSKd, aProvisioningUrl);
@@ -896,7 +896,7 @@ OTNODEAPI int32_t OTCALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, con
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeJoinerStop(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeJoinerStop(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: joiner stop\r\n", aNode->mId);
@@ -907,7 +907,7 @@ OTNODEAPI int32_t OTCALL otNodeJoinerStop(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeClearWhitelist(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist clear\r\n", aNode->mId);
@@ -917,7 +917,7 @@ OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeEnableWhitelist(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist enable\r\n", aNode->mId);
@@ -927,7 +927,7 @@ OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeDisableWhitelist(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist disable\r\n", aNode->mId);
@@ -937,7 +937,7 @@ OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi)
+OTNODEAPI int32_t OT_CALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     if (aRssi == 0)
@@ -961,7 +961,7 @@ OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr,
     return error;
 }
 
-OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr)
+OTNODEAPI int32_t OT_CALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: whitelist remove %s\r\n", aNode->mId, aExtAddr);
@@ -975,7 +975,7 @@ OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAd
     return 0;
 }
 
-OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode)
+OTNODEAPI uint16_t OT_CALL otNodeGetAddr16(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetRloc16(aNode->mInstance);
@@ -984,7 +984,7 @@ OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode)
     return result;
 }
 
-OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode)
+OTNODEAPI const char* OT_CALL otNodeGetHashMacAddress(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     otExtAddress aHashMacAddress = {};
@@ -998,7 +998,7 @@ OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode)
     return str;
 }
 
-OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
+OTNODEAPI const char* OT_CALL otNodeGetAddr64(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto extAddr = otGetExtendedAddress(aNode->mInstance);
@@ -1012,7 +1012,7 @@ OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
     return str;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
+OTNODEAPI int32_t OT_CALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: channel %d\r\n", aNode->mId, aChannel);
@@ -1021,7 +1021,7 @@ OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey)
+OTNODEAPI int32_t OT_CALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey)
 {
     otLogFuncEntryMsg("[%d] %s", aNode->mId, aMasterkey);
     printf("%d: masterkey %s\r\n", aNode->mId, aMasterkey);
@@ -1039,7 +1039,7 @@ OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterke
     return error;
 }
 
-OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode)
+OTNODEAPI const char* OT_CALL otNodeGetMasterkey(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     uint8_t aKeyLength = 0;
@@ -1055,7 +1055,7 @@ OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode)
     return str;
 }
 
-OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
+OTNODEAPI uint32_t OT_CALL otNodeGetKeySequence(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetKeySequenceCounter(aNode->mInstance);
@@ -1064,7 +1064,7 @@ OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
+OTNODEAPI int32_t OT_CALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: keysequence %d\r\n", aNode->mId, aSequence);
@@ -1073,7 +1073,7 @@ OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout)
+OTNODEAPI int32_t OT_CALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: networkidtimeout %d\r\n", aNode->mId, aTimeout);
@@ -1082,7 +1082,7 @@ OTNODEAPI int32_t OTCALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeo
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName)
+OTNODEAPI int32_t OT_CALL otNodeSetNetworkName(otNode* aNode, const char *aName)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: networkname %s\r\n", aNode->mId, aName);
@@ -1091,7 +1091,7 @@ OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName)
     return result;
 }
 
-OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode)
+OTNODEAPI uint16_t OT_CALL otNodeGetPanId(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetPanId(aNode->mInstance);
@@ -1100,7 +1100,7 @@ OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId)
+OTNODEAPI int32_t OT_CALL otNodeSetPanId(otNode* aNode, uint16_t aPanId)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: panid 0x%04x\r\n", aNode->mId, aPanId);
@@ -1109,7 +1109,7 @@ OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold)
+OTNODEAPI int32_t OT_CALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: routerupgradethreshold %d\r\n", aNode->mId, aThreshold);
@@ -1118,7 +1118,7 @@ OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t 
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_t aThreshold)
+OTNODEAPI int32_t OT_CALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_t aThreshold)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: routerdowngradethreshold %d\r\n", aNode->mId, aThreshold);
@@ -1127,7 +1127,7 @@ OTNODEAPI int32_t OTCALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId)
+OTNODEAPI int32_t OT_CALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: releaserouterid %d\r\n", aNode->mId, aRouterId);
@@ -1136,7 +1136,7 @@ OTNODEAPI int32_t OTCALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId)
     return result;
 }
 
-OTNODEAPI const char* OTCALL otNodeGetState(otNode* aNode)
+OTNODEAPI const char* OT_CALL otNodeGetState(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto role = otGetDeviceRole(aNode->mInstance);
@@ -1147,7 +1147,7 @@ OTNODEAPI const char* OTCALL otNodeGetState(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetState(otNode* aNode, const char *aState)
+OTNODEAPI int32_t OT_CALL otNodeSetState(otNode* aNode, const char *aState)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: state %s\r\n", aNode->mId, aState);
@@ -1177,7 +1177,7 @@ OTNODEAPI int32_t OTCALL otNodeSetState(otNode* aNode, const char *aState)
     return error;
 }
 
-OTNODEAPI uint32_t OTCALL otNodeGetTimeout(otNode* aNode)
+OTNODEAPI uint32_t OT_CALL otNodeGetTimeout(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetChildTimeout(aNode->mInstance);
@@ -1186,7 +1186,7 @@ OTNODEAPI uint32_t OTCALL otNodeGetTimeout(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout)
+OTNODEAPI int32_t OT_CALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: childtimeout %d\r\n", aNode->mId, aTimeout);
@@ -1195,7 +1195,7 @@ OTNODEAPI int32_t OTCALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout)
     return 0;
 }
 
-OTNODEAPI uint8_t OTCALL otNodeGetWeight(otNode* aNode)
+OTNODEAPI uint8_t OT_CALL otNodeGetWeight(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetLeaderWeight(aNode->mInstance);
@@ -1204,7 +1204,7 @@ OTNODEAPI uint8_t OTCALL otNodeGetWeight(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetWeight(otNode* aNode, uint8_t aWeight)
+OTNODEAPI int32_t OT_CALL otNodeSetWeight(otNode* aNode, uint8_t aWeight)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: leaderweight %d\r\n", aNode->mId, aWeight);
@@ -1213,7 +1213,7 @@ OTNODEAPI int32_t OTCALL otNodeSetWeight(otNode* aNode, uint8_t aWeight)
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeAddIpAddr(otNode* aNode, const char *aAddr)
+OTNODEAPI int32_t OT_CALL otNodeAddIpAddr(otNode* aNode, const char *aAddr)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: add ipaddr %s\r\n", aNode->mId, aAddr);
@@ -1237,7 +1237,7 @@ inline uint16_t Swap16(uint16_t v)
         (((v & 0xff00U) >> 8) & 0x00ff);
 }
 
-OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
+OTNODEAPI const char* OT_CALL otNodeGetAddrs(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: ipaddr\r\n", aNode->mId);
@@ -1283,7 +1283,7 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
     return str;
 }
 
-OTNODEAPI uint32_t OTCALL otNodeGetContextReuseDelay(otNode* aNode)
+OTNODEAPI uint32_t OT_CALL otNodeGetContextReuseDelay(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetContextIdReuseDelay(aNode->mInstance);
@@ -1292,7 +1292,7 @@ OTNODEAPI uint32_t OTCALL otNodeGetContextReuseDelay(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDelay)
+OTNODEAPI int32_t OT_CALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDelay)
 {
     otLogFuncEntryMsg("[%d] %d", aNode->mId, aDelay);
     printf("%d: contextreusedelay %d\r\n", aNode->mId, aDelay);
@@ -1301,7 +1301,7 @@ OTNODEAPI int32_t OTCALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDel
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, const char *aFlags, const char *aPreference)
+OTNODEAPI int32_t OT_CALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, const char *aFlags, const char *aPreference)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: prefix add %s %s %s\r\n", aNode->mId, aPrefix, aFlags, aPreference);
@@ -1384,7 +1384,7 @@ OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, con
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix)
+OTNODEAPI int32_t OT_CALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     struct otIp6Prefix prefix;
@@ -1408,7 +1408,7 @@ OTNODEAPI int32_t OTCALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, const char *aPreference)
+OTNODEAPI int32_t OT_CALL otNodeAddRoute(otNode* aNode, const char *aPrefix, const char *aPreference)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     otExternalRouteConfig config = {0};
@@ -1449,7 +1449,7 @@ OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, cons
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
+OTNODEAPI int32_t OT_CALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     struct otIp6Prefix prefix;
@@ -1473,7 +1473,7 @@ OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeRegisterNetdata(otNode* aNode)
+OTNODEAPI int32_t OT_CALL otNodeRegisterNetdata(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: registernetdata\r\n", aNode->mId);
@@ -1482,7 +1482,7 @@ OTNODEAPI int32_t OTCALL otNodeRegisterNetdata(otNode* aNode)
     return result;
 }
 
-void OTCALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength, void *aContext)
+void OT_CALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength, void *aContext)
 {
     otNode* aNode = (otNode*)aContext;
 
@@ -1494,7 +1494,7 @@ void OTCALL otNodeCommissionerEnergyReportCallback(uint32_t aChannelMask, const 
     SetEvent(aNode->mEnergyScanEvent);
 }
 
-OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr)
+OTNODEAPI int32_t OT_CALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: energy scan 0x%x %d %d %d %s\r\n", aNode->mId, aMask, aCount, aPeriod, aDuration, aAddr);
@@ -1521,14 +1521,14 @@ OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t
     return result;
 }
 
-void OTCALL otNodeCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
+void OT_CALL otNodeCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
 {
     otNode* aNode = (otNode*)aContext;
     printf("Conflict: 0x%04x, 0x%08x\r\n", aPanId, aChannelMask);
     SetEvent(aNode->mPanIdConflictEvent);
 }
 
-OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr)
+OTNODEAPI int32_t OT_CALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     printf("%d: panid query 0x%04x 0x%x %s\r\n", aNode->mId, aPanId, aMask, aAddr);
@@ -1555,7 +1555,7 @@ OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32
     return result;
 }
 
-OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode)
+OTNODEAPI const char* OT_CALL otNodeScan(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     UNREFERENCED_PARAMETER(aNode);
@@ -1563,7 +1563,7 @@ OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode)
     return nullptr;
 }
 
-OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies)
+OTNODEAPI uint32_t OT_CALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies)
 {
     otLogFuncEntryMsg("[%d] %s (%d bytes)", aNode->mId, aAddr, aSize);
     printf("%d: ping %s (%d bytes)\r\n", aNode->mId, aAddr, aSize);
@@ -1715,7 +1715,7 @@ exit:
     return numberOfReplies;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter)
+OTNODEAPI int32_t OT_CALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter)
 {
     otLogFuncEntryMsg("[%d] %d", aNode->mId, aRouterJitter);
     printf("%d: routerselectionjitter %d\r\n", aNode->mId, aRouterJitter);
@@ -1724,7 +1724,7 @@ OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t a
     return 0;
 }
 
-OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const char *aAddr)
+OTNODEAPI int32_t OT_CALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const char *aAddr)
 {
     otLogFuncEntryMsg("[%d] 0x%08x %d %d %s", aNode->mId, aChannelMask, aCount, aPeriod, aAddr);
     printf("%d: commissioner announce 0x%08x %d %d %s\r\n", aNode->mId, aChannelMask, aCount, aPeriod, aAddr);
@@ -1738,7 +1738,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel)
+OTNODEAPI int32_t OT_CALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel)
 {
     otLogFuncEntryMsg("[%d] 0x%llX %d %d", aNode->mId, aTimestamp, aPanId, aChannel);
     printf("%d: dataset set active 0x%llX %d %d\r\n", aNode->mId, aTimestamp, aPanId, aChannel);

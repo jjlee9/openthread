@@ -53,272 +53,272 @@ typedef struct otNode otNode;
 /**
  * Logs a WPP message
  */
-OTNODEAPI int32_t OTCALL otNodeLog(const char *aMessage);
+OTNODEAPI int32_t OT_CALL otNodeLog(const char *aMessage);
 
 /**
  * Allocates a new virtual node
  */
-OTNODEAPI otNode* OTCALL otNodeInit(uint32_t id);
+OTNODEAPI otNode* OT_CALL otNodeInit(uint32_t id);
 
 /**
  * Frees a node
  */
-OTNODEAPI int32_t OTCALL otNodeFinalize(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeFinalize(otNode* aNode);
 
 /**
  * Sets the link mode
  */
-OTNODEAPI int32_t OTCALL otNodeSetMode(otNode* aNode, const char *aMode);
+OTNODEAPI int32_t OT_CALL otNodeSetMode(otNode* aNode, const char *aMode);
 
 /**
  * Starts the thread interface
  */
-OTNODEAPI int32_t OTCALL otNodeInterfaceUp(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeInterfaceUp(otNode* aNode);
 
 /**
  * Stops the thread interface
  */
-OTNODEAPI int32_t OTCALL otNodeInterfaceDown(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeInterfaceDown(otNode* aNode);
 
 /**
  * Starts the thread logic
  */
-OTNODEAPI int32_t OTCALL otNodeThreadStart(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeThreadStart(otNode* aNode);
 
 /**
  * Stops the thread logic
  */
-OTNODEAPI int32_t OTCALL otNodeThreadStop(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeThreadStop(otNode* aNode);
 
 /**
  * Starts the commissioner logic
  */
-OTNODEAPI int32_t OTCALL otNodeCommissionerStart(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeCommissionerStart(otNode* aNode);
 
 /**
  * Adds a new joiner to the list for commissioning
  */
-OTNODEAPI int32_t OTCALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *aExtAddr, const char *aPSKd);
+OTNODEAPI int32_t OT_CALL otNodeCommissionerJoinerAdd(otNode* aNode, const char *aExtAddr, const char *aPSKd);
 
 /**
  * Stops the commissioner logic
  */
-OTNODEAPI int32_t OTCALL otNodeCommissionerStop(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeCommissionerStop(otNode* aNode);
 
 /**
  * Starts the joiner logic
  */
-OTNODEAPI int32_t OTCALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl);
+OTNODEAPI int32_t OT_CALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, const char *aProvisioningUrl);
 
 /**
  * Clears the node's whitelist
  */
-OTNODEAPI int32_t OTCALL otNodeClearWhitelist(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeClearWhitelist(otNode* aNode);
 
 /**
  * Enables the node's whitelist
  */
-OTNODEAPI int32_t OTCALL otNodeEnableWhitelist(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeEnableWhitelist(otNode* aNode);
 
 /**
  * Disables the node's whitelist
  */
-OTNODEAPI int32_t OTCALL otNodeDisableWhitelist(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeDisableWhitelist(otNode* aNode);
 
 /**
  * Adds an entry to the node's whitelist
  */
-OTNODEAPI int32_t OTCALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi);
+OTNODEAPI int32_t OT_CALL otNodeAddWhitelist(otNode* aNode, const char *aExtAddr, int8_t aRssi);
 
 /**
  * Removes an entry to the node's whitelist
  */
-OTNODEAPI int32_t OTCALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr);
+OTNODEAPI int32_t OT_CALL otNodeRemoveWhitelist(otNode* aNode, const char *aExtAddr);
 
 /**
  * Gets the node's short mac address (Rloc16)
  */
-OTNODEAPI uint16_t OTCALL otNodeGetAddr16(otNode* aNode);
+OTNODEAPI uint16_t OT_CALL otNodeGetAddr16(otNode* aNode);
 
 /**
  * Gets the node's extended mac address
  */
-OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode);
+OTNODEAPI const char* OT_CALL otNodeGetAddr64(otNode* aNode);
 
 /**
  * Gets the node's hash mac address
  */
-OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode);
+OTNODEAPI const char* OT_CALL otNodeGetHashMacAddress(otNode* aNode);
 
 /**
  * Sets the channel for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel);
+OTNODEAPI int32_t OT_CALL otNodeSetChannel(otNode* aNode, uint8_t aChannel);
 
 /**
  * sets the node's master key
  */
-OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey);
+OTNODEAPI int32_t OT_CALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey);
 
 /**
  * Gets the node's master key
  */
-OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode);
+OTNODEAPI const char* OT_CALL otNodeGetMasterkey(otNode* aNode);
 
 /**
  * Gets the key sequance for the node
  */
-OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode);
+OTNODEAPI uint32_t OT_CALL otNodeGetKeySequence(otNode* aNode);
 
 /**
  * Sets the network id timeout for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence);
+OTNODEAPI int32_t OT_CALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence);
 
 /**
  * Sets the network id timeout for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout);
+OTNODEAPI int32_t OT_CALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout);
 
 /**
  * Sets the network name for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName);
+OTNODEAPI int32_t OT_CALL otNodeSetNetworkName(otNode* aNode, const char *aName);
 
 /**
  * Gets the pan id for the node
  */
-OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode);
+OTNODEAPI uint16_t OT_CALL otNodeGetPanId(otNode* aNode);
 
 /**
  * Sets the pan id for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId);
+OTNODEAPI int32_t OT_CALL otNodeSetPanId(otNode* aNode, uint16_t aPanId);
 
 /**
  * Sets the router upgrade threshold for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold);
+OTNODEAPI int32_t OT_CALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold);
 
 /**
  * Sets the router downgrade threshold for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_t aThreshold);
+OTNODEAPI int32_t OT_CALL otNodeSetRouterDowngradeThreshold(otNode* aNode, uint8_t aThreshold);
 
 /**
  * Releases a router id for the node
  */
-OTNODEAPI int32_t OTCALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId);
+OTNODEAPI int32_t OT_CALL otNodeReleaseRouterId(otNode* aNode, uint8_t aRouterId);
 
 /**
  * Gets the node's state
  */
-OTNODEAPI const char* OTCALL otNodeGetState(otNode* aNode);
+OTNODEAPI const char* OT_CALL otNodeGetState(otNode* aNode);
 
 /**
  * Sets the node's state
  */
-OTNODEAPI int32_t OTCALL otNodeSetState(otNode* aNode, const char *aState);
+OTNODEAPI int32_t OT_CALL otNodeSetState(otNode* aNode, const char *aState);
 
 /**
  * Gets the child timeout for the node
  */
-OTNODEAPI uint32_t OTCALL otNodeGetTimeout(otNode* aNode);
+OTNODEAPI uint32_t OT_CALL otNodeGetTimeout(otNode* aNode);
 
 /**
  * Sets the child timeout for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout);
+OTNODEAPI int32_t OT_CALL otNodeSetTimeout(otNode* aNode, uint32_t aTimeout);
 
 /**
  * Gets the leader weight for the node
  */
-OTNODEAPI uint8_t OTCALL otNodeGetWeight(otNode* aNode);
+OTNODEAPI uint8_t OT_CALL otNodeGetWeight(otNode* aNode);
 
 /**
  * Sets the leader weight for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetWeight(otNode* aNode, uint8_t aWeight);
+OTNODEAPI int32_t OT_CALL otNodeSetWeight(otNode* aNode, uint8_t aWeight);
 
 /**
  * Adds an IP address for the node
  */
-OTNODEAPI int32_t OTCALL otNodeAddIpAddr(otNode* aNode, const char *aAddr);
+OTNODEAPI int32_t OT_CALL otNodeAddIpAddr(otNode* aNode, const char *aAddr);
 
 /**
  * Gets the IP address for the node
  */
-OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode);
+OTNODEAPI const char* OT_CALL otNodeGetAddrs(otNode* aNode);
 
 /**
  * Gets the context reuse delay for the node
  */
-OTNODEAPI uint32_t OTCALL otNodeGetContextReuseDelay(otNode* aNode);
+OTNODEAPI uint32_t OT_CALL otNodeGetContextReuseDelay(otNode* aNode);
 
 /**
  * Sets the context reuse delay for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDelay);
+OTNODEAPI int32_t OT_CALL otNodeSetContextReuseDelay(otNode* aNode, uint32_t aDelay);
 
 /**
  * Adds an IP prefix for the node
  */
-OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, const char *aFlags, const char *aPreference);
+OTNODEAPI int32_t OT_CALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, const char *aFlags, const char *aPreference);
 
 /**
  * Removes an IP prefix from the node
  */
-OTNODEAPI int32_t OTCALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix);
+OTNODEAPI int32_t OT_CALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix);
 
 /**
  * Adds an IP route for the node
  */
-OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, const char *aPreference);
+OTNODEAPI int32_t OT_CALL otNodeAddRoute(otNode* aNode, const char *aPrefix, const char *aPreference);
 
 /**
  * Removes an IP route from the node
  */
-OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix);
+OTNODEAPI int32_t OT_CALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix);
 
 /**
  * Registers the net data for the node
  */
-OTNODEAPI int32_t OTCALL otNodeRegisterNetdata(otNode* aNode);
+OTNODEAPI int32_t OT_CALL otNodeRegisterNetdata(otNode* aNode);
 
 /**
  * Performs an energy scan for the node
  */
-OTNODEAPI int32_t OTCALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr);
+OTNODEAPI int32_t OT_CALL otNodeEnergyScan(otNode* aNode, uint32_t aMask, uint8_t aCount, uint16_t aPeriod, uint16_t aDuration, const char *aAddr);
 
 /**
  * Performs a panid query for the node
  */
-OTNODEAPI int32_t OTCALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr);
+OTNODEAPI int32_t OT_CALL otNodePanIdQuery(otNode* aNode, uint16_t aPanId, uint32_t aMask, const char *aAddr);
 
 /**
  * Performs an scan for the node
  */
-OTNODEAPI const char* OTCALL otNodeScan(otNode* aNode);
+OTNODEAPI const char* OT_CALL otNodeScan(otNode* aNode);
 
 /**
  * Performs an scan for the node
  */
-OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies);
+OTNODEAPI uint32_t OT_CALL otNodePing(otNode* aNode, const char *aAddr, uint16_t aSize, uint32_t aMinReplies);
 
 /**
  * Sets the router selection jitter value for a node
  */
-OTNODEAPI int32_t OTCALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter);
+OTNODEAPI int32_t OT_CALL otNodeSetRouterSelectionJitter(otNode* aNode, uint8_t aRouterJitter);
 
 /**
  * Sends the announce message for a node
  */
-OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const char *aAddr);
+OTNODEAPI int32_t OT_CALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const char *aAddr);
 
 /**
  * Sets the active dataset for a node
  */
-OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0);
+OTNODEAPI int32_t OT_CALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0);
 
 #ifdef __cplusplus
 }  // extern "C"

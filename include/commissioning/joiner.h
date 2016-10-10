@@ -35,14 +35,14 @@
 #ifndef OPENTHREAD_JOINER_H_
 #define OPENTHREAD_JOINER_H_
 
+#include <platform/toolchain.h>
+
 #ifdef OTDLL
 #ifndef OTAPI
 #define OTAPI __declspec(dllimport)
 #endif
-#define OTCALL WINAPI
 #else
 #define OTAPI
-#define OTCALL
 #endif
 
 #ifdef __cplusplus
@@ -67,7 +67,7 @@ extern "C" {
  * @retval kThreadError_InvalidArgs  @p aPSKd or @p aProvisioningUrl is invalid.
  *
  */
-OTAPI ThreadError OTCALL otJoinerStart(otInstance *aInstance, const char *aPSKd, const char *aProvisioningUrl);
+OTAPI ThreadError OT_CALL otJoinerStart(otInstance *aInstance, const char *aPSKd, const char *aProvisioningUrl);
 
 /**
  * This function disables the Thread Joiner role.
@@ -75,7 +75,7 @@ OTAPI ThreadError OTCALL otJoinerStart(otInstance *aInstance, const char *aPSKd,
  * @param[in]  aInstance  A pointer to an OpenThread instance.
  *
  */
-OTAPI ThreadError OTCALL otJoinerStop(otInstance *aInstance);
+OTAPI ThreadError OT_CALL otJoinerStop(otInstance *aInstance);
 
 /**
  * @}
