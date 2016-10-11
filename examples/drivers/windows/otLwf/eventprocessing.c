@@ -861,7 +861,7 @@ otLwfEventWorkerThread(
                                     pFilter->otReceiveFrame.mPower = NblContext->Power;
                                     pFilter->otReceiveFrame.mLqi = NblContext->Lqi;
                                     pFilter->otReceiveFrame.mLength = (uint8_t)NET_BUFFER_DATA_LENGTH(CurrNb);
-                                    otLwfRadioReceiveFrame(pFilter);
+                                    otLwfRadioReceiveFrame(pFilter, CurrNbl);
                                     NblStatus = STATUS_SUCCESS;
                                 }
                             }
@@ -903,7 +903,7 @@ otLwfEventWorkerThread(
                                         {
                                             IPV6_HEADER* v6Header = (IPV6_HEADER*)MessageBuffer;
                                             
-                                            LogVerbose(DRIVER_DATA_PATH, "Filter: %p, SEND: %p : %!IPV6ADDR! => %!IPV6ADDR! (%u bytes)", 
+                                            LogVerbose(DRIVER_DATA_PATH, "Filter: %p, IP6_SEND: %p : %!IPV6ADDR! => %!IPV6ADDR! (%u bytes)", 
                                                        pFilter, CurrNbl, &v6Header->SourceAddress, &v6Header->DestinationAddress, 
                                                        NET_BUFFER_DATA_LENGTH(CurrNb));
                                         

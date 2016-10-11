@@ -545,7 +545,7 @@ otLwfReceiveIp6DatagramCallback(
         }
     }
     
-    LogVerbose(DRIVER_DATA_PATH, "Filter: %p, RECV: %p : %!IPV6ADDR! => %!IPV6ADDR! (%u bytes)", 
+    LogVerbose(DRIVER_DATA_PATH, "Filter: %p, IP6_RECV: %p : %!IPV6ADDR! => %!IPV6ADDR! (%u bytes)", 
                pFilter, NetBufferList, &v6Header->SourceAddress, &v6Header->DestinationAddress,
                messageLength);
 

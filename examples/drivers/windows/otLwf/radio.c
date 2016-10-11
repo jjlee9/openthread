@@ -36,6 +36,18 @@
 #include "radio.tmh"
 
 void 
+LogMac(
+    _In_ PCSTR szDir,
+    _In_ PMS_FILTER pFilter,
+    _In_ PNET_BUFFER_LIST NetBufferList,
+    ULONG frameLength,
+    _In_reads_bytes_(frameLength) PUCHAR frame
+    );
+
+#define LogMacSend(pFilter, NBL, frameLength, frame) LogMac("MAC_SEND", pFilter, NBL, frameLength, frame)
+#define LogMacRecv(pFilter, NBL, frameLength, frame) LogMac("MAC_RECV", pFilter, NBL, frameLength, frame)
+
+void 
 otPlatReset(
     _In_ otInstance *otCtx
     )
@@ -425,12 +437,15 @@ int otPlatRadioGetPromiscuous(_In_ otInstance *otCtx)
 
 VOID 
 otLwfRadioReceiveFrame(
-    _In_ PMS_FILTER pFilter
+    _In_ PMS_FILTER pFilter,
+    _In_ PNET_BUFFER_LIST NetBufferList
     )
 {    
     NT_ASSERT(pFilter->otReceiveFrame.mChannel >= 11 && pFilter->otReceiveFrame.mChannel <= 26);
 
     LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p", pFilter);
+
+    LogMacRecv(pFilter, NetBufferList, pFilter->otReceiveFrame.mLength, pFilter->otReceiveFrame.mPsdu);
 
     NT_ASSERT(pFilter->otPhyState > kStateDisabled);
     if (pFilter->otPhyState > kStateDisabled)
@@ -492,6 +507,8 @@ otLwfRadioSendPacket(
     NT_ASSERT(!pFilter->SendPending);
 
     NT_ASSERT(Packet->mLength <= kMaxPHYPacketSize);
+
+    LogMacSend(pFilter, pFilter->SendNetBufferList, Packet->mLength, Packet->mPsdu);
 
     // Copy to the NetBufferList
     RtlCopyBufferToMdl(
@@ -823,4 +840,83 @@ ThreadError otPlatRadioEnergyScan(_In_ otInstance *otCtx, uint8_t aScanChannel, 
     }
 
     return NT_SUCCESS(status) ? kThreadError_None : kThreadError_Failed;
+}
+
+inline USHORT getDstShortAddress(const UCHAR *frame)
+{
+    return (((USHORT)frame[IEEE802154_DSTADDR_OFFSET + 1]) << 8) | frame[IEEE802154_DSTADDR_OFFSET];
+}
+
+inline USHORT getSrcShortAddress(ULONG frameLength, _In_reads_bytes_(frameLength) PUCHAR frame, ULONG offset)
+{
+    return (offset + 1 < frameLength) ? ((((USHORT)frame[offset + 1]) << 8) | frame[offset]) : 0;
+}
+
+inline ULONGLONG getDstExtAddress(const UCHAR *frame)
+{
+    return *(ULONGLONG*)(frame + IEEE802154_DSTADDR_OFFSET);
+}
+
+inline ULONGLONG getSrcExtAddress(ULONG frameLength, _In_reads_bytes_(frameLength) PUCHAR frame, ULONG offset)
+{
+    return (offset + 7 < frameLength) ? (*(ULONGLONG*)(frame + offset)) : 0;
+}
+
+void 
+LogMac(
+    _In_ PCSTR szDir,
+    _In_ PMS_FILTER pFilter,
+    _In_ PNET_BUFFER_LIST NetBufferList,
+    ULONG frameLength,
+    _In_reads_bytes_(frameLength) PUCHAR frame
+    )
+{
+    if (frameLength < 6) return;
+
+    NT_ASSERT(frame);
+
+    UCHAR AckRequested = (frame[0] & IEEE802154_ACK_REQUEST) != 0 ? 1 : 0;
+    UCHAR FramePending = (frame[0] & IEEE802154_FRAME_PENDING) != 0 ? 1 : 0;
+
+    switch (frame[1] & (IEEE802154_DST_ADDR_MASK | IEEE802154_SRC_ADDR_MASK))
+    {
+    case IEEE802154_DST_ADDR_NONE | IEEE802154_SRC_ADDR_NONE:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : null => null (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, frameLength, AckRequested, FramePending);
+        break;
+    case IEEE802154_DST_ADDR_NONE | IEEE802154_SRC_ADDR_SHORT:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : %X => null (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getSrcShortAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET), frameLength, AckRequested, FramePending);
+        break;
+    case IEEE802154_DST_ADDR_NONE | IEEE802154_SRC_ADDR_EXT:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : %llX => null (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getSrcExtAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET), frameLength, AckRequested, FramePending);
+        break;
+        
+    case IEEE802154_DST_ADDR_SHORT | IEEE802154_SRC_ADDR_NONE:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : null => %X (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getDstShortAddress(frame), frameLength, AckRequested, FramePending);
+        break;
+    case IEEE802154_DST_ADDR_SHORT | IEEE802154_SRC_ADDR_SHORT:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : %X => %X (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getSrcShortAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET+2), getDstShortAddress(frame), frameLength, AckRequested, FramePending);
+        break;
+    case IEEE802154_DST_ADDR_SHORT | IEEE802154_SRC_ADDR_EXT:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : %llX => %X (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getSrcExtAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET+2), getDstShortAddress(frame), frameLength, AckRequested, FramePending);
+        break;
+        
+    case IEEE802154_DST_ADDR_EXT | IEEE802154_SRC_ADDR_NONE:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : null => %llX (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getDstExtAddress(frame), frameLength, AckRequested, FramePending);
+        break;
+    case IEEE802154_DST_ADDR_EXT | IEEE802154_SRC_ADDR_SHORT:
+        LogVerbose(DRIVER_DATA_PATH, "Filt: %p, %s: %p : %X => %llX (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getSrcShortAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET+8), getDstExtAddress(frame), frameLength, AckRequested, FramePending);
+        break;
+    case IEEE802154_DST_ADDR_EXT | IEEE802154_SRC_ADDR_EXT:
+        LogVerbose(DRIVER_DATA_PATH, "Filter: %p, %s: %p : %llX => %llX (%u bytes, AckReq=%u, FramePending=%u)", 
+            pFilter, szDir, NetBufferList, getSrcExtAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET+8), getDstExtAddress(frame), frameLength, AckRequested, FramePending);
+        break;
+    }
 }

@@ -1262,6 +1262,10 @@ exit:
 
     if (error != kThreadError_None)
     {
+#ifdef WINDOWS_LOGGING
+        otLogDebgMac("Dropping received frame, %!otError!\n", error);
+#endif
+
         switch (error)
         {
         case kThreadError_Security:
