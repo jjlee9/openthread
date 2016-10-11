@@ -44,8 +44,11 @@ LogMac(
     _In_reads_bytes_(frameLength) PUCHAR frame
     );
 
-#define LogMacSend(pFilter, NBL, frameLength, frame) LogMac("MAC_SEND", pFilter, NBL, frameLength, frame)
-#define LogMacRecv(pFilter, NBL, frameLength, frame) LogMac("MAC_RECV", pFilter, NBL, frameLength, frame)
+const char MacSend[] = "MAC_SEND";
+const char MacRecv[] = "MAC_RECV";
+
+#define LogMacSend(pFilter, NBL, frameLength, frame) LogMac(MacSend, pFilter, NBL, frameLength, frame)
+#define LogMacRecv(pFilter, NBL, frameLength, frame) LogMac(MacRecv, pFilter, NBL, frameLength, frame)
 
 void 
 otPlatReset(
