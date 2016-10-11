@@ -948,18 +948,23 @@ exit:
 
 ThreadError Mle::AppendActiveTimestamp(Message &aMessage)
 {
-    ThreadError error;
     ActiveTimestampTlv timestampTlv;
     const MeshCoP::Timestamp *timestamp(mNetif.GetActiveDataset().GetNetwork().GetTimestamp());
 
-    VerifyOrExit(timestamp && timestamp->GetSeconds() != 0, error = kThreadError_None);
-
     timestampTlv.Init();
-    *static_cast<MeshCoP::Timestamp *>(&timestampTlv) = *timestamp;
-    error = aMessage.Append(&timestampTlv, sizeof(timestampTlv));
 
-exit:
-    return error;
+    // set active timestamp to 0 if there is no valid active operational dataset
+    if (timestamp == NULL)
+    {
+        timestampTlv.SetSeconds(0);
+        timestampTlv.SetTicks(0);
+    }
+    else
+    {
+        *static_cast<MeshCoP::Timestamp *>(&timestampTlv) = *timestamp;
+    }
+
+    return aMessage.Append(&timestampTlv, sizeof(timestampTlv));
 }
 
 ThreadError Mle::AppendPendingTimestamp(Message &aMessage)
@@ -1820,11 +1825,13 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
     VerifyOrExit(networkData.IsValid(), error = kThreadError_Parse);
 
     // Active Timestamp
-    if (Tlv::GetTlv(aMessage, Tlv::kActiveTimestamp, sizeof(activeTimestamp), activeTimestamp) == kThreadError_None)
+    SuccessOrExit(error = Tlv::GetTlv(aMessage, Tlv::kActiveTimestamp, sizeof(activeTimestamp), activeTimestamp));
+    VerifyOrExit(activeTimestamp.IsValid(), error = kThreadError_Parse);
+
+    if (activeTimestamp.GetSeconds() != 0)
     {
         const MeshCoP::Timestamp *timestamp;
 
-        VerifyOrExit(activeTimestamp.IsValid(), error = kThreadError_Parse);
         timestamp = mNetif.GetActiveDataset().GetNetwork().GetTimestamp();
 
         // if received timestamp does not match the local value and message does not contain the dataset,
@@ -2135,16 +2142,19 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
     {
         VerifyOrExit(activeTimestamp.IsValid(), error = kThreadError_Parse);
 
-        // Active Dataset
-        if (Tlv::GetOffset(aMessage, Tlv::kActiveDataset, offset) == kThreadError_None)
+        if (activeTimestamp.GetSeconds() != 0)
         {
-            aMessage.Read(offset, sizeof(tlv), &tlv);
-            mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
+            // Active Dataset
+            if (Tlv::GetOffset(aMessage, Tlv::kActiveDataset, offset) == kThreadError_None)
+            {
+                aMessage.Read(offset, sizeof(tlv), &tlv);
+                mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
+            }
         }
-    }
-    else
-    {
-        mNetif.GetActiveDataset().Clear();
+        else
+        {
+            mNetif.GetActiveDataset().Clear();
+        }
     }
 
     // Pending Timestamp
@@ -2454,6 +2464,8 @@ ThreadError Mle::SendDiscoveryResponse(const Ip6::Address &aDestination, uint16_
     MeshCoP::ExtendedPanIdTlv extPanId;
     MeshCoP::NetworkNameTlv networkName;
     MeshCoP::JoinerUdpPortTlv joinerUdpPort;
+    uint8_t *cur;
+    uint8_t length;
 
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, ;);
     message->SetLinkSecurityEnabled(false);
@@ -2481,6 +2493,25 @@ ThreadError Mle::SendDiscoveryResponse(const Ip6::Address &aDestination, uint16_
     networkName.Init();
     networkName.SetNetworkName(mMac.GetNetworkName());
     SuccessOrExit(error = message->Append(&networkName, sizeof(tlv) + networkName.GetLength()));
+
+    // Steering Data TLV
+    if ((cur = mNetif.GetNetworkDataLeader().GetCommissioningData(length)) != NULL)
+    {
+        uint8_t *end = cur + length;
+
+        while (cur < end)
+        {
+            MeshCoP::Tlv *meshcop = reinterpret_cast<MeshCoP::Tlv *>(cur);
+
+            if (meshcop->GetType() == MeshCoP::Tlv::kSteeringData)
+            {
+                SuccessOrExit(message->Append(meshcop, sizeof(*meshcop) + meshcop->GetLength()));
+                break;
+            }
+
+            cur += sizeof(*meshcop) + meshcop->GetLength();
+        }
+    }
 
     // Joiner UDP Port TLV
     joinerUdpPort.Init();
@@ -2513,6 +2544,7 @@ ThreadError Mle::HandleDiscoveryResponse(const Message &aMessage, const Ip6::Mes
     MeshCoP::DiscoveryResponseTlv discoveryResponse;
     MeshCoP::ExtendedPanIdTlv extPanId;
     MeshCoP::NetworkNameTlv networkName;
+    MeshCoP::SteeringDataTlv steeringData;
     MeshCoP::JoinerUdpPortTlv JoinerUdpPort;
     otActiveScanResult result;
     uint16_t offset;
@@ -2574,6 +2606,13 @@ ThreadError Mle::HandleDiscoveryResponse(const Message &aMessage, const Ip6::Mes
             aMessage.Read(offset, sizeof(networkName), &networkName);
             VerifyOrExit(networkName.IsValid(), error = kThreadError_Parse);
             memcpy(&result.mNetworkName, networkName.GetNetworkName(), networkName.GetLength());
+            break;
+
+        case MeshCoP::Tlv::kSteeringData:
+            aMessage.Read(offset, sizeof(steeringData), &steeringData);
+            VerifyOrExit(steeringData.IsValid(), error = kThreadError_Parse);
+            result.mSteeringData.mLength = steeringData.GetLength();
+            memcpy(result.mSteeringData.m8, steeringData.GetValue(), result.mSteeringData.mLength);
             break;
 
         case MeshCoP::Tlv::kJoinerUdpPort:

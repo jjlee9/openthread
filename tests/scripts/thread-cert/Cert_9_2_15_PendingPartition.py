@@ -35,19 +35,17 @@ import node
 CHANNEL_INIT = 19
 PANID_INIT = 0xface
 
-CHANNEL_FINAL = 16
-PANID_FINAL = 0xafce
+PANID_FINAL = 0xabcd
 
 COMMISSIONER = 1
 LEADER = 2
 ROUTER1 = 3
-ED1 = 4
-SED1 = 5
+ROUTER2 = 4
 
-class Cert_9_2_10_PendingPartition(unittest.TestCase):
+class Cert_9_2_15_PendingPartition(unittest.TestCase):
     def setUp(self):
         self.nodes = {}
-        for i in range(1,6):
+        for i in range(1,5):
             self.nodes[i] = node.Node(i)
 
         self.nodes[COMMISSIONER].set_active_dataset(15, channel=CHANNEL_INIT, panid=PANID_INIT)
@@ -67,21 +65,15 @@ class Cert_9_2_10_PendingPartition(unittest.TestCase):
         self.nodes[ROUTER1].set_active_dataset(15, channel=CHANNEL_INIT, panid=PANID_INIT)
         self.nodes[ROUTER1].set_mode('rsdn')
         self.nodes[ROUTER1].add_whitelist(self.nodes[LEADER].get_addr64())
-        self.nodes[ROUTER1].add_whitelist(self.nodes[ED1].get_addr64())
-        self.nodes[ROUTER1].add_whitelist(self.nodes[SED1].get_addr64())
+        self.nodes[ROUTER1].add_whitelist(self.nodes[ROUTER2].get_addr64())
         self.nodes[ROUTER1].enable_whitelist()
         self.nodes[ROUTER1].set_router_selection_jitter(1)
 
-        self.nodes[ED1].set_active_dataset(15, channel=CHANNEL_INIT, panid=PANID_INIT)
-        self.nodes[ED1].set_mode('rsn')
-        self.nodes[ED1].add_whitelist(self.nodes[ROUTER1].get_addr64())
-        self.nodes[ED1].enable_whitelist()
-
-        self.nodes[SED1].set_active_dataset(15, channel=CHANNEL_INIT, panid=PANID_INIT)
-        self.nodes[SED1].set_mode('s')
-        self.nodes[SED1].add_whitelist(self.nodes[ROUTER1].get_addr64())
-        self.nodes[SED1].enable_whitelist()
-        self.nodes[SED1].set_timeout(3)
+        self.nodes[ROUTER2].set_active_dataset(15, channel=CHANNEL_INIT, panid=PANID_INIT)
+        self.nodes[ROUTER2].set_mode('rsdn')
+        self.nodes[ROUTER2].add_whitelist(self.nodes[ROUTER1].get_addr64())
+        self.nodes[ROUTER2].enable_whitelist()
+        self.nodes[ROUTER2].set_router_selection_jitter(1)
 
     def tearDown(self):
         for node in list(self.nodes.values()):
@@ -101,64 +93,39 @@ class Cert_9_2_10_PendingPartition(unittest.TestCase):
         time.sleep(5)
         self.assertEqual(self.nodes[ROUTER1].get_state(), 'router')
 
-        self.nodes[ED1].start()
+        self.nodes[COMMISSIONER].send_mgmt_pending_set(pending_timestamp=10,
+                                                       active_timestamp=70,
+                                                       delay_timer=600000,
+                                                       mesh_local='fd00:0db9::')
         time.sleep(5)
-        self.assertEqual(self.nodes[ED1].get_state(), 'child')
 
-        self.nodes[SED1].start()
+        self.nodes[ROUTER2].start()
         time.sleep(5)
-        self.assertEqual(self.nodes[SED1].get_state(), 'child')
+        self.assertEqual(self.nodes[ROUTER2].get_state(), 'router')
 
-        self.nodes[COMMISSIONER].send_mgmt_pending_set(pending_timestamp=30,
-                                                       active_timestamp=165,
-                                                       delay_timer=150000,
-                                                       channel=CHANNEL_FINAL,
+        self.nodes[ROUTER2].stop()
+
+        self.nodes[COMMISSIONER].send_mgmt_pending_set(pending_timestamp=20,
+                                                       active_timestamp=80,
+                                                       delay_timer=200000,
+                                                       mesh_local='fd00:0db7::',
                                                        panid=PANID_FINAL)
+        time.sleep(100)
+
+        self.nodes[ROUTER2].start()
         time.sleep(5)
+        self.assertEqual(self.nodes[ROUTER2].get_state(), 'router')
+        time.sleep(100)
 
-        print(self.nodes[COMMISSIONER].get_channel())
-        print(self.nodes[LEADER].get_channel())
-        print(self.nodes[ROUTER1].get_channel())
-        print(self.nodes[ED1].get_channel())
-        print(self.nodes[SED1].get_channel())
-
-        self.nodes[LEADER].remove_whitelist(self.nodes[ROUTER1].get_addr64())
-        self.nodes[ROUTER1].remove_whitelist(self.nodes[LEADER].get_addr64())
-        time.sleep(160)
-
-        print(self.nodes[COMMISSIONER].get_channel())
-        print(self.nodes[LEADER].get_channel())
-        print(self.nodes[ROUTER1].get_channel())
-        print(self.nodes[ED1].get_channel())
-        print(self.nodes[SED1].get_channel())
-
-        self.assertEqual(self.nodes[ROUTER1].get_state(), 'leader')
-        self.assertEqual(self.nodes[ED1].get_state(), 'child')
-        self.assertEqual(self.nodes[SED1].get_state(), 'child')
-
+        self.assertEqual(self.nodes[COMMISSIONER].get_panid(), PANID_FINAL)
+        self.assertEqual(self.nodes[LEADER].get_panid(), PANID_FINAL)
         self.assertEqual(self.nodes[ROUTER1].get_panid(), PANID_FINAL)
-        self.assertEqual(self.nodes[ED1].get_panid(), PANID_FINAL)
-        self.assertEqual(self.nodes[SED1].get_panid(), PANID_FINAL)
+        self.assertEqual(self.nodes[ROUTER2].get_panid(), PANID_FINAL)
 
-        self.assertEqual(self.nodes[ROUTER1].get_channel(), CHANNEL_FINAL)
-        self.assertEqual(self.nodes[ED1].get_channel(), CHANNEL_FINAL)
-        self.assertEqual(self.nodes[SED1].get_channel(), CHANNEL_FINAL)
-
-        self.nodes[LEADER].add_whitelist(self.nodes[ROUTER1].get_addr64())
-        self.nodes[ROUTER1].add_whitelist(self.nodes[LEADER].get_addr64())
-        time.sleep(40)
-
-        self.assertEqual(self.nodes[COMMISSIONER].get_state(), 'router')
-        self.assertEqual(self.nodes[LEADER].get_state(), 'leader')
-        self.assertEqual(self.nodes[ROUTER1].get_state(), 'router')
-        self.assertEqual(self.nodes[ED1].get_state(), 'child')
-        self.assertEqual(self.nodes[SED1].get_state(), 'child')
-
-        ipaddrs = self.nodes[ED1].get_addrs()
+        ipaddrs = self.nodes[ROUTER2].get_addrs()
         for ipaddr in ipaddrs:
             if ipaddr[0:4] != 'fe80':
                 break
-
         self.assertTrue(self.nodes[LEADER].ping(ipaddr))
 
 if __name__ == '__main__':

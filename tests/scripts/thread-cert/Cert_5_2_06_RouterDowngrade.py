@@ -32,22 +32,20 @@ import unittest
 
 import node
 
-COMMISSIONER = 1
-JOINER = 2
+LEADER = 1
+ROUTER1 = 2
 
-class Cert_8_1_02_Commissioning(unittest.TestCase):
+class Cert_5_2_06_RouterDowngrade(unittest.TestCase):
     def setUp(self):
         self.nodes = {}
-        for i in range(1,3):
+        for i in range(1, 26):
             self.nodes[i] = node.Node(i)
-
-        self.nodes[COMMISSIONER].set_panid(0xface)
-        self.nodes[COMMISSIONER].set_mode('rsdn')
-        self.nodes[COMMISSIONER].set_masterkey('deadbeefdeadbeefdeadbeefdeadbeef')
-
-        self.nodes[JOINER].set_mode('rsdn')
-        self.nodes[JOINER].set_masterkey('00112233445566778899aabbccddeeff')
-        self.nodes[JOINER].set_router_selection_jitter(1)
+            self.nodes[i].set_panid(0xface)
+            self.nodes[i].set_mode('rsdn')
+            self.nodes[i].set_router_selection_jitter(1)
+            if i != ROUTER1:
+                self.nodes[i].set_router_upgrade_threshold(32)
+                self.nodes[i].set_router_downgrade_threshold(32)
 
     def tearDown(self):
         for node in list(self.nodes.values()):
@@ -55,18 +53,21 @@ class Cert_8_1_02_Commissioning(unittest.TestCase):
         del self.nodes
 
     def test(self):
-        self.nodes[COMMISSIONER].interface_up()
-        self.nodes[COMMISSIONER].thread_start()
-        time.sleep(5)
-        self.assertEqual(self.nodes[COMMISSIONER].get_state(), 'leader')
-        self.nodes[COMMISSIONER].commissioner_start()
-        time.sleep(3)
-        self.nodes[COMMISSIONER].commissioner_add_joiner(self.nodes[JOINER].get_hashmacaddr(), 'openthread')
+        self.nodes[LEADER].start()
+        self.nodes[LEADER].set_state('leader')
+        self.assertEqual(self.nodes[LEADER].get_state(), 'leader')
 
-        self.nodes[JOINER].interface_up()
-        self.nodes[JOINER].joiner_start('daerhtnepo')
+        for i in range(2, 25):
+            self.nodes[i].start()
+            time.sleep(5)
+            self.assertEqual(self.nodes[i].get_state(), 'router')
+
+        self.nodes[25].start()
+        time.sleep(5)
+        self.assertEqual(self.nodes[25].get_state(), 'router')
+
         time.sleep(10)
-        self.assertNotEqual(self.nodes[JOINER].get_masterkey(), self.nodes[COMMISSIONER].get_masterkey())
+        self.assertEqual(self.nodes[ROUTER1].get_state(), 'child')
 
 if __name__ == '__main__':
     unittest.main()

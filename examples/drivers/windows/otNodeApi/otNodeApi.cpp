@@ -56,6 +56,37 @@ volatile LONG gNumberOfInterfaces = 0;
 
 otApiInstance *gApiInstance = nullptr;
 
+ThreadError otNodeParsePrefix(const char *aStrPrefix, _Out_ otIp6Prefix *aPrefix)
+{
+    char *prefixLengthStr;
+    char *endptr;
+
+    if ((prefixLengthStr = (char*)strchr(aStrPrefix, '/')) == NULL)
+    {
+        printf("invalid prefix (%s)!\r\n", aStrPrefix);
+        return kThreadError_InvalidArgs;
+    }
+
+    *prefixLengthStr++ = '\0';
+    
+    auto error = otIp6AddressFromString(aStrPrefix, &aPrefix->mPrefix);
+    if (error != kThreadError_None)
+    {
+        printf("ipaddr (%s) to string failed, 0x%x!\r\n", aStrPrefix, error);
+        return error;
+    }
+
+    aPrefix->mLength = static_cast<uint8_t>(strtol(prefixLengthStr, &endptr, 0));
+    
+    if (*endptr != '\0')
+    {
+        printf("invalid prefix ending (%s)!\r\n", aStrPrefix);
+        return kThreadError_Parse;
+    }
+
+    return kThreadError_None;
+}
+
 otApiInstance* GetApiInstance()
 {
     if (gApiInstance == nullptr)
@@ -1100,6 +1131,16 @@ OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName)
     return result;
 }
 
+OTNODEAPI const char* OTCALL otNodeGetNetworkName(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otGetNetworkName(aNode->mInstance);
+    aNode->mMemoryToFree.push_back((char*)result);
+    printf("%d: networkname\r\n%s\r\n", aNode->mId, result);
+    otLogFuncExit();
+    return result;
+}
+
 OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
@@ -1334,27 +1375,9 @@ OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, con
     printf("%d: prefix add %s %s %s\r\n", aNode->mId, aPrefix, aFlags, aPreference);
 
     otBorderRouterConfig config = {0};
-    char *prefixLengthStr;
-    char *endptr;
 
-    if ((prefixLengthStr = (char*)strchr(aPrefix, '/')) == NULL)
-    {
-        printf("invalid prefix!\r\n");
-        return kThreadError_InvalidArgs;
-    }
-
-    *prefixLengthStr++ = '\0';
-    
-    auto error = otIp6AddressFromString(aPrefix, &config.mPrefix.mPrefix);
-    if (error != kThreadError_None)
-    {
-        printf("ipaddr to string failed, 0x%x!\r\n", error);
-        return error;
-    }
-
-    config.mPrefix.mLength = static_cast<uint8_t>(strtol(prefixLengthStr, &endptr, 0));
-    
-    if (*endptr != '\0') return kThreadError_Parse;
+    auto error = otNodeParsePrefix(aPrefix, &config.mPrefix);
+    if (error != kThreadError_None) return error;
     
     const char *index = aFlags;
     while (*index)
@@ -1414,21 +1437,10 @@ OTNODEAPI int32_t OTCALL otNodeAddPrefix(otNode* aNode, const char *aPrefix, con
 OTNODEAPI int32_t OTCALL otNodeRemovePrefix(otNode* aNode, const char *aPrefix)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
-    struct otIp6Prefix prefix;
-    char *prefixLengthStr;
-    char *endptr;
 
-    if ((prefixLengthStr = (char *)strchr(aPrefix, '/')) == NULL)
-        return kThreadError_InvalidArgs;
-
-    *prefixLengthStr++ = '\0';
-    
-    auto error = otIp6AddressFromString(aPrefix, &prefix.mPrefix);
+    otIp6Prefix prefix;
+    auto error = otNodeParsePrefix(aPrefix, &prefix);
     if (error != kThreadError_None) return error;
-
-    prefix.mLength = static_cast<uint8_t>(strtol(prefixLengthStr, &endptr, 0));
-
-    if (*endptr != '\0') return kThreadError_Parse;
 
     auto result = otRemoveBorderRouter(aNode->mInstance, &prefix);
     otLogFuncExit();
@@ -1439,20 +1451,9 @@ OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, cons
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     otExternalRouteConfig config = {0};
-    char *prefixLengthStr;
-    char *endptr;
 
-    if ((prefixLengthStr = (char*)strchr(aPrefix, '/')) == NULL)
-        return kThreadError_InvalidArgs;
-
-    *prefixLengthStr++ = '\0';
-    
-    auto error = otIp6AddressFromString(aPrefix, &config.mPrefix.mPrefix);
+    auto error = otNodeParsePrefix(aPrefix, &config.mPrefix);
     if (error != kThreadError_None) return error;
-
-    config.mPrefix.mLength = static_cast<uint8_t>(strtol(prefixLengthStr, &endptr, 0));
-    
-    if (*endptr != '\0') return kThreadError_Parse;
     
     if (strcmp(aPreference, "high") == 0)
     {
@@ -1479,21 +1480,10 @@ OTNODEAPI int32_t OTCALL otNodeAddRoute(otNode* aNode, const char *aPrefix, cons
 OTNODEAPI int32_t OTCALL otNodeRemoveRoute(otNode* aNode, const char *aPrefix)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
-    struct otIp6Prefix prefix;
-    char *prefixLengthStr;
-    char *endptr;
 
-    if ((prefixLengthStr = (char *)strchr(aPrefix, '/')) == NULL)
-        return kThreadError_InvalidArgs;
-
-    *prefixLengthStr++ = '\0';
-    
-    auto error = otIp6AddressFromString(aPrefix, &prefix.mPrefix);
+    otIp6Prefix prefix;
+    auto error = otNodeParsePrefix(aPrefix, &prefix);
     if (error != kThreadError_None) return error;
-
-    prefix.mLength = static_cast<uint8_t>(strtol(prefixLengthStr, &endptr, 0));
-
-    if (*endptr != '\0') return kThreadError_Parse;
 
     auto result = otRemoveExternalRoute(aNode->mInstance, &prefix);
     otLogFuncExit();
@@ -1839,7 +1829,7 @@ OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActive
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp, uint64_t aPendingTimestamp, uint32_t aDelayTimer, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey)
+OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp, uint64_t aPendingTimestamp, uint32_t aDelayTimer, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey, const char *aMeshLocal)
 {
     otLogFuncEntryMsg("[%d] 0x%llX 0x%llX %d %d", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
     printf("%d: dataset send pending 0x%llX 0x%llX %d %d\r\n", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
@@ -1885,6 +1875,15 @@ OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTim
             return kThreadError_Parse;
         }
         aDataset.mIsMasterKeySet = true;
+    }
+
+    if (aMeshLocal != NULL && strlen(aMeshLocal) != 0)
+    {
+        otIp6Address prefix;
+        auto error = otIp6AddressFromString(aMeshLocal, &prefix);
+        if (error != kThreadError_None) return error;
+        memcpy(aDataset.mMeshLocalPrefix.m8, prefix.mFields.m8, sizeof(aDataset.mMeshLocalPrefix.m8));
+        aDataset.mIsMeshLocalPrefixSet = true;
     }
 
     auto result = otSendPendingSet(aNode->mInstance, &aDataset, nullptr, 0);

@@ -359,6 +359,19 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
+    def get_network_name(self):
+        if self.Api:
+            return self.Api.otNodeGetNetworkName(self.otNode).decode("utf-8")
+        else:     
+            self.send_command('networkname')
+            while True:
+                i = self.pexpect.expect(['Done', '(\S+)'])
+                if i != 0:
+                    network_name = self.pexpect.match.groups()[0].decode('utf-8')
+                else:
+                    break
+            return network_name
+
     def set_network_name(self, network_name):
         if self.Api:
             if self.Api.otNodeSetNetworkName(self.otNode, network_name.encode('utf-8')) != 0:
@@ -735,8 +748,30 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
+    def send_mgmt_active_set(self, active_timestamp=None, channel=None, panid=None, mesh_local=None,
+                              network_name=None):
+        cmd = 'dataset mgmtsetcommand active '
+
+        if active_timestamp != None:
+            cmd += 'activetimestamp %d ' % active_timestamp
+
+        if channel != None:
+            cmd += 'channel %d ' % channel
+
+        if panid != None:
+            cmd += 'panid %d ' % panid
+
+        if mesh_local != None:
+            cmd += 'localprefix ' + mesh_local + ' '
+
+        if network_name != None:
+            cmd += 'networkname ' + network_name + ' '
+
+        self.send_command(cmd)
+        self.pexpect.expect('Done')
+
     def send_mgmt_pending_set(self, pending_timestamp=None, active_timestamp=None, delay_timer=None, channel=None,
-                              panid=None, master_key=None):
+                              panid=None, master_key=None, mesh_local=None):
         if self.Api:
             if pending_timestamp == None:
                 pending_timestamp = 0
@@ -750,7 +785,9 @@ class Node:
                 channel = 0
             if master_key == None:
                 master_key = ""
-            if self.Api.otNodeSendPendingSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ulonglong(pending_timestamp), ctypes.c_uint(delay_timer), ctypes.c_ushort(panid), ctypes.c_ushort(channel), master_key.encode('utf-8')) != 0:
+            if mesh_local == None:
+                mesh_local = ""
+            if self.Api.otNodeSendPendingSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ulonglong(pending_timestamp), ctypes.c_uint(delay_timer), ctypes.c_ushort(panid), ctypes.c_ushort(channel), master_key.encode('utf-8'), mesh_local.encode('utf-8')) != 0:
                 raise OSError("otNodeSendPendingSet failed!")
         else:
             cmd = 'dataset mgmtsetcommand pending '
@@ -772,6 +809,9 @@ class Node:
 
             if master_key != None:
                 cmd += 'masterkey ' + master_key + ' '
+
+            if mesh_local != None:
+                cmd += 'localprefix ' + mesh_local + ' '
 
             self.send_command(cmd)
             self.pexpect.expect('Done')
@@ -863,6 +903,9 @@ class Node:
 
         self.Api.otNodeSetNetworkIdTimeout.argtypes = [ctypes.c_void_p, 
                                                        ctypes.c_ubyte]
+        
+        self.Api.otNodeGetNetworkName.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetNetworkName.restype = ctypes.c_char_p
 
         self.Api.otNodeSetNetworkName.argtypes = [ctypes.c_void_p, 
                                                   ctypes.c_char_p]
@@ -983,6 +1026,7 @@ class Node:
                                                   ctypes.c_uint,
                                                   ctypes.c_ushort,
                                                   ctypes.c_ushort,
+                                                  ctypes.c_char_p,
                                                   ctypes.c_char_p]
         
         # Initialize a new node

@@ -186,6 +186,11 @@ OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
 OTNODEAPI int32_t OTCALL otNodeSetNetworkIdTimeout(otNode* aNode, uint8_t aTimeout);
 
 /**
+ * Gets the network name for the node
+ */
+OTNODEAPI const char* OTCALL otNodeGetNetworkName(otNode* aNode);
+
+/**
  * Sets the network name for the node
  */
 OTNODEAPI int32_t OTCALL otNodeSetNetworkName(otNode* aNode, const char *aName);
@@ -343,7 +348,7 @@ OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActive
 /**
  * Sends a pending set for a node
  */
-OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint32_t aDelayTimer = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL);
+OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint32_t aDelayTimer = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL, const char *aMeshLocal = NULL);
 
 #ifdef __cplusplus
 }  // extern "C"
