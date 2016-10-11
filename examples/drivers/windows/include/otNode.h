@@ -156,6 +156,11 @@ OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode);
 OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel);
 
 /**
+ * Gets the channel for the node
+ */
+OTNODEAPI uint8_t OTCALL otNodeGetChannel(otNode* aNode);
+
+/**
  * sets the node's master key
  */
 OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey);
@@ -194,6 +199,16 @@ OTNODEAPI uint16_t OTCALL otNodeGetPanId(otNode* aNode);
  * Sets the pan id for the node
  */
 OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId);
+
+/**
+ * Gets the partition id for the node
+ */
+OTNODEAPI uint32_t OTCALL otNodeGetPartitionId(otNode* aNode);
+
+/**
+ * Sets the partition id for the node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetPartitionId(otNode* aNode, uint32_t aPartitionId);
 
 /**
  * Sets the router upgrade threshold for the node
@@ -318,7 +333,17 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t
 /**
  * Sets the active dataset for a node
  */
-OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0);
+OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL);
+
+/**
+ * Sets the pending dataset for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint16_t aPanId = 0, uint16_t aChannel = 0);
+
+/**
+ * Sends a pending set for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint32_t aDelayTimer = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL);
 
 #ifdef __cplusplus
 }  // extern "C"

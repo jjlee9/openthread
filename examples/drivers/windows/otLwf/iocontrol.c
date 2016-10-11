@@ -62,7 +62,7 @@ otLwfIoCtlEnumerateInterfaces(
         goto error;
     }
 
-	// Iterate through each interface and build up the list of running interfaces
+    // Iterate through each interface and build up the list of running interfaces
     for (PLIST_ENTRY Link = FilterModuleList.Flink; Link != &FilterModuleList; Link = Link->Flink)
     {
         PMS_FILTER pFilter = CONTAINING_RECORD(Link, MS_FILTER, FilterModuleLink);
@@ -124,7 +124,7 @@ otLwfIoCtlQueryInterface(
     PGUID pInterfaceGuid = (PGUID)InBuffer;
     POTLWF_DEVICE pDevice = (POTLWF_DEVICE)OutBuffer;
 
-	// Look up the interface
+    // Look up the interface
     PMS_FILTER pFilter = otLwfFindAndRefInterface(pInterfaceGuid);
     if (pFilter == NULL)
     {
@@ -135,8 +135,8 @@ otLwfIoCtlQueryInterface(
     NewOutBufferLength = sizeof(OTLWF_DEVICE);
     pDevice->CompartmentID = pFilter->InterfaceCompartmentID;
 
-	// Release the ref on the interface
-	otLwfReleaseInterface(pFilter);
+    // Release the ref on the interface
+    otLwfReleaseInterface(pFilter);
 
 error:
 
@@ -288,6 +288,12 @@ const char* IoCtlStrings[] =
     "IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL",
     "IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN",
     "IOCTL_OTLWF_OT_ENERGY_SCAN",
+    "IOCTL_OTLWF_OT_SEND_ACTIVE_GET",
+    "IOCTL_OTLWF_OT_SEND_ACTIVE_SET",
+    "IOCTL_OTLWF_OT_SEND_PENDING_GET",
+    "IOCTL_OTLWF_OT_SEND_PENDING_SET",
+    "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET",
+    "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET",
 };
 
 static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
@@ -295,11 +301,11 @@ static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_
 
 const char*
 IoCtlString(
-	ULONG IoControlCode
+    ULONG IoControlCode
 )
 {
-	ULONG FuncCode = ((IoControlCode >> 2) & 0xFFF) - 100;
-	return FuncCode < ARRAYSIZE(IoCtlStrings) ? IoCtlStrings[FuncCode] : "UNKNOWN IOCTL";
+    ULONG FuncCode = ((IoControlCode >> 2) & 0xFFF) - 100;
+    return FuncCode < ARRAYSIZE(IoCtlStrings) ? IoCtlStrings[FuncCode] : "UNKNOWN IOCTL";
 }
 
 // Handles Irp for IOTCLs for OpenThread control on the OpenThread thread
@@ -322,9 +328,9 @@ otLwfCompleteOpenThreadIrp(
     ULONG OrigOutBufferLength = OutBufferLength;
         
     NTSTATUS status = STATUS_SUCCESS;
-		
-	LogVerbose(DRIVER_IOCTL, "Processing Irp=%p, for %s (In:%u,Out:%u)", 
-			    Irp, IoCtlString(IoControlCode), InBufferLength, OutBufferLength);
+        
+    LogVerbose(DRIVER_IOCTL, "Processing Irp=%p, for %s (In:%u,Out:%u)", 
+                Irp, IoCtlString(IoControlCode), InBufferLength, OutBufferLength);
 
     switch (IoControlCode)
     {
@@ -360,34 +366,34 @@ otLwfCompleteOpenThreadIrp(
         break;
     case IOCTL_OTLWF_OT_MASTER_KEY:
         status = otLwfIoCtl_otMasterKey(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;			
+        break;            
     case IOCTL_OTLWF_OT_MESH_LOCAL_EID:
         status = otLwfIoCtl_otMeshLocalEid(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_MESH_LOCAL_PREFIX:
         status = otLwfIoCtl_otMeshLocalPrefix(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_NETWORK_DATA_LEADER:
         status = STATUS_NOT_IMPLEMENTED;
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_NETWORK_DATA_LOCAL:
         status = STATUS_NOT_IMPLEMENTED;
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_NETWORK_NAME:
         status = otLwfIoCtl_otNetworkName(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_PAN_ID:
         status = otLwfIoCtl_otPanId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_ROUTER_ROLL_ENABLED:
         status = otLwfIoCtl_otRouterRollEnabled(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_SHORT_ADDRESS:
         status = otLwfIoCtl_otShortAddress(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_UNICAST_ADDRESSES:
         status = STATUS_NOT_IMPLEMENTED;
-        break;	
+        break;    
     case IOCTL_OTLWF_OT_ACTIVE_DATASET:
         status = otLwfIoCtl_otActiveDataset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
@@ -441,43 +447,43 @@ otLwfCompleteOpenThreadIrp(
         break;
     case IOCTL_OTLWF_OT_CLEAR_MAC_WHITELIST:
         status = otLwfIoCtl_otClearMacWhitelist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;			
+        break;            
     case IOCTL_OTLWF_OT_DEVICE_ROLE:
         status = otLwfIoCtl_otDeviceRole(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_CHILD_INFO_BY_ID:
         status = otLwfIoCtl_otChildInfoById(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_CHILD_INFO_BY_INDEX:
         status = otLwfIoCtl_otChildInfoByIndex(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_EID_CACHE_ENTRY:
         status = otLwfIoCtl_otEidCacheEntry(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_LEADER_DATA:
         status = otLwfIoCtl_otLeaderData(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_LEADER_ROUTER_ID:
         status = otLwfIoCtl_otLeaderRouterId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_LEADER_WEIGHT:
         status = otLwfIoCtl_otLeaderWeight(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_NETWORK_DATA_VERSION:
         status = otLwfIoCtl_otNetworkDataVersion(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_PARTITION_ID:
         status = otLwfIoCtl_otPartitionId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_RLOC16:
         status = otLwfIoCtl_otRloc16(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_ROUTER_ID_SEQUENCE:
         status = otLwfIoCtl_otRouterIdSequence(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_ROUTER_INFO:
         status = otLwfIoCtl_otRouterInfo(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;		
+        break;        
     case IOCTL_OTLWF_OT_STABLE_NETWORK_DATA_VERSION:
         status = otLwfIoCtl_otStableNetworkDataVersion(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
@@ -580,6 +586,24 @@ otLwfCompleteOpenThreadIrp(
     case IOCTL_OTLWF_OT_ENERGY_SCAN:
         status = otLwfIoCtl_otEnergyScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
         break;
+    case IOCTL_OTLWF_OT_SEND_ACTIVE_GET:
+        status = otLwfIoCtl_otSendActiveGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_ACTIVE_SET:
+        status = otLwfIoCtl_otSendActiveSet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_PENDING_GET:
+        status = otLwfIoCtl_otSendPendingGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_PENDING_SET:
+        status = otLwfIoCtl_otSendPendingSet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET:
+        status = otLwfIoCtl_otSendMgmtCommissionerGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
+    case IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET:
+        status = otLwfIoCtl_otSendMgmtCommissionerSet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        break;
     default:
         status = STATUS_NOT_IMPLEMENTED;
         OutBufferLength = 0;
@@ -591,11 +615,11 @@ otLwfCompleteOpenThreadIrp(
         RtlZeroMemory((PUCHAR)OutBuffer + OutBufferLength, OrigOutBufferLength - OutBufferLength);
     }
 
-	LogVerbose(DRIVER_IOCTL, "Completing Irp=%p, with %!STATUS! for %s (Out:%u)", 
-			    Irp, status, IoCtlString(IoControlCode), OutBufferLength);
+    LogVerbose(DRIVER_IOCTL, "Completing Irp=%p, with %!STATUS! for %s (Out:%u)", 
+                Irp, status, IoCtlString(IoControlCode), OutBufferLength);
 
     // Complete the IRP
-	Irp->IoStatus.Information = OutBufferLength;
+    Irp->IoStatus.Information = OutBufferLength;
     Irp->IoStatus.Status = status;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
 }
@@ -619,9 +643,9 @@ otLwfIoCtl_otInterface(
         BOOLEAN IsEnabled = *(BOOLEAN*)InBuffer;
         if (IsEnabled)
         {
-			// Make sure our addresses are in sync
-			(void)otLwfInitializeAddresses(pFilter);
-			otLwfAddressesUpdated(pFilter);
+            // Make sure our addresses are in sync
+            (void)otLwfInitializeAddresses(pFilter);
+            otLwfAddressesUpdated(pFilter);
 
             status = ThreadErrorToNtstatus(otInterfaceUp(pFilter->otCtx));
         }
@@ -1047,23 +1071,23 @@ otLwfIoCtl_otLinkMode(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
-	static_assert(sizeof(otLinkModeConfig) == 4, "The size of otLinkModeConfig should be 4 bytes");
-	if (InBufferLength >= sizeof(otLinkModeConfig))
-	{
-		status = ThreadErrorToNtstatus(otSetLinkMode(pFilter->otCtx, *(otLinkModeConfig*)InBuffer));
-		*OutBufferLength = 0;
-	}
-	else if (*OutBufferLength >= sizeof(otLinkModeConfig))
-	{
-		*(otLinkModeConfig*)OutBuffer = otGetLinkMode(pFilter->otCtx);
+    
+    static_assert(sizeof(otLinkModeConfig) == 4, "The size of otLinkModeConfig should be 4 bytes");
+    if (InBufferLength >= sizeof(otLinkModeConfig))
+    {
+        status = ThreadErrorToNtstatus(otSetLinkMode(pFilter->otCtx, *(otLinkModeConfig*)InBuffer));
+        *OutBufferLength = 0;
+    }
+    else if (*OutBufferLength >= sizeof(otLinkModeConfig))
+    {
+        *(otLinkModeConfig*)OutBuffer = otGetLinkMode(pFilter->otCtx);
         *OutBufferLength = sizeof(otLinkModeConfig);
-		status = STATUS_SUCCESS;
-	}
-	else
-	{
-		*OutBufferLength = 0;
-	}
+        status = STATUS_SUCCESS;
+    }
+    else
+    {
+        *OutBufferLength = 0;
+    }
 
     return status;
 }
@@ -1118,13 +1142,13 @@ otLwfIoCtl_otMeshLocalEid(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
     if (*OutBufferLength >= sizeof(otIp6Address))
     {
-		memcpy(OutBuffer,  otGetMeshLocalEid(pFilter->otCtx), sizeof(otIp6Address));
+        memcpy(OutBuffer,  otGetMeshLocalEid(pFilter->otCtx), sizeof(otIp6Address));
         status = STATUS_SUCCESS;
     }
     else
@@ -1890,41 +1914,41 @@ otLwfIoCtl_otDeviceRole(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     if (InBufferLength >= sizeof(uint8_t))
     {
-		otDeviceRole role = *(uint8_t*)InBuffer;
+        otDeviceRole role = *(uint8_t*)InBuffer;
 
-		InBufferLength -= sizeof(uint8_t);
-		InBuffer = InBuffer + sizeof(uint8_t);
+        InBufferLength -= sizeof(uint8_t);
+        InBuffer = InBuffer + sizeof(uint8_t);
 
-		if (role == kDeviceRoleLeader)
-		{
-			status = ThreadErrorToNtstatus(
-						otBecomeLeader(pFilter->otCtx)
-						);
-		}
-		else if (role == kDeviceRoleRouter)
-		{
-			status = ThreadErrorToNtstatus(
-						otBecomeRouter(pFilter->otCtx)
-						);
-		}
-		else if (role == kDeviceRoleChild)
-		{
-			if (InBufferLength >= sizeof(uint8_t))
-			{
-				status = ThreadErrorToNtstatus(
-							otBecomeChild(pFilter->otCtx, *(uint8_t*)InBuffer)
-							);
-			}
-		}
-		else if (role == kDeviceRoleDetached)
-		{
-			status = ThreadErrorToNtstatus(
-						otBecomeDetached(pFilter->otCtx)
-						);
-		}
+        if (role == kDeviceRoleLeader)
+        {
+            status = ThreadErrorToNtstatus(
+                        otBecomeLeader(pFilter->otCtx)
+                        );
+        }
+        else if (role == kDeviceRoleRouter)
+        {
+            status = ThreadErrorToNtstatus(
+                        otBecomeRouter(pFilter->otCtx)
+                        );
+        }
+        else if (role == kDeviceRoleChild)
+        {
+            if (InBufferLength >= sizeof(uint8_t))
+            {
+                status = ThreadErrorToNtstatus(
+                            otBecomeChild(pFilter->otCtx, *(uint8_t*)InBuffer)
+                            );
+            }
+        }
+        else if (role == kDeviceRoleDetached)
+        {
+            status = ThreadErrorToNtstatus(
+                        otBecomeDetached(pFilter->otCtx)
+                        );
+        }
         *OutBufferLength = 0;
     }
     else if (*OutBufferLength >= sizeof(uint8_t))
@@ -2053,7 +2077,7 @@ otLwfIoCtl_otLeaderData(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2083,7 +2107,7 @@ otLwfIoCtl_otLeaderRouterId(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2114,7 +2138,7 @@ otLwfIoCtl_otLeaderWeight(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2145,7 +2169,7 @@ otLwfIoCtl_otNetworkDataVersion(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2176,7 +2200,7 @@ otLwfIoCtl_otPartitionId(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2207,7 +2231,7 @@ otLwfIoCtl_otRloc16(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2238,7 +2262,7 @@ otLwfIoCtl_otRouterIdSequence(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2302,7 +2326,7 @@ otLwfIoCtl_otStableNetworkDataVersion(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2692,11 +2716,11 @@ otLwfIoCtl_otParentInfo(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
     
-	static_assert(sizeof(otRouterInfo) == 20, "The size of otRouterInfo should be 20 bytes");
+    static_assert(sizeof(otRouterInfo) == 20, "The size of otRouterInfo should be 20 bytes");
     if (*OutBufferLength >= sizeof(otRouterInfo))
     {
         status = ThreadErrorToNtstatus(otGetParentInfo(pFilter->otCtx, (otRouterInfo*)OutBuffer));
@@ -2723,7 +2747,7 @@ otLwfIoCtl_otSingleton(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -2754,7 +2778,7 @@ otLwfIoCtl_otMacCounters(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-	
+    
     UNREFERENCED_PARAMETER(InBuffer);
     UNREFERENCED_PARAMETER(InBufferLength);
 
@@ -3256,6 +3280,228 @@ otLwfIoCtl_otCommissionerAnnounceBegin(
                     aCount,
                     aPeriod,
                     aAddress)
+                );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendActiveGet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(uint8_t))
+    {
+        uint8_t aLength = *(uint8_t*)InBuffer;
+        PUCHAR aTlvTypes = aLength == 0 ? NULL : InBuffer + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(uint8_t) + aLength)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendActiveGet(
+                    pFilter->otCtx,
+                    aTlvTypes,
+                    aLength)
+                );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendActiveSet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(otOperationalDataset) + sizeof(uint8_t))
+    {
+        const otOperationalDataset *aDataset = (otOperationalDataset*)InBuffer;
+        uint8_t aLength = *(uint8_t*)(InBuffer + sizeof(otOperationalDataset));
+        PUCHAR aTlvTypes = aLength == 0 ? NULL : InBuffer + sizeof(otOperationalDataset) + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(otOperationalDataset) + sizeof(uint8_t) + aLength)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendActiveSet(
+                    pFilter->otCtx,
+                    aDataset,
+                    aTlvTypes,
+                    aLength)
+                );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendPendingGet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(uint8_t))
+    {
+        uint8_t aLength = *(uint8_t*)InBuffer;
+        PUCHAR aTlvTypes = aLength == 0 ? NULL : InBuffer + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(uint8_t) + aLength)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendPendingGet(
+                    pFilter->otCtx,
+                    aTlvTypes,
+                    aLength)
+                );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendPendingSet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(otOperationalDataset) + sizeof(uint8_t))
+    {
+        const otOperationalDataset *aDataset = (otOperationalDataset*)InBuffer;
+        uint8_t aLength = *(uint8_t*)(InBuffer + sizeof(otOperationalDataset));
+        PUCHAR aTlvTypes = aLength == 0 ? NULL : InBuffer + sizeof(otOperationalDataset) + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(otOperationalDataset) + sizeof(uint8_t) + aLength)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendPendingSet(
+                    pFilter->otCtx,
+                    aDataset,
+                    aTlvTypes,
+                    aLength)
+                );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendMgmtCommissionerGet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(uint8_t))
+    {
+        uint8_t aLength = *(uint8_t*)InBuffer;
+        PUCHAR aTlvs = aLength == 0 ? NULL : InBuffer + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(uint8_t) + aLength)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendMgmtCommissionerGet(
+                    pFilter->otCtx,
+                    aTlvs,
+                    aLength)
+                );
+        }
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otSendMgmtCommissionerSet(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    
+    *OutBufferLength = 0;
+    UNREFERENCED_PARAMETER(OutBuffer);
+
+    if (InBufferLength >= sizeof(otCommissioningDataset) + sizeof(uint8_t))
+    {
+        const otCommissioningDataset *aDataset = (otCommissioningDataset*)InBuffer;
+        uint8_t aLength = *(uint8_t*)(InBuffer + sizeof(otCommissioningDataset));
+        PUCHAR aTlvs = aLength == 0 ? NULL : InBuffer + sizeof(otCommissioningDataset) + sizeof(uint8_t);
+
+        if (InBufferLength >= sizeof(otCommissioningDataset) + sizeof(uint8_t) + aLength)
+        {
+            status = ThreadErrorToNtstatus(
+                otSendMgmtCommissionerSet(
+                    pFilter->otCtx,
+                    aDataset,
+                    aTlvs,
+                    aLength)
                 );
         }
     }

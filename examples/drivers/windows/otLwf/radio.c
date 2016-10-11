@@ -357,6 +357,8 @@ ThreadError otPlatRadioReceive(_In_ otInstance *otCtx, uint8_t aChannel)
         NDIS_STATUS status;
         ULONG bytesProcessed;
         OT_CURRENT_CHANNEL OidBuffer = { {NDIS_OBJECT_TYPE_DEFAULT, OT_CURRENT_CHANNEL_REVISION_1, SIZEOF_OT_CURRENT_CHANNEL_REVISION_1}, aChannel };
+        
+        NT_ASSERT(aChannel >= 11 && aChannel <= 26);
 
         LogInfo(DRIVER_DEFAULT, "Filter %p new Listen Channel = %u.", pFilter, aChannel);
         pFilter->otCurrentListenChannel = aChannel;

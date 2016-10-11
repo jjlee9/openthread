@@ -919,7 +919,7 @@ void *otPlatAlloc(size_t aNum, size_t aSize)
         RtlZeroMemory(mem, totalSize);
 #if DBG
         PMS_FILTER pFilter = otLwfFindFromCurrentThread();
-        LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = ID:%u %p", (ULONG)totalSize, pFilter->otAllocationID, mem);
+        //LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = ID:%u %p", (ULONG)totalSize, pFilter->otAllocationID, mem);
 
         OT_ALLOC* AllocHeader = (OT_ALLOC*)mem;
         AllocHeader->Length = (LONG)totalSize;
@@ -940,7 +940,7 @@ void otPlatFree(void *aPtr)
     if (aPtr == NULL) return;
 #if DBG
     aPtr = (PUCHAR)(aPtr) - sizeof(OT_ALLOC);
-    LogVerbose(DRIVER_DEFAULT, "otPlatFree(%p)", aPtr);
+    //LogVerbose(DRIVER_DEFAULT, "otPlatFree(%p)", aPtr);
     OT_ALLOC* AllocHeader = (OT_ALLOC*)aPtr;
 
     PMS_FILTER pFilter = otLwfFindFromCurrentThread();

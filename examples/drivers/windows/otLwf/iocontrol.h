@@ -169,5 +169,11 @@ OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerRemoveJoiner;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerProvisioningUrl;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAnnounceBegin;
 OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otEnergyScan;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendActiveGet;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendActiveSet;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendPendingGet;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendPendingSet;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendMgmtCommissionerGet;
+OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendMgmtCommissionerSet;
 
 #endif // _IOCONTROL_H

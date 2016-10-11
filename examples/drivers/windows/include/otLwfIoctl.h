@@ -556,24 +556,24 @@ typedef struct otCommissionConfig
     // otIp6Address - aAddress
     
 #define IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER \
-    OTLWF_CTL_CODE(176, METHOD_BUFFERED, FILE_READ_DATA)
+    OTLWF_CTL_CODE(176, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // uint8_t - aRouterJitter
     
 #define IOCTL_OTLWF_OT_JOINER_UDP_PORT \
-    OTLWF_CTL_CODE(177, METHOD_BUFFERED, FILE_READ_DATA)
+    OTLWF_CTL_CODE(177, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // uint16_t - aJoinerUdpPort
     
 #define IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET \
-    OTLWF_CTL_CODE(178, METHOD_BUFFERED, FILE_READ_DATA)
+    OTLWF_CTL_CODE(178, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // otIp6Address - aDestination
     // uint8_t - aCount
     // uint8_t[aCount] - aTlvTypes
     
 #define IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET \
-    OTLWF_CTL_CODE(179, METHOD_BUFFERED, FILE_READ_DATA)
+    OTLWF_CTL_CODE(179, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // otIp6Address - aDestination
     // uint8_t - aCount
@@ -610,9 +610,48 @@ typedef struct otCommissionConfig
     // GUID - InterfaceGuid
     // uint32_t - aScanChannels
     // uint16_t - aScanDuration
+    
+#define IOCTL_OTLWF_OT_SEND_ACTIVE_GET \
+    OTLWF_CTL_CODE(185, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // uint8_t - aLength
+    // uint8_t[aLength] - aTlvTypes
+    
+#define IOCTL_OTLWF_OT_SEND_ACTIVE_SET \
+    OTLWF_CTL_CODE(186, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // otOperationalDataset - aDataset
+    // uint8_t - aLength
+    // uint8_t[aLength] - aTlvTypes
+    
+#define IOCTL_OTLWF_OT_SEND_PENDING_GET \
+    OTLWF_CTL_CODE(187, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // uint8_t - aLength
+    // uint8_t[aLength] - aTlvTypes
+    
+#define IOCTL_OTLWF_OT_SEND_PENDING_SET \
+    OTLWF_CTL_CODE(188, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // otOperationalDataset - aDataset
+    // uint8_t - aLength
+    // uint8_t[aLength] - aTlvTypes
+    
+#define IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET \
+    OTLWF_CTL_CODE(189, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // uint8_t - aLength
+    // uint8_t[aLength] - aTlvs
+    
+#define IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET \
+    OTLWF_CTL_CODE(190, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // otOperationalDataset - aDataset
+    // uint8_t - aLength
+    // uint8_t[aLength] - aTlvs
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 184
+#define MAX_OTLWF_IOCTL_FUNC_CODE 190
 
 #endif //__OTLWFIOCTL_H__

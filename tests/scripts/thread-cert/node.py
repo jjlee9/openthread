@@ -291,12 +291,15 @@ class Node:
             return addr
 
     def get_channel(self):
-        self.send_command('channel')
-        i = self.pexpect.expect('(\d+)\r\n')
-        if i == 0:
-            channel = int(self.pexpect.match.groups()[0])
-        self.pexpect.expect('Done')
-        return channel
+        if self.Api:
+            return self.Api.otNodeGetChannel(self.otNode)
+        else:
+            self.send_command('channel')
+            i = self.pexpect.expect('(\d+)\r\n')
+            if i == 0:
+                channel = int(self.pexpect.match.groups()[0])
+            self.pexpect.expect('Done')
+            return channel
 
     def set_channel(self, channel):
         if self.Api:
@@ -386,17 +389,24 @@ class Node:
             self.pexpect.expect('Done')
 
     def get_partition_id(self):
-        self.send_command('leaderpartitionid')
-        i = self.pexpect.expect('(\d+)\r\n')
-        if i == 0:
-            weight = self.pexpect.match.groups()[0]
-        self.pexpect.expect('Done')
-        return weight
+        if self.Api:
+            return int(self.Api.otNodeGetPartitionId(self.otNode))
+        else:
+            self.send_command('leaderpartitionid')
+            i = self.pexpect.expect('(\d+)\r\n')
+            if i == 0:
+                weight = self.pexpect.match.groups()[0]
+            self.pexpect.expect('Done')
+            return weight
 
     def set_partition_id(self, partition_id):
-        cmd = 'leaderpartitionid %d' % partition_id
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
+        if self.Api:
+            if self.Api.otNodeSetPartitionId(self.otNode, ctypes.c_uint(partition_id)) != 0:
+                raise OSError("otNodeSetPartitionId failed!")
+        else:  
+            cmd = 'leaderpartitionid %d' % partition_id
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
 
     def set_router_upgrade_threshold(self, threshold):
         if self.Api:
@@ -650,8 +660,8 @@ class Node:
             if channel == None:
                 channel = 0
             if master_key == None:
-                master_key = 0 # TODO
-            if self.Api.otNodeSetActiveDataset(self.otNode, ctypes.c_ulonglong(timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel)) != 0:
+                master_key = ""
+            if self.Api.otNodeSetActiveDataset(self.otNode, ctypes.c_ulonglong(timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel), master_key.encode('utf-8')) != 0:
                 raise OSError("otNodeSetActiveDataset failed!")
         else:
             self.send_command('dataset clear')
@@ -681,7 +691,16 @@ class Node:
 
     def set_pending_dataset(self, pendingtimestamp, activetimestamp, panid=None, channel=None):
         if self.Api:
-            raise OSError("not implemented!")
+            if pendingtimestamp == None:
+                pendingtimestamp = 0
+            if activetimestamp == None:
+                activetimestamp = 0
+            if panid == None:
+                panid = 0
+            if channel == None:
+                channel = 0
+            if self.Api.otNodeSetPendingDataset(self.otNode, ctypes.c_ulonglong(activetimestamp), ctypes.c_ulonglong(pendingtimestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel)) != 0:
+                raise OSError("otNodeSetPendingDataset failed!")
         else:
             self.send_command('dataset clear')
             self.pexpect.expect('Done')
@@ -719,7 +738,20 @@ class Node:
     def send_mgmt_pending_set(self, pending_timestamp=None, active_timestamp=None, delay_timer=None, channel=None,
                               panid=None, master_key=None):
         if self.Api:
-            raise OSError("not implemented!") # TODO
+            if pending_timestamp == None:
+                pending_timestamp = 0
+            if active_timestamp == None:
+                active_timestamp = 0
+            if delay_timer == None:
+                delay_timer = 0
+            if panid == None:
+                panid = 0
+            if channel == None:
+                channel = 0
+            if master_key == None:
+                master_key = ""
+            if self.Api.otNodeSendPendingSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ulonglong(pending_timestamp), ctypes.c_uint(delay_timer), ctypes.c_ushort(panid), ctypes.c_ushort(channel), master_key.encode('utf-8')) != 0:
+                raise OSError("otNodeSendPendingSet failed!")
         else:
             cmd = 'dataset mgmtsetcommand pending '
 
@@ -805,14 +837,17 @@ class Node:
         self.Api.otNodeGetAddr16.argtypes = [ctypes.c_void_p]
         self.Api.otNodeGetAddr16.restype = ctypes.c_ushort
         
-        self.Api.otNodeGetHashMacAddress.argtypes = [ctypes.c_void_p]
-        self.Api.otNodeGetHashMacAddress.restype = ctypes.c_ushort
-        
         self.Api.otNodeGetAddr64.argtypes = [ctypes.c_void_p]
         self.Api.otNodeGetAddr64.restype = ctypes.c_char_p
+        
+        self.Api.otNodeGetHashMacAddress.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetHashMacAddress.restype = ctypes.c_char_p
 
         self.Api.otNodeSetChannel.argtypes = [ctypes.c_void_p, 
                                               ctypes.c_ubyte]
+        
+        self.Api.otNodeGetChannel.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetChannel.restype = ctypes.c_ubyte
 
         self.Api.otNodeSetMasterkey.argtypes = [ctypes.c_void_p, 
                                                 ctypes.c_char_p]
@@ -837,6 +872,12 @@ class Node:
 
         self.Api.otNodeSetPanId.argtypes = [ctypes.c_void_p, 
                                             ctypes.c_ushort]
+        
+        self.Api.otNodeGetPartitionId.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetPartitionId.restype = ctypes.c_uint
+
+        self.Api.otNodeSetPartitionId.argtypes = [ctypes.c_void_p, 
+                                                  ctypes.c_uint]
 
         self.Api.otNodeSetRouterUpgradeThreshold.argtypes = [ctypes.c_void_p, 
                                                              ctypes.c_ubyte]
@@ -927,7 +968,22 @@ class Node:
         self.Api.otNodeSetActiveDataset.argtypes = [ctypes.c_void_p,
                                                     ctypes.c_ulonglong,
                                                     ctypes.c_ushort,
-                                                    ctypes.c_ushort]
+                                                    ctypes.c_ushort,
+                                                    ctypes.c_char_p]
+
+        self.Api.otNodeSetPendingDataset.argtypes = [ctypes.c_void_p,
+                                                     ctypes.c_ulonglong,
+                                                     ctypes.c_ulonglong,
+                                                     ctypes.c_ushort,
+                                                     ctypes.c_ushort]
+
+        self.Api.otNodeSendPendingSet.argtypes = [ctypes.c_void_p,
+                                                  ctypes.c_ulonglong,
+                                                  ctypes.c_ulonglong,
+                                                  ctypes.c_uint,
+                                                  ctypes.c_ushort,
+                                                  ctypes.c_ushort,
+                                                  ctypes.c_char_p]
         
         # Initialize a new node
         self.otNode = self.Api.otNodeInit(ctypes.c_uint(nodeid))

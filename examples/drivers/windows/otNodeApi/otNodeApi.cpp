@@ -1021,6 +1021,15 @@ OTNODEAPI int32_t OTCALL otNodeSetChannel(otNode* aNode, uint8_t aChannel)
     return result;
 }
 
+OTNODEAPI uint8_t OTCALL otNodeGetChannel(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otGetChannel(aNode->mInstance);
+    printf("%d: channel\r\n%d\r\n", aNode->mId, result);
+    otLogFuncExit();
+    return result;
+}
+
 OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterkey)
 {
     otLogFuncEntryMsg("[%d] %s", aNode->mId, aMasterkey);
@@ -1107,6 +1116,24 @@ OTNODEAPI int32_t OTCALL otNodeSetPanId(otNode* aNode, uint16_t aPanId)
     auto result = otSetPanId(aNode->mInstance, aPanId);
     otLogFuncExit();
     return result;
+}
+
+OTNODEAPI uint32_t OTCALL otNodeGetPartitionId(otNode* aNode)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    auto result = otGetLocalLeaderPartitionId(aNode->mInstance);
+    printf("%d: leaderpartitionid\r\n0x%04x\r\n", aNode->mId, result);
+    otLogFuncExit();
+    return result;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetPartitionId(otNode* aNode, uint32_t aPartitionId)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: leaderpartitionid 0x%04x\r\n", aNode->mId, aPartitionId);
+    otSetLocalLeaderPartitionId(aNode->mInstance, aPartitionId);
+    otLogFuncExit();
+    return 0;
 }
 
 OTNODEAPI int32_t OTCALL otNodeSetRouterUpgradeThreshold(otNode* aNode, uint8_t aThreshold)
@@ -1641,7 +1668,7 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
     memcpy_s(SendBuffer, aSize, &otDestinationAddress, sizeof(IN6_ADDR));
 
     // Send the buffer
-    result = sendto(Socket, SendBuffer, sizeof(SendBuffer), 0, (SOCKADDR*)&DestinationAddress, sizeof(DestinationAddress));
+    result = sendto(Socket, SendBuffer, aSize, 0, (SOCKADDR*)&DestinationAddress, sizeof(DestinationAddress));
     if (result == SOCKET_ERROR)
     {
         printf("sendto failed, 0x%x\r\n", WSAGetLastError());
@@ -1672,7 +1699,7 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
         {
             //printf("waiting for completion event...\r\n");
             // Wait for the receive to complete
-            result = WSAWaitForMultipleEvents(1, &Overlapped.hEvent, TRUE, (DWORD)(4000 - (GetTickCount64() - StartTick)), TRUE);
+            result = WSAWaitForMultipleEvents(1, &Overlapped.hEvent, TRUE, (DWORD)(5000 - (GetTickCount64() - StartTick)), TRUE);
             if (result == WSA_WAIT_TIMEOUT)
             {
                 //printf("recv timeout\r\n");
@@ -1738,7 +1765,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel)
+OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey)
 {
     otLogFuncEntryMsg("[%d] 0x%llX %d %d", aNode->mId, aTimestamp, aPanId, aChannel);
     printf("%d: dataset set active 0x%llX %d %d\r\n", aNode->mId, aTimestamp, aPanId, aChannel);
@@ -1760,7 +1787,107 @@ OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimesta
         aDataset.mIsChannelSet = true;
     }
 
+    if (aMasterKey != NULL && strlen(aMasterKey) != 0)
+    {
+        int keyLength;
+        if ((keyLength = Hex2Bin(aMasterKey, aDataset.mMasterKey.m8, sizeof(aDataset.mMasterKey))) != OT_MASTER_KEY_SIZE)
+        {
+            printf("invalid length key %d\r\n", keyLength);
+            return kThreadError_Parse;
+        }
+        aDataset.mIsMasterKeySet = true;
+    }
+
     auto result = otSetActiveDataset(aNode->mInstance, &aDataset);
+    otLogFuncExit();
+    return result;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActiveTimestamp, uint64_t aPendingTimestamp, uint16_t aPanId, uint16_t aChannel)
+{
+    otLogFuncEntryMsg("[%d] 0x%llX 0x%llX %d %d", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
+    printf("%d: dataset set pending 0x%llX 0x%llX %d %d\r\n", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
+
+    otOperationalDataset aDataset = {};
+
+    if (aActiveTimestamp != 0)
+    {
+        aDataset.mActiveTimestamp = aActiveTimestamp;
+        aDataset.mIsActiveTimestampSet = true;
+    }
+
+    if (aPendingTimestamp != 0)
+    {
+        aDataset.mPendingTimestamp = aPendingTimestamp;
+        aDataset.mIsPendingTimestampSet = true;
+    }
+
+    if (aPanId != 0)
+    {
+        aDataset.mPanId = aPanId;
+        aDataset.mIsPanIdSet = true;
+    }
+
+    if (aChannel != 0)
+    {
+        aDataset.mChannel = aChannel;
+        aDataset.mIsChannelSet = true;
+    }
+
+    auto result = otSetPendingDataset(aNode->mInstance, &aDataset);
+    otLogFuncExit();
+    return result;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp, uint64_t aPendingTimestamp, uint32_t aDelayTimer, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey)
+{
+    otLogFuncEntryMsg("[%d] 0x%llX 0x%llX %d %d", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
+    printf("%d: dataset send pending 0x%llX 0x%llX %d %d\r\n", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
+
+    otOperationalDataset aDataset = {};
+
+    if (aActiveTimestamp != 0)
+    {
+        aDataset.mActiveTimestamp = aActiveTimestamp;
+        aDataset.mIsActiveTimestampSet = true;
+    }
+
+    if (aPendingTimestamp != 0)
+    {
+        aDataset.mPendingTimestamp = aPendingTimestamp;
+        aDataset.mIsPendingTimestampSet = true;
+    }
+
+    if (aDelayTimer != 0)
+    {
+        aDataset.mDelay = aDelayTimer;
+        aDataset.mIsDelaySet = true;
+    }
+
+    if (aPanId != 0)
+    {
+        aDataset.mPanId = aPanId;
+        aDataset.mIsPanIdSet = true;
+    }
+
+    if (aChannel != 0)
+    {
+        aDataset.mChannel = aChannel;
+        aDataset.mIsChannelSet = true;
+    }
+
+    if (aMasterKey != NULL && strlen(aMasterKey) != 0)
+    {
+        int keyLength;
+        if ((keyLength = Hex2Bin(aMasterKey, aDataset.mMasterKey.m8, sizeof(aDataset.mMasterKey))) != OT_MASTER_KEY_SIZE)
+        {
+            printf("invalid length key %d\r\n", keyLength);
+            return kThreadError_Parse;
+        }
+        aDataset.mIsMasterKeySet = true;
+    }
+
+    auto result = otSendPendingSet(aNode->mInstance, &aDataset, nullptr, 0);
     otLogFuncExit();
     return result;
 }

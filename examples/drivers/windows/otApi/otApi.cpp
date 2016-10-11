@@ -2122,10 +2122,22 @@ otSendActiveGet(
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aInstance);
-    UNREFERENCED_PARAMETER(aTlvTypes);
-    UNREFERENCED_PARAMETER(aLength);
-    return kThreadError_NotImplemented;
+    if (aTlvTypes == nullptr && aLength != 0) return kThreadError_InvalidArgs;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(uint8_t) + aLength;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), &aLength, sizeof(aLength));
+    if (aLength > 0)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(uint8_t), aTlvTypes, aLength);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_ACTIVE_GET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
@@ -2138,12 +2150,24 @@ otSendActiveSet(
     uint8_t aLength
     )
 {
-    if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aInstance);
-    UNREFERENCED_PARAMETER(aDataset);
-    UNREFERENCED_PARAMETER(aTlvs);
-    UNREFERENCED_PARAMETER(aLength);
-    return kThreadError_NotImplemented;
+    if (aInstance == nullptr || aDataset == nullptr) return kThreadError_InvalidArgs;
+    if (aTlvs == nullptr && aLength != 0) return kThreadError_InvalidArgs;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(otOperationalDataset) + sizeof(uint8_t) + aLength;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), aDataset, sizeof(otOperationalDataset));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otOperationalDataset), BufferSize - sizeof(GUID) - sizeof(otOperationalDataset), &aLength, sizeof(aLength));
+    if (aLength > 0)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(otOperationalDataset) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(otOperationalDataset) - sizeof(uint8_t), aTlvs, aLength);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_ACTIVE_SET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
@@ -2156,10 +2180,22 @@ otSendPendingGet(
     )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aInstance);
-    UNREFERENCED_PARAMETER(aTlvTypes);
-    UNREFERENCED_PARAMETER(aLength);
-    return kThreadError_NotImplemented;
+    if (aTlvTypes == nullptr && aLength != 0) return kThreadError_InvalidArgs;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(uint8_t) + aLength;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), &aLength, sizeof(aLength));
+    if (aLength > 0)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(uint8_t), aTlvTypes, aLength);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_PENDING_GET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
@@ -2172,12 +2208,24 @@ otSendPendingSet(
     uint8_t aLength
     )
 {
-    if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aInstance);
-    UNREFERENCED_PARAMETER(aDataset);
-    UNREFERENCED_PARAMETER(aTlvs);
-    UNREFERENCED_PARAMETER(aLength);
-    return kThreadError_NotImplemented;
+    if (aInstance == nullptr || aDataset == nullptr) return kThreadError_InvalidArgs;
+    if (aTlvs == nullptr && aLength != 0) return kThreadError_InvalidArgs;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(otOperationalDataset) + sizeof(uint8_t) + aLength;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), aDataset, sizeof(otOperationalDataset));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otOperationalDataset), BufferSize - sizeof(GUID) - sizeof(otOperationalDataset), &aLength, sizeof(aLength));
+    if (aLength > 0)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(otOperationalDataset) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(otOperationalDataset) - sizeof(uint8_t), aTlvs, aLength);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_PENDING_SET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
@@ -3305,9 +3353,22 @@ otSendMgmtCommissionerGet(
 )
 {
     if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aTlvs);
-    UNREFERENCED_PARAMETER(aLength);
-    return kThreadError_NotImplemented;
+    if (aTlvs == nullptr && aLength != 0) return kThreadError_InvalidArgs;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(uint8_t) + aLength;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), &aLength, sizeof(aLength));
+    if (aLength > 0)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(uint8_t), aTlvs, aLength);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
@@ -3320,11 +3381,24 @@ otSendMgmtCommissionerSet(
     uint8_t aLength
     )
 {
-    if (aInstance == nullptr) return kThreadError_InvalidArgs;
-    UNREFERENCED_PARAMETER(aDataset);
-    UNREFERENCED_PARAMETER(aTlvs);
-    UNREFERENCED_PARAMETER(aLength);
-    return kThreadError_NotImplemented;
+    if (aInstance == nullptr || aDataset == nullptr) return kThreadError_InvalidArgs;
+    if (aTlvs == nullptr && aLength != 0) return kThreadError_InvalidArgs;
+    
+    DWORD BufferSize = sizeof(GUID) + sizeof(otCommissioningDataset) + sizeof(uint8_t) + aLength;
+    PBYTE Buffer = (PBYTE)malloc(BufferSize);
+    if (Buffer == nullptr) return kThreadError_NoBufs;
+
+    memcpy_s(Buffer, BufferSize, &aInstance->InterfaceGuid, sizeof(GUID));
+    memcpy_s(Buffer + sizeof(GUID), BufferSize - sizeof(GUID), aDataset, sizeof(otCommissioningDataset));
+    memcpy_s(Buffer + sizeof(GUID) + sizeof(otCommissioningDataset), BufferSize - sizeof(GUID) - sizeof(otCommissioningDataset), &aLength, sizeof(aLength));
+    if (aLength > 0)
+        memcpy_s(Buffer + sizeof(GUID) + sizeof(otCommissioningDataset) + sizeof(uint8_t), BufferSize - sizeof(GUID) - sizeof(otCommissioningDataset) - sizeof(uint8_t), aTlvs, aLength);
+    
+    ThreadError result = 
+        DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET, Buffer, BufferSize, nullptr, 0));
+
+    free(Buffer);
+    return result;
 }
 
 OTAPI 
