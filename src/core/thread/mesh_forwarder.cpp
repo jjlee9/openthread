@@ -1428,9 +1428,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogDebgMac("Dropping received frame, %!otError!\n", error);
-#endif
+        otLogDebgMacErr(error, "Dropping received frame");
     }
 }
 
@@ -1488,9 +1486,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogDebgMac("Dropping received mesh frame, %!otError!\n", error);
-#endif
+        otLogDebgMacErr(error, "Dropping received mesh frame");
 
         if (message != NULL)
         {
@@ -1609,9 +1605,7 @@ exit:
     }
     else
     {
-#ifdef WINDOWS_LOGGING
-        otLogDebgMac("Dropping received fragment, %!otError!\n", error);
-#endif
+        otLogDebgMacErr(error, "Dropping received fragment");
 
         if (message != NULL)
         {
@@ -1690,9 +1684,7 @@ exit:
     }
     else
     {
-#ifdef WINDOWS_LOGGING
-        otLogDebgMac("Dropping received lowpan HC, %!otError!\n", error);
-#endif
+        otLogDebgMacErr(error, "Dropping received lowpan HC");
 
         if (message != NULL)
         {

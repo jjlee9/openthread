@@ -257,6 +257,12 @@
 // end_wpp
 
 // begin_wpp config
+// USEPREFIX (otLogWarnMleErr, "MLE%!SPACE!");
+// otLogWarnMleErr{LEVEL=TRACE_LEVEL_WARNING,FLAGS=OT_MLE}(EXP, MSG, ...);
+// USESUFFIX(otLogWarnMleErr, ", %!otError!", EXP);
+// end_wpp
+
+// begin_wpp config
 // USEPREFIX (otLogInfoMle, "MLE%!SPACE!");
 // otLogInfoMle{LEVEL=TRACE_LEVEL_INFORMATION,FLAGS=OT_MLE}(MSG, ...);
 // end_wpp
@@ -374,6 +380,12 @@
 // begin_wpp config
 // USEPREFIX (otLogDebgMac, "MAC%!SPACE!");
 // otLogDebgMac{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_MAC}(MSG, ...);
+// end_wpp
+
+// begin_wpp config
+// USEPREFIX (otLogDebgMacErr, "MAC%!SPACE!");
+// otLogDebgMacErr{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_MAC}(EXP, MSG, ...);
+// USESUFFIX(otLogDebgMacErr, ", %!otError!", EXP);
 // end_wpp
 
 // ==MEM==

@@ -1774,11 +1774,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Advertisement, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Advertisement, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Advertisement");
     }
 
     return error;
@@ -1906,11 +1902,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Data Response, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Data Response, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Data Response");
     }
 
     (void)aMessageInfo;
@@ -2099,11 +2091,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Parent Response, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Parent Response, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Parent Response");
     }
 
     return error;
@@ -2226,11 +2214,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Child ID Response, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Child ID Response, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Child ID Response");
     }
 
     (void)aMessageInfo;
@@ -2346,11 +2330,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Child Update Response, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Child Update Response, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Child Update Response");
     }
 
     return error;
@@ -2458,11 +2438,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Discovery Request, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Discovery Request, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Discovery Request");
     }
 
     return error;
@@ -2620,11 +2596,7 @@ exit:
 
     if (error != kThreadError_None)
     {
-#ifdef WINDOWS_LOGGING
-        otLogWarnMle("Failed to process Discovery Response, %!otError!", error);
-#else
-        otLogWarnMle("Failed to process Discovery Response, 0x%x", error);
-#endif
+        otLogWarnMleErr(error, "Failed to process Discovery Response");
     }
 
     return error;
