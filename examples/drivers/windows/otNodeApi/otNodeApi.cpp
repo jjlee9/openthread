@@ -1889,3 +1889,56 @@ OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTim
     otLogFuncExit();
     return result;
 }
+
+OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTimestamp, uint16_t aPanId, uint16_t aChannel, const char *aMeshLocal, const char *aNetworkName)
+{
+    otLogFuncEntryMsg("[%d] 0x%llX %d %d", aNode->mId, aActiveTimestamp, aPanId, aChannel);
+    printf("%d: dataset send active 0x%llX %d %d\r\n", aNode->mId, aActiveTimestamp, aPanId, aChannel);
+
+    otOperationalDataset aDataset = {};
+
+    if (aActiveTimestamp != 0)
+    {
+        aDataset.mActiveTimestamp = aActiveTimestamp;
+        aDataset.mIsActiveTimestampSet = true;
+    }
+    if (aPanId != 0)
+    {
+        aDataset.mPanId = aPanId;
+        aDataset.mIsPanIdSet = true;
+    }
+
+    if (aChannel != 0)
+    {
+        aDataset.mChannel = aChannel;
+        aDataset.mIsChannelSet = true;
+    }
+
+    if (aMeshLocal != NULL && strlen(aMeshLocal) != 0)
+    {
+        otIp6Address prefix;
+        auto error = otIp6AddressFromString(aMeshLocal, &prefix);
+        if (error != kThreadError_None) return error;
+        memcpy(aDataset.mMeshLocalPrefix.m8, prefix.mFields.m8, sizeof(aDataset.mMeshLocalPrefix.m8));
+        aDataset.mIsMeshLocalPrefixSet = true;
+    }
+
+    if (aNetworkName != NULL && strlen(aNetworkName) != 0)
+    {
+        strcpy_s(aDataset.mNetworkName.m8, sizeof(aDataset.mNetworkName.m8), aNetworkName);
+        aDataset.mIsNetworkNameSet = true;
+    }
+
+    auto result = otSendActiveSet(aNode->mInstance, &aDataset, nullptr, 0);
+    otLogFuncExit();
+    return result;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetMaxChildren(otNode* aNode, uint8_t aMaxChildren)
+{
+    otLogFuncEntryMsg("[%d] %d", aNode->mId, aMaxChildren);
+    printf("%d: childmax %d\r\n", aNode->mId, aMaxChildren);
+    auto result = otSetMaxAllowedChildren(aNode->mInstance, aMaxChildren);
+    otLogFuncExit();
+    return result;
+}

@@ -350,6 +350,16 @@ OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActive
  */
 OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint32_t aDelayTimer = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL, const char *aMeshLocal = NULL);
 
+/**
+ * Sends a active set for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMeshLocal = NULL, const char *aNetworkName = NULL);
+
+/**
+ * Sets the maximum number of children for a node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetMaxChildren(otNode* aNode, uint8_t aMaxChildren);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

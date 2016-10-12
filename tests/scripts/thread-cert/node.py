@@ -117,6 +117,8 @@ class Node:
                 self.pexpect.close(force=True)
 
     def send_command(self, cmd):
+        if self.Api:
+            raise OSError("Unsupported on Windows!")
         print ("%d: %s" % (self.nodeid, cmd))
         self.pexpect.sendline(cmd)
 
@@ -750,25 +752,39 @@ class Node:
 
     def send_mgmt_active_set(self, active_timestamp=None, channel=None, panid=None, mesh_local=None,
                               network_name=None):
-        cmd = 'dataset mgmtsetcommand active '
+        if self.Api:
+            if active_timestamp == None:
+                active_timestamp = 0
+            if channel == None:
+                channel = 0
+            if panid == None:
+                panid = 0
+            if mesh_local == None:
+                mesh_local = 0
+            if network_name == None:
+                network_name = 0
+            if self.Api.otNodeSendActiveSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel), mesh_local.encode('utf-8'), network_name.encode('utf-8')) != 0:
+                raise OSError("otNodeSendActiveSet failed!")
+        else:
+            cmd = 'dataset mgmtsetcommand active '
 
-        if active_timestamp != None:
-            cmd += 'activetimestamp %d ' % active_timestamp
+            if active_timestamp != None:
+                cmd += 'activetimestamp %d ' % active_timestamp
 
-        if channel != None:
-            cmd += 'channel %d ' % channel
+            if channel != None:
+                cmd += 'channel %d ' % channel
 
-        if panid != None:
-            cmd += 'panid %d ' % panid
+            if panid != None:
+                cmd += 'panid %d ' % panid
 
-        if mesh_local != None:
-            cmd += 'localprefix ' + mesh_local + ' '
+            if mesh_local != None:
+                cmd += 'localprefix ' + mesh_local + ' '
 
-        if network_name != None:
-            cmd += 'networkname ' + network_name + ' '
+            if network_name != None:
+                cmd += 'networkname ' + network_name + ' '
 
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
 
     def send_mgmt_pending_set(self, pending_timestamp=None, active_timestamp=None, delay_timer=None, channel=None,
                               panid=None, master_key=None, mesh_local=None):
@@ -813,6 +829,15 @@ class Node:
             if mesh_local != None:
                 cmd += 'localprefix ' + mesh_local + ' '
 
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
+    def set_max_children(self, number):
+        if self.Api:
+            if self.Api.otNodeSetMaxChildren(self.otNode, ctypes.c_ubyte(number)) != 0:
+                raise OSError("otNodeSetMaxChildren failed!")
+        else:  
+            cmd = 'childmax %d' % number
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
@@ -1028,6 +1053,9 @@ class Node:
                                                   ctypes.c_ushort,
                                                   ctypes.c_char_p,
                                                   ctypes.c_char_p]
+
+        self.Api.otNodeSetMaxChildren.argtypes = [ctypes.c_void_p, 
+                                                  ctypes.c_ubyte]
         
         # Initialize a new node
         self.otNode = self.Api.otNodeInit(ctypes.c_uint(nodeid))
