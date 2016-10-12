@@ -31,8 +31,6 @@
  *   This file implements the local Thread Network Data.
  */
 
-#define WPP_NAME "network_data_local.tmh"
-
 #include <common/debug.hpp>
 #include <common/logging.hpp>
 #include <common/code_utils.hpp>

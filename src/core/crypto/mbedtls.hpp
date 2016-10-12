@@ -62,11 +62,7 @@ public:
     enum
     {
 #if OPENTHREAD_ENABLE_DTLS
-#ifdef _WIN32
-        kMemorySize = 2500 * sizeof(void *), ///< Size of memory buffer (bytes).
-#else
         kMemorySize = 2048 * sizeof(void *), ///< Size of memory buffer (bytes).
-#endif
 #else
         kMemorySize = 512,                   ///< Size of memory buffer (bytes).
 #endif
