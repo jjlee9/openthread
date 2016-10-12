@@ -567,6 +567,7 @@ void Commissioner::HandleRelayReceive(Coap::Header &aHeader, Message &aMessage, 
     JoinerRouterLocatorTlv joinerRloc;
     uint16_t offset;
     uint16_t length;
+    uint64_t iid;
 
     otLogFuncEntry();
 
@@ -588,7 +589,8 @@ void Commissioner::HandleRelayReceive(Coap::Header &aHeader, Message &aMessage, 
     mJoinerPort = joinerPort.GetUdpPort();
     mJoinerRloc = joinerRloc.GetJoinerRouterLocator();
 
-    otLogInfoMeshCoP("Received relay receive for %llX, rloc:%x\n", HostSwap64(*(uint64_t *)&mJoinerIid[0]), mJoinerRloc);
+    memcpy(&iid, mJoinerIid, sizeof(iid));
+    otLogInfoMeshCoP("Received relay receive for %llX, rloc:%x\n", HostSwap64(iid), mJoinerRloc);
 
     if (!mNetif.GetDtls().IsStarted())
     {
