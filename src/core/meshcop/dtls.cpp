@@ -447,6 +447,7 @@ ThreadError Dtls::MapError(int rval)
 void Dtls::HandleMbedtlsDebug(void *ctx, int level, const char *file, int line, const char *str)
 {
 #ifdef WINDOWS_LOGGING
+
     if (strnlen(str, 512) != 512)
     {
         otLogInfoMbedTls("%s", str);
