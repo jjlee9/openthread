@@ -50,7 +50,7 @@
 
 #if defined(_WIN32) && !defined(EFIX64) && !defined(EFI32)
 
-#if defined(WINDOWS_KERNEL)
+#if defined(_KERNEL_MODE)
 
 #include <ntdef.h>
 #include <bcrypt.h>
@@ -103,7 +103,7 @@ int mbedtls_platform_entropy_poll( void *data, unsigned char *output, size_t len
     return( 0 );
 }
 
-#endif /* WINDOWS_KERNEL */
+#endif /* _KERNEL_MODE */
 
 #else /* _WIN32 && !EFIX64 && !EFI32 */
 
