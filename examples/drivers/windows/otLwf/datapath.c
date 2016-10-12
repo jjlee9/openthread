@@ -44,7 +44,7 @@ __forceinline CHAR ToHex(CHAR n)
     else       return '0' + n;
 }
 
-const ULONG otLogLineLength = 32;
+#define otLogLineLength 32
 
 // Helper to log a buffer
 void

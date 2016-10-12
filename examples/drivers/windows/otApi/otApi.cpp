@@ -1266,7 +1266,7 @@ otEnergyScan(
         );
     
     PackedBuffer3<GUID,uint32_t,uint16_t> Buffer(aInstance->InterfaceGuid, aScanChannels, aScanDuration);
-    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ACTIVE_SCAN, &Buffer, sizeof(Buffer), nullptr, 0));
+    return DwordToThreadError(SendIOCTL(aInstance->ApiHandle, IOCTL_OTLWF_OT_ENERGY_SCAN, &Buffer, sizeof(Buffer), nullptr, 0));
 }
 
 OTAPI 
@@ -1644,7 +1644,7 @@ otGetNetworkDataLeader(
     UNREFERENCED_PARAMETER(aStable);
     UNREFERENCED_PARAMETER(aData);
     UNREFERENCED_PARAMETER(aDataLength);
-    return kThreadError_NotImplemented;
+    return kThreadError_NotImplemented; // TODO
 }
 
 OTAPI
@@ -1662,7 +1662,7 @@ otGetNetworkDataLocal(
     UNREFERENCED_PARAMETER(aStable);
     UNREFERENCED_PARAMETER(aData);
     UNREFERENCED_PARAMETER(aDataLength);
-    return kThreadError_NotImplemented;
+    return kThreadError_NotImplemented; // TODO
 }
 
 OTAPI
@@ -2400,7 +2400,7 @@ otSetContextIdReuseDelay(
     uint32_t aDelay
     )
 {
-    if (aInstance) (void)SetIOCTL(aInstance, IOCTL_OTLWF_OT_REMOVE_EXTERNAL_ROUTE, aDelay);
+    if (aInstance) (void)SetIOCTL(aInstance, IOCTL_OTLWF_OT_CONTEXT_ID_REUSE_DELAY, aDelay);
 }
 
 OTAPI
@@ -2423,7 +2423,7 @@ otSetKeySequenceCounter(
     uint32_t aKeySequenceCounter
     )
 {
-    if (aInstance) (void)SetIOCTL(aInstance, IOCTL_OTLWF_OT_REMOVE_EXTERNAL_ROUTE, aKeySequenceCounter);
+    if (aInstance) (void)SetIOCTL(aInstance, IOCTL_OTLWF_OT_KEY_SEQUENCE_COUNTER, aKeySequenceCounter);
 }
 
 OTAPI

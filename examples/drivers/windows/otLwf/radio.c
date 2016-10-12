@@ -922,4 +922,8 @@ LogMac(
             pFilter, szDir, NetBufferList, getSrcExtAddress(frameLength, frame, IEEE802154_DSTADDR_OFFSET+8), getDstExtAddress(frame), frameLength, AckRequested, FramePending);
         break;
     }
+    
+#ifdef LOG_BUFFERS
+    otLogBuffer(frame, frameLength);
+#endif
 }

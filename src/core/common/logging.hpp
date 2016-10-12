@@ -597,6 +597,72 @@ extern "C" {
 #define otLogDebgMem(aFormat, ...)
 #endif
 
+/**
+ * @def otLogCritNetDiag
+ *
+ * This method generates a log with level critical for the NETDIAG region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogWarnNetDiag
+ *
+ * This method generates a log with level warning for the NETDIAG region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogInfoNetDiag
+ *
+ * This method generates a log with level info for the NETDIAG region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogDebgNetDiag
+ *
+ * This method generates a log with level debug for the NETDIAG region.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+#ifdef OPENTHREAD_CONFIG_LOG_NETDIAG
+#define otLogCritNetDiag(aFormat, ...) otLogCrit(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
+#define otLogWarnNetDiag(aFormat, ...) otLogWarn(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
+#define otLogInfoNetDiag(aFormat, ...) otLogInfo(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
+#define otLogDebgNetDiag(aFormat, ...) otLogDebg(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
+#else
+#define otLogCritNetDiag(aFormat, ...)
+#define otLogWarnNetDiag(aFormat, ...)
+#define otLogInfoNetDiag(aFormat, ...)
+#define otLogDebgNetDiag(aFormat, ...)
+#endif
+
+/**
+ * @def otLogCert
+ *
+ * This method generates a log with level none for the certification test.
+ *
+ * @param[in]  aFormat  A pointer to the format string.
+ * @param[in]  ...      Arguments for the format specification.
+ *
+ */
+#if OPENTHREAD_ENABLE_CERT_LOG
+#define otLogCertMeshCoP(aFormat, ...) otPlatLog(kLogLevelNone, kLogRegionMeshCoP, aFormat, ## __VA_ARGS__)
+#else
+#define otLogCertMeshCoP(aFormat, ...)
+#endif
+
 #endif // WINDOWS_LOGGING
 
 /**
@@ -1053,72 +1119,6 @@ extern "C" {
 #endif
 
 /**
- * @def otLogCritNetDiag
- *
- * This method generates a log with level critical for the NETDIAG region.
- *
- * @param[in]  aFormat  A pointer to the format string.
- * @param[in]  ...      Arguments for the format specification.
- *
- */
-
-/**
- * @def otLogWarnNetDiag
- *
- * This method generates a log with level warning for the NETDIAG region.
- *
- * @param[in]  aFormat  A pointer to the format string.
- * @param[in]  ...      Arguments for the format specification.
- *
- */
-
-/**
- * @def otLogInfoNetDiag
- *
- * This method generates a log with level info for the NETDIAG region.
- *
- * @param[in]  aFormat  A pointer to the format string.
- * @param[in]  ...      Arguments for the format specification.
- *
- */
-
-/**
- * @def otLogDebgNetDiag
- *
- * This method generates a log with level debug for the NETDIAG region.
- *
- * @param[in]  aFormat  A pointer to the format string.
- * @param[in]  ...      Arguments for the format specification.
- *
- */
-#ifdef OPENTHREAD_CONFIG_LOG_NETDIAG
-#define otLogCritNetDiag(aFormat, ...) otLogCrit(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
-#define otLogWarnNetDiag(aFormat, ...) otLogWarn(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
-#define otLogInfoNetDiag(aFormat, ...) otLogInfo(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
-#define otLogDebgNetDiag(aFormat, ...) otLogDebg(kLogRegionNetDiag, aFormat, ## __VA_ARGS__)
-#else
-#define otLogCritNetDiag(aFormat, ...)
-#define otLogWarnNetDiag(aFormat, ...)
-#define otLogInfoNetDiag(aFormat, ...)
-#define otLogDebgNetDiag(aFormat, ...)
-#endif
-
-/**
- * @def otLogCert
- *
- * This method generates a log with level none for the certification test.
- *
- * @param[in]  aFormat  A pointer to the format string.
- * @param[in]  ...      Arguments for the format specification.
- *
- */
-#if OPENTHREAD_ENABLE_CERT_LOG
-#define otLogCertMeshCoP(aFormat, ...) otPlatLog(kLogLevelNone, kLogRegionMeshCoP, aFormat, ## __VA_ARGS__)
-#else
-#define otLogCertMeshCoP(aFormat, ...)
-#endif
-
-/**
  * @def otDumpCert
  *
  * This method generates a memory dump with log level none for the certification test.
@@ -1144,7 +1144,7 @@ extern "C" {
  * @param[in]  aLength  Number of bytes to print.
  *
  */
-void otDump(otLogLevel aLevel, otLogRegion aRegion, const char *aId, const void *aBuf, const int aLength);
+void otDump(otLogLevel aLevel, otLogRegion aRegion, const char *aId, const void *aBuf, const size_t aLength);
 
 #ifdef __cplusplus
 };

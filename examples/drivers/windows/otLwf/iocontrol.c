@@ -3166,7 +3166,7 @@ otLwfIoCtl_otCommissionerAddJoiner(
     
     if (InBufferLength >= sizeof(uint8_t) + sizeof(otExtAddress))
     {
-        const ULONG aPSKdBufferLength = InBufferLength - sizeof(otExtAddress) - sizeof(otExtAddress);
+        const ULONG aPSKdBufferLength = InBufferLength - sizeof(uint8_t) - sizeof(otExtAddress);
 
         if (aPSKdBufferLength <= OPENTHREAD_PSK_MAX_LENGTH + 1)
         {

@@ -35,6 +35,8 @@
 #ifndef _LOGGING_WINDOWS_H
 #define _LOGGING_WINDOWS_H
 
+#define OPENTHREAD_ENABLE_CERT_LOG 1
+
 //
 // Tracing Definitions: {1AA98926-2E40-43D1-9D83-34C6BE816365}
 //
@@ -57,7 +59,9 @@
         WPP_DEFINE_BIT(OT_NCP)              /* 0x00001000 */    \
         WPP_DEFINE_BIT(OT_COAP)             /* 0x00002000 */    \
         WPP_DEFINE_BIT(OT_DEFAULT)          /* 0x00004000 */    \
-        WPP_DEFINE_BIT(OT_MBEDTLS)          /* 0x00002000 */    \
+        WPP_DEFINE_BIT(OT_MBEDTLS)          /* 0x00008000 */    \
+        WPP_DEFINE_BIT(OT_DUMP)             /* 0x00010000 */    \
+        WPP_DEFINE_BIT(OT_NDIAG)            /* 0x00020000 */    \
         )
 
 #define WPP_LEVEL_FLAGS_LOGGER(lvl,flag) \
@@ -220,6 +224,11 @@
 // begin_wpp config
 // USEPREFIX (otLogDebgMeshCoP, "COAP%!SPACE!");
 // otLogDebgMeshCoP{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_COAP}(MSG, ...);
+// end_wpp
+
+// begin_wpp config
+// USEPREFIX (otLogCertMeshCoP, "COAP%!SPACE!");
+// otLogCertMeshCoP{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_COAP}(MSG, ...);
 // end_wpp
 
 // ==MBEDTLS==
@@ -408,6 +417,34 @@
 // begin_wpp config
 // USEPREFIX (otLogDebgMem, "MEM%!SPACE!");
 // otLogDebgMem{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_MEM}(MSG, ...);
+// end_wpp
+
+// ==DUMP==
+
+// begin_wpp config
+// otLogDump{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_DUMP}(MSG, ...);
+// end_wpp
+
+// ==MEM==
+
+// begin_wpp config
+// USEPREFIX (otLogCritNetDiag, "NETDIAG%!SPACE!");
+// otLogCritNetDiag{LEVEL=TRACE_LEVEL_ERROR,FLAGS=OT_NDIAG}(MSG, ...);
+// end_wpp
+
+// begin_wpp config
+// USEPREFIX (otLogWarnNetDiag, "NETDIAG%!SPACE!");
+// otLogWarnNetDiag{LEVEL=TRACE_LEVEL_WARNING,FLAGS=OT_NDIAG}(MSG, ...);
+// end_wpp
+
+// begin_wpp config
+// USEPREFIX (otLogInfoNetDiag, "NETDIAG%!SPACE!");
+// otLogInfoNetDiag{LEVEL=TRACE_LEVEL_INFORMATION,FLAGS=OT_NDIAG}(MSG, ...);
+// end_wpp
+
+// begin_wpp config
+// USEPREFIX (otLogDebgNetDiag, "NETDIAG%!SPACE!");
+// otLogDebgNetDiag{LEVEL=TRACE_LEVEL_VERBOSE,FLAGS=OT_NDIAG}(MSG, ...);
 // end_wpp
 
 // ==FUNC==
