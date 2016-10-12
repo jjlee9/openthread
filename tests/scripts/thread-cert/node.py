@@ -760,9 +760,9 @@ class Node:
             if panid == None:
                 panid = 0
             if mesh_local == None:
-                mesh_local = 0
+                mesh_local = ""
             if network_name == None:
-                network_name = 0
+                network_name = ""
             if self.Api.otNodeSendActiveSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel), mesh_local.encode('utf-8'), network_name.encode('utf-8')) != 0:
                 raise OSError("otNodeSendActiveSet failed!")
         else:
@@ -1053,6 +1053,13 @@ class Node:
                                                   ctypes.c_ushort,
                                                   ctypes.c_char_p,
                                                   ctypes.c_char_p]
+
+        self.Api.otNodeSendActiveSet.argtypes = [ctypes.c_void_p,
+                                                 ctypes.c_ulonglong,
+                                                 ctypes.c_ushort,
+                                                 ctypes.c_ushort,
+                                                 ctypes.c_char_p,
+                                                 ctypes.c_char_p]
 
         self.Api.otNodeSetMaxChildren.argtypes = [ctypes.c_void_p, 
                                                   ctypes.c_ubyte]
