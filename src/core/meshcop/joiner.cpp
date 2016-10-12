@@ -107,7 +107,7 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
 {
     if (aResult != NULL)
     {
-        otLogFuncEntryMsg("aResult = %llX", HostSwap64(*(uint64_t*)&aResult->mExtAddress));
+        otLogFuncEntryMsg("aResult = %llX", HostSwap64(*(uint64_t *)&aResult->mExtAddress));
 
         SteeringDataTlv steeringData;
         Mac::ExtAddress extAddress;
@@ -154,6 +154,7 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
 
         mNetif.GetDtls().Start(true, HandleDtlsReceive, HandleDtlsSend, this);
     }
+
     otLogFuncExit();
 }
 
@@ -184,7 +185,7 @@ exit:
     {
         mTransmitMessage->Free();
     }
-    
+
     otLogFuncExitErr(error);
     return error;
 }
@@ -218,6 +219,7 @@ void Joiner::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessag
     {
         SendJoinerFinalize();
     }
+
     otLogFuncExit();
 }
 
@@ -236,7 +238,7 @@ void Joiner::HandleUdpTransmit(void)
 
     VerifyOrExit(mTransmitMessage != NULL, error = kThreadError_NoBufs);
 
-    otLogInfoMeshCoP("transmit %d (for %llX)\n", mTransmitMessage->GetLength(), HostSwap64(*(uint64_t*)&mJoinerRouter));
+    otLogInfoMeshCoP("transmit %d (for %llX)\n", mTransmitMessage->GetLength(), HostSwap64(*(uint64_t *)&mJoinerRouter));
 
     memset(&messageInfo, 0, sizeof(messageInfo));
     messageInfo.GetPeerAddr().mFields.m16[0] = HostSwap16(0xfe80);
@@ -331,6 +333,7 @@ exit:
     {
         message->Free();
     }
+
     otLogFuncExit();
 }
 

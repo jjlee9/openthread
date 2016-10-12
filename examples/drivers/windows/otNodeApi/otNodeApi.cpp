@@ -319,13 +319,6 @@ PingHandlerRecvCallback(
     // Make sure it didn't come from our address
     if (memcmp(&aPingHandler->mSourceAddr6.sin6_addr, &aPingHandler->mAddress, sizeof(IN6_ADDR)) != 0)
     {
-        CHAR szIpAddress[46] = { 0 };
-        RtlIpv6AddressToStringA(&aPingHandler->mSourceAddr6.sin6_addr, szIpAddress);
-        
-#if DEBUG_PING
-        printf("received ping (%d bytes) from %s\r\n", cbTransferred, szIpAddress);
-#endif
-
         bool shouldReply = true;
 
         // TODO - Fix this hack...
@@ -340,6 +333,12 @@ PingHandlerRecvCallback(
 
         if (shouldReply)
         {
+#if DEBUG_PING
+            CHAR szIpAddress[46] = { 0 };
+            RtlIpv6AddressToStringA(&aPingHandler->mSourceAddr6.sin6_addr, szIpAddress);
+            printf("%d: received ping (%d bytes) from %s\r\n", aPingHandler->mParentNode->mId, cbTransferred, szIpAddress);
+#endif
+
             // Send the received data back
             result = 
                 sendto(

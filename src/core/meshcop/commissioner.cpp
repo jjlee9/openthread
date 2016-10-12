@@ -81,7 +81,7 @@ Commissioner::Commissioner(ThreadNetif &aThreadNetif):
 ThreadError Commissioner::Start(void)
 {
     ThreadError error = kThreadError_None;
-    
+
     otLogFuncEntry();
     VerifyOrExit(mState == kStateDisabled, error = kThreadError_InvalidState);
 
@@ -100,7 +100,7 @@ exit:
 ThreadError Commissioner::Stop(void)
 {
     ThreadError error = kThreadError_None;
-    
+
     otLogFuncEntry();
     VerifyOrExit(mState != kStateDisabled, error = kThreadError_InvalidState);
 
@@ -119,7 +119,7 @@ ThreadError Commissioner::SendCommissionerSet(void)
     ThreadError error;
     otCommissioningDataset dataset;
     SteeringDataTlv steeringData;
-    
+
     otLogFuncEntry();
     VerifyOrExit(mState == kStateActive, error = kThreadError_InvalidState);
 
@@ -176,6 +176,7 @@ exit:
 void Commissioner::ClearJoiners(void)
 {
     otLogFuncEntry();
+
     for (size_t i = 0; i < sizeof(mJoiners) / sizeof(mJoiners[0]); i++)
     {
         mJoiners[i].mValid = false;
@@ -188,8 +189,8 @@ void Commissioner::ClearJoiners(void)
 ThreadError Commissioner::AddJoiner(const Mac::ExtAddress *aExtAddress, const char *aPSKd)
 {
     ThreadError error = kThreadError_NoBufs;
-    
-    otLogFuncEntryMsg("%llX, %s", (aExtAddress ? HostSwap64(*(uint64_t*)aExtAddress) : 0), aPSKd);
+
+    otLogFuncEntryMsg("%llX, %s", (aExtAddress ? HostSwap64(*(uint64_t *)aExtAddress) : 0), aPSKd);
     VerifyOrExit(strlen(aPSKd) <= Dtls::kPskMaxLength, error = kThreadError_InvalidArgs);
     RemoveJoiner(aExtAddress);
 
@@ -226,8 +227,9 @@ exit:
 ThreadError Commissioner::RemoveJoiner(const Mac::ExtAddress *aExtAddress)
 {
     ThreadError error = kThreadError_NotFound;
-    
-    otLogFuncEntryMsg("%llX", (aExtAddress ? HostSwap64(*(uint64_t*)aExtAddress) : 0));
+
+    otLogFuncEntryMsg("%llX", (aExtAddress ? HostSwap64(*(uint64_t *)aExtAddress) : 0));
+
     for (size_t i = 0; i < sizeof(mJoiners) / sizeof(mJoiners[0]); i++)
     {
         if (!mJoiners[i].mValid)
@@ -300,7 +302,7 @@ ThreadError Commissioner::SendMgmtCommissionerGetRequest(const uint8_t *aTlvs,
     Message *message;
     Ip6::MessageInfo messageInfo;
     MeshCoP::Tlv tlv;
-    
+
     otLogFuncEntry();
     mIsSendMgmtCommRequest = true;
 
@@ -342,7 +344,7 @@ exit:
         mIsSendMgmtCommRequest = false;
         message->Free();
     }
-    
+
     otLogFuncExitErr(error);
     return error;
 }
@@ -354,7 +356,7 @@ ThreadError Commissioner::SendMgmtCommissionerSetRequest(const otCommissioningDa
     Coap::Header header;
     Message *message;
     Ip6::MessageInfo messageInfo;
-    
+
     otLogFuncEntry();
     mIsSendMgmtCommRequest = true;
 
@@ -426,7 +428,7 @@ exit:
         mIsSendMgmtCommRequest = false;
         message->Free();
     }
-    
+
     otLogFuncExitErr(error);
     return error;
 }
@@ -438,7 +440,7 @@ ThreadError Commissioner::SendPetition(void)
     Message *message = NULL;
     Ip6::MessageInfo messageInfo;
     CommissionerIdTlv commissionerId;
-    
+
     otLogFuncEntry();
 
     if (mTransmitAttempts >= kPetitionRetryCount)
@@ -484,7 +486,7 @@ exit:
     {
         message->Free();
     }
-    
+
     otLogFuncExitErr(error);
     return error;
 }
@@ -497,7 +499,7 @@ ThreadError Commissioner::SendKeepAlive(void)
     Ip6::MessageInfo messageInfo;
     StateTlv state;
     CommissionerSessionIdTlv sessionId;
-    
+
     otLogFuncEntry();
 
     if (mTransmitAttempts >= kPetitionRetryCount)
@@ -546,7 +548,7 @@ exit:
     {
         message->Free();
     }
-    
+
     otLogFuncExitErr(error);
     return error;
 }
@@ -565,7 +567,7 @@ void Commissioner::HandleRelayReceive(Coap::Header &aHeader, Message &aMessage, 
     JoinerRouterLocatorTlv joinerRloc;
     uint16_t offset;
     uint16_t length;
-    
+
     otLogFuncEntry();
 
     VerifyOrExit(aHeader.GetType() == Coap::Header::kTypeNonConfirmable &&
@@ -586,7 +588,7 @@ void Commissioner::HandleRelayReceive(Coap::Header &aHeader, Message &aMessage, 
     mJoinerPort = joinerPort.GetUdpPort();
     mJoinerRloc = joinerRloc.GetJoinerRouterLocator();
 
-    otLogInfoMeshCoP("Received relay receive for %llX, rloc:%x\n", HostSwap64(*(uint64_t*)mJoinerIid), mJoinerRloc);
+    otLogInfoMeshCoP("Received relay receive for %llX, rloc:%x\n", HostSwap64(*(uint64_t *)&mJoinerIid[0]), mJoinerRloc);
 
     if (!mNetif.GetDtls().IsStarted())
     {
@@ -648,7 +650,7 @@ void Commissioner::SendDatasetChangedResponse(const Coap::Header &aRequestHeader
     ThreadError error = kThreadError_None;
     Coap::Header responseHeader;
     Message *message;
-    
+
     otLogFuncEntry();
     VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
     responseHeader.Init();
@@ -668,6 +670,7 @@ exit:
     {
         message->Free();
     }
+
     otLogFuncExit();
 }
 
@@ -682,7 +685,7 @@ void Commissioner::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     Coap::Header header;
     StateTlv state;
     CommissionerSessionIdTlv sessionId;
-    
+
     otLogFuncEntry();
     SuccessOrExit(header.FromMessage(aMessage));
     VerifyOrExit(header.GetType() == Coap::Header::kTypeAcknowledgment &&
@@ -744,7 +747,7 @@ ThreadError Commissioner::HandleDtlsSend(void *aContext, const uint8_t *aBuf, ui
 ThreadError Commissioner::HandleDtlsSend(const unsigned char *aBuf, uint16_t aLength)
 {
     ThreadError error = kThreadError_None;
-    
+
     otLogFuncEntry();
 
     if (mTransmitMessage == NULL)
@@ -803,7 +806,7 @@ exit:
     {
         mTransmitMessage->Free();
     }
-    
+
     otLogFuncExitErr(error);
     return error;
 }
@@ -832,7 +835,7 @@ void Commissioner::HandleUdpTransmit(void)
     ThreadError error = kThreadError_None;
     Ip6::MessageInfo messageInfo;
     ExtendedTlv tlv;
-    
+
     otLogFuncEntry();
     VerifyOrExit(mTransmitMessage != NULL, error = kThreadError_NoBufs);
 
@@ -869,7 +872,7 @@ void Commissioner::ReceiveJoinerFinalize(uint8_t *buf, uint16_t length)
 
     StateTlv::State state = StateTlv::kAccept;
     ProvisioningUrlTlv provisioningUrl;
-    
+
     otLogFuncEntry();
     otLogInfoMeshCoP("receive joiner finalize 1\n");
 
@@ -928,6 +931,7 @@ exit:
     {
         message->Free();
     }
+
     otLogFuncExit();
 }
 
