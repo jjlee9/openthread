@@ -907,7 +907,7 @@ otLwfFindFromCurrentThread()
 }
 #endif
 
-void *otPlatAlloc(size_t aNum, size_t aSize)
+void *otPlatCAlloc(size_t aNum, size_t aSize)
 {
     size_t totalSize = aNum * aSize;
 #if DBG

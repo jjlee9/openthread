@@ -2492,7 +2492,7 @@ __inline int windows_kernel_snprintf(char * s, size_t n, const char * format, ..
 /* Platform options */
 //#define MBEDTLS_PLATFORM_STD_MEM_HDR   <stdlib.h> /**< Header to include if MBEDTLS_PLATFORM_NO_STD_FUNCTIONS is defined. Don't define if no header is needed. */
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
-#define MBEDTLS_PLATFORM_STD_CALLOC     otPlatAlloc /**< Default allocator to use, can be undefined */
+#define MBEDTLS_PLATFORM_STD_CALLOC    otPlatCAlloc /**< Default allocator to use, can be undefined */
 #define MBEDTLS_PLATFORM_STD_FREE        otPlatFree /**< Default free to use, can be undefined */
 #endif
 //#define MBEDTLS_PLATFORM_STD_EXIT            exit /**< Default exit to use, can be undefined */
