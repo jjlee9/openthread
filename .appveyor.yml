@@ -67,7 +67,6 @@ test_script:
     # Flush the logging
     - cmd: logman stop Thread -ets
     - cmd: copy %SystemRoot%\System32\LogFiles\WMI\Thread.*
-    - cmd: copy %SystemRoot%\Logs\NetSetup\*
 artifacts:
 - path: release
   name: release
