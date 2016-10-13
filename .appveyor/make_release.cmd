@@ -30,15 +30,26 @@ pushd %APPVEYOR_BUILD_FOLDER%
 
 REM Make the release directory
 mkdir release
+mkdir release\symbols
+mkdir release\symbols\TraceFormat
+mkdir release\logs
 
 REM Copy the relavant binaries
 
 copy build\bin\%Platform2%\%Configuration%\sys\otlwf\* release
 copy build\bin\%Platform2%\%Configuration%\sys\otlwf.cer release
-copy build\bin\%Platform2%\%Configuration%\sys\otlwf.pdb release
+copy build\bin\%Platform2%\%Configuration%\sys\otlwf.pdb release\symbols
 copy build\bin\%Platform2%\%Configuration%\dll\otApi.dll release
-copy build\bin\%Platform2%\%Configuration%\dll\otApi.pdb release
+copy build\bin\%Platform2%\%Configuration%\dll\otApi.pdb release\symbols
+copy build\bin\%Platform2%\%Configuration%\dll\otNodeApi.dll release
+copy build\bin\%Platform2%\%Configuration%\dll\otNodeApi.pdb release\symbols
 copy build\bin\%Platform2%\%Configuration%\exe\otCli.exe release
-copy build\bin\%Platform2%\%Configuration%\exe\otCli.pdb release
+copy build\bin\%Platform2%\%Configuration%\exe\otCli.pdb release\symbols
+copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.exe release
+copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.pdb release\symbols
+
+REM Generate the trace format files to decode the WPP logs
+
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Bin\x64\TracePdb.exe" -f release\symbols\*.pdb -p release\symbols\TraceFormat
 
 popd
