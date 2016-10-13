@@ -238,7 +238,7 @@ void Joiner::HandleUdpTransmit(void)
 
     VerifyOrExit(mTransmitMessage != NULL, error = kThreadError_NoBufs);
 
-    otLogInfoMeshCoP("transmit %d (for %llX)\n", mTransmitMessage->GetLength(), HostSwap64(*(uint64_t *)&mJoinerRouter));
+    otLogInfoMeshCoP("transmit %d (to %llX)\n", mTransmitMessage->GetLength(), HostSwap64(*(uint64_t *)&mJoinerRouter));
 
     memset(&messageInfo, 0, sizeof(messageInfo));
     messageInfo.GetPeerAddr().mFields.m16[0] = HostSwap16(0xfe80);

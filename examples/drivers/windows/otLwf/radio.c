@@ -77,44 +77,15 @@ otLwfRadioSendPacket(
     );
 
 VOID 
-otLwfRadioInit(
+otLwfRadioGetFactoryAddress(
     _In_ PMS_FILTER pFilter
     )
 {
-    LogFuncEntry(DRIVER_DEFAULT);
-
-    NT_ASSERT(pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO);
-
-    // Initialize the OpenThread radio capability flags
-    pFilter->otRadioCapabilities = kRadioCapsEnergyScan;
-    if ((pFilter->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0)
-        pFilter->otRadioCapabilities |= kRadioCapsAckTimeout;
-
-    pFilter->otPhyState = kStateDisabled;
-    pFilter->otCurrentListenChannel = 0xFF;
-    pFilter->otPromiscuous = false;
-
-    pFilter->otReceiveFrame.mPsdu = pFilter->otReceiveMessage;
-    pFilter->otTransmitFrame.mPsdu = pFilter->otTransmitMessage;
-    
-    pFilter->otPendingMacOffloadEnabled = FALSE;
-    pFilter->otPendingShortAddressCount = 0;
-    pFilter->otPendingExtendedAddressCount = 0;
-    
-    LogInfo(DRIVER_DEFAULT, "Filter %p PhyState = kStateDisabled.", pFilter);
-    
-    LogFuncExit(DRIVER_DEFAULT);
-}
-
-void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
-{
-    NT_ASSERT(otCtx);
-    PMS_FILTER pFilter = otCtxToFilter(otCtx);
     NDIS_STATUS status;
     ULONG bytesProcessed;
     OT_FACTORY_EXTENDED_ADDRESS OidBuffer = { {0} };
 
-    RtlZeroMemory(aIeeeEui64, sizeof(ULONGLONG));
+    RtlZeroMemory(&pFilter->otFactoryAddress, sizeof(pFilter->otFactoryAddress));
 
     // Query the MP for the address
     status = 
@@ -142,9 +113,49 @@ void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
         return;
     }
 
-    LogInfo(DRIVER_DEFAULT, "Interface %!GUID! get factory Extended Mac Address: %llX", &pFilter->InterfaceGuid, OidBuffer.ExtendedAddress);
+    LogInfo(DRIVER_DEFAULT, "Interface %!GUID! cached factory Extended Mac Address: %llX", &pFilter->InterfaceGuid, OidBuffer.ExtendedAddress);
 
-    memcpy(aIeeeEui64, &OidBuffer.ExtendedAddress, sizeof(ULONGLONG));
+    pFilter->otFactoryAddress = OidBuffer.ExtendedAddress;
+}
+
+VOID 
+otLwfRadioInit(
+    _In_ PMS_FILTER pFilter
+    )
+{
+    LogFuncEntry(DRIVER_DEFAULT);
+
+    NT_ASSERT(pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO);
+
+    // Initialize the OpenThread radio capability flags
+    pFilter->otRadioCapabilities = kRadioCapsEnergyScan;
+    if ((pFilter->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0)
+        pFilter->otRadioCapabilities |= kRadioCapsAckTimeout;
+
+    pFilter->otPhyState = kStateDisabled;
+    pFilter->otCurrentListenChannel = 0xFF;
+    pFilter->otPromiscuous = false;
+
+    pFilter->otReceiveFrame.mPsdu = pFilter->otReceiveMessage;
+    pFilter->otTransmitFrame.mPsdu = pFilter->otTransmitMessage;
+    
+    pFilter->otPendingMacOffloadEnabled = FALSE;
+    pFilter->otPendingShortAddressCount = 0;
+    pFilter->otPendingExtendedAddressCount = 0;
+
+    // Cache the factory address
+    otLwfRadioGetFactoryAddress(pFilter);
+    
+    LogInfo(DRIVER_DEFAULT, "Filter %p PhyState = kStateDisabled.", pFilter);
+    
+    LogFuncExit(DRIVER_DEFAULT);
+}
+
+void otPlatRadioGetIeeeEui64(otInstance *otCtx, uint8_t *aIeeeEui64)
+{
+    NT_ASSERT(otCtx);
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    memcpy(aIeeeEui64, &pFilter->otFactoryAddress, sizeof(ULONGLONG));
 }
 
 void otPlatRadioSetPanId(_In_ otInstance *otCtx, uint16_t panid)

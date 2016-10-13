@@ -51,6 +51,7 @@
 #include <thread/thread_uris.hpp>
 
 using Thread::Encoding::BigEndian::HostSwap16;
+using Thread::Encoding::BigEndian::HostSwap64;
 
 namespace Thread {
 namespace MeshCoP {
@@ -185,7 +186,7 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     ExtendedTlv tlv;
     uint16_t borderAgentRloc;
 
-    otLogFuncEntry();
+    otLogFuncEntryMsg("from peer: %llX", HostSwap64(*(uint64_t *)(aMessageInfo.GetPeerAddr().mFields.m8 + 8)));
     otLogInfoMeshCoP("JoinerRouter::HandleUdpReceive\n");
 
     SuccessOrExit(error = GetBorderAgentRloc(borderAgentRloc));

@@ -179,6 +179,7 @@ typedef struct _MS_FILTER
 
     BOOLEAN                         otPromiscuous;
     uint16_t                        otPanID;
+    uint64_t                        otFactoryAddress;
     uint64_t                        otExtendedAddress;
     uint16_t                        otShortAddress;
 

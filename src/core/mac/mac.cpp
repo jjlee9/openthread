@@ -43,6 +43,7 @@
 
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
+#include <common/encoding.hpp>
 #include <common/logging.hpp>
 #include <crypto/aes_ccm.hpp>
 #include <crypto/sha256.hpp>
@@ -52,6 +53,8 @@
 #include <thread/mle_router.hpp>
 #include <thread/thread_netif.hpp>
 #include <openthread-instance.h>
+
+using Thread::Encoding::BigEndian::HostSwap64;
 
 namespace Thread {
 namespace Mac {
@@ -360,6 +363,8 @@ ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
     ThreadError error = kThreadError_None;
     uint8_t buf[sizeof(aExtAddress)];
 
+    otLogFuncEntry();
+
     VerifyOrExit(!aExtAddress.IsGroup(), error = kThreadError_InvalidArgs);
 
     for (size_t i = 0; i < sizeof(buf); i++)
@@ -371,6 +376,7 @@ ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
     mExtAddress = aExtAddress;
 
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 
@@ -379,6 +385,8 @@ void Mac::GetHashMacAddress(ExtAddress *aHashMacAddress)
     Crypto::Sha256 sha256;
     uint8_t buf[Crypto::Sha256::kHashSize];
 
+    otLogFuncEntry();
+
     otPlatRadioGetIeeeEui64(mNetif.GetInstance(), buf);
     sha256.Start();
     sha256.Update(buf, OT_EXT_ADDRESS_SIZE);
@@ -386,6 +394,9 @@ void Mac::GetHashMacAddress(ExtAddress *aHashMacAddress)
 
     memcpy(aHashMacAddress->m8, buf, OT_EXT_ADDRESS_SIZE);
     aHashMacAddress->SetLocal(true);
+    aHashMacAddress->SetGroup(false);
+
+    otLogFuncExitMsg("%llX", HostSwap64(*(uint64_t *)aHashMacAddress));
 }
 
 ShortAddress Mac::GetShortAddress(void) const
@@ -395,8 +406,10 @@ ShortAddress Mac::GetShortAddress(void) const
 
 ThreadError Mac::SetShortAddress(ShortAddress aShortAddress)
 {
+    otLogFuncEntryMsg("%d", aShortAddress);
     mShortAddress = aShortAddress;
     otPlatRadioSetShortAddress(mNetif.GetInstance(), aShortAddress);
+    otLogFuncExit();
     return kThreadError_None;
 }
 
@@ -407,6 +420,7 @@ uint8_t Mac::GetChannel(void) const
 
 ThreadError Mac::SetChannel(uint8_t aChannel)
 {
+    otLogFuncEntryMsg("%d", aChannel);
     mChannel = aChannel;
 
     if (mState == kStateIdle)
@@ -414,6 +428,7 @@ ThreadError Mac::SetChannel(uint8_t aChannel)
         NextOperation();
     }
 
+    otLogFuncExit();
     return kThreadError_None;
 }
 
@@ -435,6 +450,7 @@ const char *Mac::GetNetworkName(void) const
 ThreadError Mac::SetNetworkName(const char *aNetworkName)
 {
     ThreadError error = kThreadError_None;
+    otLogFuncEntryMsg("%s", aNetworkName);
 
     VerifyOrExit(strlen(aNetworkName) <= OT_NETWORK_NAME_MAX_SIZE, error = kThreadError_InvalidArgs);
 
@@ -446,6 +462,7 @@ ThreadError Mac::SetNetworkName(const char *aNetworkName)
 #endif
 
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 
@@ -456,8 +473,10 @@ PanId Mac::GetPanId(void) const
 
 ThreadError Mac::SetPanId(PanId aPanId)
 {
+    otLogFuncEntryMsg("%d", aPanId);
     mPanId = aPanId;
     otPlatRadioSetPanId(mNetif.GetInstance(), mPanId);
+    otLogFuncExit();
     return kThreadError_None;
 }
 

@@ -1776,7 +1776,7 @@ OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimesta
         aDataset.mIsChannelSet = true;
     }
 
-    if (aChannel != 0)
+    if (aChannelMask != 0)
     {
         aDataset.mChannelMaskPage0 = aChannelMask;
         aDataset.mIsChannelMaskPage0Set = true;
