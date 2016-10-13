@@ -33,6 +33,7 @@ mkdir test_release
 
 REM Copy the relavant binaries
 
+copy build\bin\%Platform2%\%Configuration%\sys\otlwf.pdb test_release
 copy build\bin\%Platform2%\%Configuration%\dll\ot*.dll test_release
 copy build\bin\%Platform2%\%Configuration%\dll\ot*.pdb test_release
 copy build\bin\%Platform2%\%Configuration%\exe\otTestRunner.* test_release

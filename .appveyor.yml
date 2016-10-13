@@ -38,7 +38,6 @@ clone_depth: 10
 install:
     - cmd: Bcdedit.exe -set TESTSIGNING ON
     # Configure logging
-    - cmd del /F %SystemRoot%\System32\LogFiles\WMI\Thread.*
     - cmd: reg import .appveyor\ThreadEtw.reg
     - ps: Restart-Computer -Force
     - ps: Start-Sleep -s 10
