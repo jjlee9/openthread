@@ -358,14 +358,11 @@ const ExtAddress *Mac::GetExtAddress(void) const
     return &mExtAddress;
 }
 
-ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
+void Mac::SetExtAddress(const ExtAddress &aExtAddress)
 {
-    ThreadError error = kThreadError_None;
     uint8_t buf[sizeof(aExtAddress)];
 
     otLogFuncEntry();
-
-    VerifyOrExit(!aExtAddress.IsGroup(), error = kThreadError_InvalidArgs);
 
     for (size_t i = 0; i < sizeof(buf); i++)
     {
@@ -375,9 +372,7 @@ ThreadError Mac::SetExtAddress(const ExtAddress &aExtAddress)
     otPlatRadioSetExtendedAddress(mNetif.GetInstance(), buf);
     mExtAddress = aExtAddress;
 
-exit:
-    otLogFuncExitErr(error);
-    return error;
+    otLogFuncExit();
 }
 
 void Mac::GetHashMacAddress(ExtAddress *aHashMacAddress)
@@ -394,7 +389,6 @@ void Mac::GetHashMacAddress(ExtAddress *aHashMacAddress)
 
     memcpy(aHashMacAddress->m8, buf, OT_EXT_ADDRESS_SIZE);
     aHashMacAddress->SetLocal(true);
-    aHashMacAddress->SetGroup(false);
 
     otLogFuncExitMsg("%llX", HostSwap64(*(uint64_t *)aHashMacAddress));
 }
