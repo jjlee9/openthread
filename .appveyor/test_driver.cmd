@@ -28,16 +28,19 @@ REM
 
 IF NOT "%Platform"=="x64" ( GOTO :EOF )
 
-pushd %APPVEYOR_BUILD_FOLDER%\build\bin\%Platform2%\%Configuration%\sys
+pushd %APPVEYOR_BUILD_FOLDER%\release
 
-REM Install the certifications to the cert stores
-certutil -addstore root otLwf.cer
-certutil -addstore TrustedPublisher otLwf.cer
+REM Query the driver state
 
-cd otLwf
+sc query otlwf
 
-REM Install the NDSI LWF driver, otLwf.sys
+REM Run the basic driver test
 
-netcfg.exe -v -l otlwf.inf -c s -i otLwf
+otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
+
+REM Grab the logs
+
+logman stop Thread -ets
+copy %SystemRoot%\System32\LogFiles\WMI\Thread.* logs
 
 popd

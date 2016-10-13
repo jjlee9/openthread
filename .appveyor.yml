@@ -49,22 +49,13 @@ after_build:
     - ps: If ($env:Platform2 -eq "x86") { $env:Platform2 = "Win32" }
     # Set up the release directories
     - cmd: .appveyor\make_release.cmd
-    # Install driver
+    # Install driver (only runs on x64)
     - cmd: .appveyor\install_driver.cmd
-    # Restart the machine to apply the driver installs
-    - ps: Restart-Computer -Force
-    - ps: Start-Sleep -s 10
 test_script:
     # Run the unit tests
     - cmd: vstest.console /logger:Appveyor /inIsolation /platform:%Platform% build\bin\%Platform2%\%Configuration%\dll\UnitTests.dll
-    # Run the sanity test for the driver
-    - cmd: cd release
-    #- ps: If ($env:Platform -eq "x86") { net start otLwf }
-    - cmd: sc query otlwf
-    - cmd: otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor
-    # Flush the logging
-    - cmd: logman stop Thread -ets
-    - cmd: copy %SystemRoot%\System32\LogFiles\WMI\Thread.* logs
+    # Run the tests for the driver (only runs on x64)
+    - cmd: .appveyor\test_driver.cmd
 artifacts:
 - path: release
   name: release
