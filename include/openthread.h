@@ -329,8 +329,8 @@ void otInstanceFinalize(otInstance *aInstance);
  *
  * @param[in] aInstance A pointer to an OpenThread instance.
  *
- * @retval kThreadError_None          Successfully enabled the IPv6 interface.
- * @retval kThreadError_InvalidState  OpenThread is not enabled or the IPv6 interface is already up.
+ * @retval kThreadError_None          Successfully enabled the IPv6 interface,
+ *                                    or the interface was already enabled.
  *
  */
 OTAPI ThreadError OTCALL otInterfaceUp(otInstance *aInstance);
@@ -342,8 +342,8 @@ OTAPI ThreadError OTCALL otInterfaceUp(otInstance *aInstance);
  *
  * @param[in] aInstance A pointer to an OpenThread instance.
  *
- * @retval kThreadError_None          Successfully brought the interface down.
- * @retval kThreadError_InvalidState  The interface was not up.
+ * @retval kThreadError_None          Successfully brought the interface down,
+ *                                    or the interface was already down.
  *
  */
 OTAPI ThreadError OTCALL otInterfaceDown(otInstance *aInstance);
@@ -367,7 +367,7 @@ OTAPI bool OTCALL otIsInterfaceUp(otInstance *aInstance);
  * @param[in] aInstance A pointer to an OpenThread instance.
  *
  * @retval kThreadError_None          Successfully started Thread protocol operation.
- * @retval kThreadError_InvalidState  Thread protocol operation is already started or the interface is not up.
+ * @retval kThreadError_InvalidState  The network interface was not not up.
  *
  */
 OTAPI ThreadError OTCALL otThreadStart(otInstance *aInstance);
@@ -378,7 +378,6 @@ OTAPI ThreadError OTCALL otThreadStart(otInstance *aInstance);
  * @param[in] aInstance A pointer to an OpenThread instance.
  *
  * @retval kThreadError_None          Successfully stopped Thread protocol operation.
- * @retval kThreadError_InvalidState  The Thread protocol operation was not started.
  *
  */
 OTAPI ThreadError OTCALL otThreadStop(otInstance *aInstance);
@@ -554,14 +553,17 @@ OTAPI uint8_t OTCALL otGetMaxAllowedChildren(otInstance *aInstance);
 /**
  * Set the maximum number of children currently allowed.
  *
+ * This parameter can only be set when Thread protocol operation
+ * has been stopped.
+ *
  * @param[in]  aInstance     A pointer to an OpenThread instance.
  * @param[in]  aMaxChildren  The maximum allowed children.
  *
  * @retval  kThreadErrorNone           Successfully set the max.
  * @retval  kThreadError_InvalidArgs   If @p aMaxChildren is not in the range [1, OPENTHREAD_CONFIG_MAX_CHILDREN].
- * @retval  kThreadError_InvalidState  If Thread has already been started.
+ * @retval  kThreadError_InvalidState  If Thread isn't stopped.
  *
- * @sa otGetMaxAllowedChildren
+ * @sa otGetMaxAllowedChildren, otThreadStop
  */
 OTAPI ThreadError OTCALL otSetMaxAllowedChildren(otInstance *aInstance, uint8_t aMaxChildren);
 
@@ -1578,8 +1580,8 @@ OTAPI bool OTCALL otIsMacWhitelistEnabled(otInstance *aInstance);
  *
  * @param[in]  aInstance A pointer to an OpenThread instance.
  *
- * @retval kThreadErrorNone    Successfully detached from the Thread network.
- * @retval kThreadErrorBusy    Thread is disabled.
+ * @retval kThreadErrorNone          Successfully detached from the Thread network.
+ * @retval kThreadErrorInvalidState  Thread is disabled.
  */
 OTAPI ThreadError OTCALL otBecomeDetached(otInstance *aInstance);
 
@@ -1589,8 +1591,8 @@ OTAPI ThreadError OTCALL otBecomeDetached(otInstance *aInstance);
  * @param[in]  aInstance A pointer to an OpenThread instance.
  * @param[in]  aFilter   Identifies whether to join any, same, or better partition.
  *
- * @retval kThreadErrorNone    Successfully begin attempt to become a child.
- * @retval kThreadErrorBusy    Thread is disabled or in the middle of an attach process.
+ * @retval kThreadErrorNone          Successfully begin attempt to become a child.
+ * @retval kThreadErrorInvalidState  Thread is disabled.
  */
 OTAPI ThreadError OTCALL otBecomeChild(otInstance *aInstance, otMleAttachFilter aFilter);
 
@@ -1599,8 +1601,8 @@ OTAPI ThreadError OTCALL otBecomeChild(otInstance *aInstance, otMleAttachFilter 
  *
  * @param[in]  aInstance A pointer to an OpenThread instance.
  *
- * @retval kThreadErrorNone    Successfully begin attempt to become a router.
- * @retval kThreadErrorBusy    Thread is disabled or already operating in a router or leader role.
+ * @retval kThreadErrorNone         Successfully begin attempt to become a router.
+ * @retval kThreadErrorInvalidState Thread is disabled.
  */
 OTAPI ThreadError OTCALL otBecomeRouter(otInstance *aInstance);
 
@@ -1609,7 +1611,8 @@ OTAPI ThreadError OTCALL otBecomeRouter(otInstance *aInstance);
  *
  * @param[in]  aInstance A pointer to an OpenThread instance.
  *
- * @retval kThreadErrorNone  Successfully became a leader and started a new partition.
+ * @retval kThreadErrorNone          Successfully became a leader and started a new partition.
+ * @retval kThreadErrorInvalidState  Thread is disabled.
  */
 OTAPI ThreadError OTCALL otBecomeLeader(otInstance *aInstance);
 
@@ -2011,8 +2014,9 @@ bool otIsLinkPromiscuous(otInstance *aInstance);
  * @param[in]  aInstance     A pointer to an OpenThread instance.
  * @param[in]  aPromiscuous  true to enable promiscuous mode, or false otherwise.
  *
- * @retval kThreadError_None  Successfully enabled promiscuous mode.
- * @retval kThreadError_Busy  Could not enable promiscuous mode because the Thread interface is enabled.
+ * @retval kThreadError_None          Successfully enabled promiscuous mode.
+ * @retval kThreadError_InvalidState  Could not enable promiscuous mode because
+ *                                    the Thread interface is enabled.
  *
  */
 ThreadError otSetLinkPromiscuous(otInstance *aInstance, bool aPromiscuous);
@@ -2380,8 +2384,8 @@ otMessage otNewUdpMessage(otInstance *aInstance);
  * @param[in]  aCallback  A pointer to the application callback function.
  * @param[in]  aContext   A pointer to application-specific context.
  *
- * @retval kThreadErrorNone  Successfully opened the socket.
- * @retval kThreadErrorBusy  Socket is already opened.
+ * @retval kThreadErrorNone         Successfully opened the socket.
+ * @retval kThreadErrorInvalidArgs  Given socket structure was already opened.
  *
  * @sa otNewUdpMessage
  * @sa otCloseUdpSocket

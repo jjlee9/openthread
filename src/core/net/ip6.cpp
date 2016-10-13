@@ -234,7 +234,7 @@ void Ip6::HandleSendQueue(void)
     }
 }
 
-ThreadError Ip6::HandleOptions(Message &message, Header &header)
+ThreadError Ip6::HandleOptions(Message &message, Header &header, bool &forward)
 {
     ThreadError error = kThreadError_None;
     HopByHopHeader hbhHeader;
@@ -253,7 +253,7 @@ ThreadError Ip6::HandleOptions(Message &message, Header &header)
         switch (optionHeader.GetType())
         {
         case OptionMpl::kType:
-            SuccessOrExit(error = mMpl.ProcessOption(message, header.GetSource()));
+            SuccessOrExit(error = mMpl.ProcessOption(message, header.GetSource(), forward));
             break;
 
         default:
@@ -309,7 +309,8 @@ exit:
     return error;
 }
 
-ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_t &nextHeader, bool receive)
+ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_t &nextHeader, bool &forward,
+                                        bool receive)
 {
     ThreadError error = kThreadError_None;
     ExtensionHeader extensionHeader;
@@ -323,7 +324,7 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
         switch (nextHeader)
         {
         case kProtoHopOpts:
-            SuccessOrExit(error = HandleOptions(message, header));
+            SuccessOrExit(error = HandleOptions(message, header, forward));
             break;
 
         case kProtoFragment:
@@ -331,7 +332,7 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
             break;
 
         case kProtoDstOpts:
-            SuccessOrExit(error = HandleOptions(message, header));
+            SuccessOrExit(error = HandleOptions(message, header, forward));
             break;
 
         case kProtoIp6:
@@ -477,11 +478,7 @@ ThreadError Ip6::HandleDatagram(Message &message, Netif *netif, int8_t interface
             receive = true;
         }
 
-        if (header.GetDestination().GetScope() > Address::kLinkLocalScope)
-        {
-            forward = true;
-        }
-        else if (netif == NULL)
+        if (netif == NULL)
         {
             forward = true;
         }
@@ -502,16 +499,16 @@ ThreadError Ip6::HandleDatagram(Message &message, Netif *netif, int8_t interface
         }
     }
 
-    if (!mForwardingEnabled && netif != NULL)
-    {
-        forward = false;
-    }
-
     message.SetOffset(sizeof(header));
 
     // process IPv6 Extension Headers
     nextHeader = static_cast<uint8_t>(header.GetNextHeader());
-    SuccessOrExit(error = HandleExtensionHeaders(message, header, nextHeader, receive));
+    SuccessOrExit(error = HandleExtensionHeaders(message, header, nextHeader, forward, receive));
+
+    if (!mForwardingEnabled && netif != NULL)
+    {
+        forward = false;
+    }
 
     // process IPv6 Payload
     if (receive)
@@ -633,7 +630,7 @@ ThreadError Ip6::AddNetif(Netif &aNetif)
         {
             if (netif == &aNetif)
             {
-                ExitNow(error = kThreadError_Busy);
+                ExitNow(error = kThreadError_Already);
             }
         }
         while (netif->mNext);
@@ -654,9 +651,9 @@ exit:
 
 ThreadError Ip6::RemoveNetif(Netif &aNetif)
 {
-    ThreadError error = kThreadError_None;
+    ThreadError error = kThreadError_NotFound;
 
-    VerifyOrExit(mNetifListHead != NULL, error = kThreadError_Busy);
+    VerifyOrExit(mNetifListHead != NULL, error = kThreadError_NotFound);
 
     if (mNetifListHead == &aNetif)
     {
@@ -672,6 +669,7 @@ ThreadError Ip6::RemoveNetif(Netif &aNetif)
             }
 
             netif->mNext = aNetif.mNext;
+            error = kThreadError_None;
             break;
         }
     }

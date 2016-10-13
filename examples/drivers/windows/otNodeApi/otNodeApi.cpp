@@ -1754,7 +1754,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey)
+OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId, uint16_t aChannel, uint32_t aChannelMask, const char *aMasterKey)
 {
     otLogFuncEntryMsg("[%d] 0x%llX %d %d", aNode->mId, aTimestamp, aPanId, aChannel);
     printf("%d: dataset set active 0x%llX %d %d\r\n", aNode->mId, aTimestamp, aPanId, aChannel);
@@ -1774,6 +1774,12 @@ OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimesta
     {
         aDataset.mChannel = aChannel;
         aDataset.mIsChannelSet = true;
+    }
+
+    if (aChannel != 0)
+    {
+        aDataset.mChannelMaskPage0 = aChannelMask;
+        aDataset.mIsChannelMaskPage0Set = true;
     }
 
     if (aMasterKey != NULL && strlen(aMasterKey) != 0)
@@ -1828,7 +1834,7 @@ OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActive
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp, uint64_t aPendingTimestamp, uint32_t aDelayTimer, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey, const char *aMeshLocal)
+OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp, uint64_t aPendingTimestamp, uint32_t aDelayTimer, uint16_t aPanId, uint16_t aChannel, const char *aMasterKey, const char *aMeshLocal, const char *aNetworkName)
 {
     otLogFuncEntryMsg("[%d] 0x%llX 0x%llX %d %d", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
     printf("%d: dataset send pending 0x%llX 0x%llX %d %d\r\n", aNode->mId, aActiveTimestamp, aPendingTimestamp, aPanId, aChannel);
@@ -1883,6 +1889,12 @@ OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTim
         if (error != kThreadError_None) return error;
         memcpy(aDataset.mMeshLocalPrefix.m8, prefix.mFields.m8, sizeof(aDataset.mMeshLocalPrefix.m8));
         aDataset.mIsMeshLocalPrefixSet = true;
+    }
+
+    if (aNetworkName != NULL && strlen(aNetworkName) != 0)
+    {
+        strcpy_s(aDataset.mNetworkName.m8, sizeof(aDataset.mNetworkName.m8), aNetworkName);
+        aDataset.mIsNetworkNameSet = true;
     }
 
     auto result = otSendPendingSet(aNode->mInstance, &aDataset, nullptr, 0);

@@ -338,7 +338,7 @@ OTNODEAPI int32_t OTCALL otNodeCommissionerAnnounceBegin(otNode* aNode, uint32_t
 /**
  * Sets the active dataset for a node
  */
-OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL);
+OTNODEAPI int32_t OTCALL otNodeSetActiveDataset(otNode* aNode, uint64_t aTimestamp, uint16_t aPanId = 0, uint16_t aChannel = 0, uint32_t aChannelMask = 0, const char *aMasterKey = NULL);
 
 /**
  * Sets the pending dataset for a node
@@ -348,7 +348,7 @@ OTNODEAPI int32_t OTCALL otNodeSetPendingDataset(otNode* aNode, uint64_t aActive
 /**
  * Sends a pending set for a node
  */
-OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint32_t aDelayTimer = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL, const char *aMeshLocal = NULL);
+OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTimestamp = 0, uint64_t aPendingTimestamp = 0, uint32_t aDelayTimer = 0, uint16_t aPanId = 0, uint16_t aChannel = 0, const char *aMasterKey = NULL, const char *aMeshLocal = NULL, const char *aNetworkName = NULL);
 
 /**
  * Sends a active set for a node

@@ -162,6 +162,7 @@ Mle::Mle(ThreadNetif &aThreadNetif) :
     mRouterSelectionJitterTimeout = 0;
     mRouterSelectionJitter = kRouterSelectionJitter;
 
+    mAnnounceChannel = kPhyMinChannel;
     mPreviousPanId = Mac::kPanIdBroadcast;
 }
 
@@ -197,7 +198,7 @@ ThreadError Mle::Start(void)
     otLogFuncEntry();
 
     // cannot bring up the interface if IEEE 802.15.4 promiscuous mode is enabled
-    VerifyOrExit(otPlatRadioGetPromiscuous(mNetif.GetInstance()) == false, error = kThreadError_Busy);
+    VerifyOrExit(otPlatRadioGetPromiscuous(mNetif.GetInstance()) == false, error = kThreadError_InvalidState);
     VerifyOrExit(mNetif.IsUp(), error = kThreadError_InvalidState);
 
     mDeviceState = kDeviceStateDetached;
@@ -310,7 +311,7 @@ ThreadError Mle::BecomeDetached(void)
 
     otLogFuncEntry();
 
-    VerifyOrExit(mDeviceState != kDeviceStateDisabled, error = kThreadError_Busy);
+    VerifyOrExit(mDeviceState != kDeviceStateDisabled, error = kThreadError_InvalidState);
 
     SetStateDetached();
     SetRloc16(Mac::kShortAddrInvalid);
@@ -327,8 +328,8 @@ ThreadError Mle::BecomeChild(otMleAttachFilter aFilter)
 
     otLogFuncEntry();
 
-    VerifyOrExit(mDeviceState != kDeviceStateDisabled &&
-                 mParentRequestState == kParentIdle, error = kThreadError_Busy);
+    VerifyOrExit(mDeviceState != kDeviceStateDisabled, error = kThreadError_InvalidState);
+    VerifyOrExit(mParentRequestState == kParentIdle, error = kThreadError_Busy);
 
     mParentRequestState = kParentRequestStart;
     mParentRequestMode = aFilter;
@@ -948,12 +949,15 @@ exit:
 
 ThreadError Mle::AppendActiveTimestamp(Message &aMessage)
 {
+    ThreadError error;
     ActiveTimestampTlv timestampTlv;
     const MeshCoP::Timestamp *timestamp(mNetif.GetActiveDataset().GetNetwork().GetTimestamp());
 
+    VerifyOrExit(timestamp || mDeviceState == kDeviceStateLeader, error = kThreadError_None);
+
     timestampTlv.Init();
 
-    // set active timestamp to 0 if there is no valid active operational dataset
+    // only for Leader: set active timestamp to 0 if it is not initialized
     if (timestamp == NULL)
     {
         timestampTlv.SetSeconds(0);
@@ -964,7 +968,10 @@ ThreadError Mle::AppendActiveTimestamp(Message &aMessage)
         *static_cast<MeshCoP::Timestamp *>(&timestampTlv) = *timestamp;
     }
 
-    return aMessage.Append(&timestampTlv, sizeof(timestampTlv));
+    error = aMessage.Append(&timestampTlv, sizeof(timestampTlv));
+
+exit:
+    return error;
 }
 
 ThreadError Mle::AppendPendingTimestamp(Message &aMessage)
@@ -1097,6 +1104,11 @@ void Mle::HandleParentRequestTimer(void)
                     mMac.SetChannel(mPreviousChannel);
                     mMac.SetPanId(mPreviousPanId);
                     mPreviousPanId = Mac::kPanIdBroadcast;
+                    BecomeDetached();
+                }
+                else if ((mDeviceMode & ModeTlv::kModeFFD) == 0)
+                {
+                    SendOrphanAnnounce();
                     BecomeDetached();
                 }
                 else if (mMleRouter.BecomeLeader() != kThreadError_None)
@@ -1402,6 +1414,48 @@ exit:
 
     return error;
 }
+
+void Mle::SendOrphanAnnounce(void)
+{
+    MeshCoP::ChannelMask0Tlv *channelMask;
+    uint8_t channel;
+
+    channelMask = static_cast<MeshCoP::ChannelMask0Tlv *>(mNetif.GetActiveDataset().GetNetwork().Get(
+                                                              MeshCoP::Tlv::kChannelMask));
+
+    VerifyOrExit(channelMask != NULL,);
+
+    // find next channel in the Active Operational Dataset Channel Mask
+    channel = mAnnounceChannel;
+
+    while (!channelMask->IsChannelSet(channel))
+    {
+        channel++;
+
+        if (channel > kPhyMaxChannel)
+        {
+            channel = kPhyMinChannel;
+        }
+
+        VerifyOrExit(channel != mAnnounceChannel,);
+    }
+
+    // Send Annuonce message
+    SendAnnounce(channel);
+
+    // Move to next channel
+    mAnnounceChannel++;
+
+    if (mAnnounceChannel > kPhyMaxChannel)
+    {
+        mAnnounceChannel = kPhyMinChannel;
+    }
+
+exit:
+    return;
+}
+
+
 
 ThreadError Mle::SendMessage(Message &aMessage, const Ip6::Address &aDestination)
 {
@@ -1825,13 +1879,11 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
     VerifyOrExit(networkData.IsValid(), error = kThreadError_Parse);
 
     // Active Timestamp
-    SuccessOrExit(error = Tlv::GetTlv(aMessage, Tlv::kActiveTimestamp, sizeof(activeTimestamp), activeTimestamp));
-    VerifyOrExit(activeTimestamp.IsValid(), error = kThreadError_Parse);
-
-    if (activeTimestamp.GetSeconds() != 0)
+    if (Tlv::GetTlv(aMessage, Tlv::kActiveTimestamp, sizeof(activeTimestamp), activeTimestamp) == kThreadError_None)
     {
         const MeshCoP::Timestamp *timestamp;
 
+        VerifyOrExit(activeTimestamp.IsValid(), error = kThreadError_Parse);
         timestamp = mNetif.GetActiveDataset().GetNetwork().GetTimestamp();
 
         // if received timestamp does not match the local value and message does not contain the dataset,
@@ -2142,18 +2194,11 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
     {
         VerifyOrExit(activeTimestamp.IsValid(), error = kThreadError_Parse);
 
-        if (activeTimestamp.GetSeconds() != 0)
+        // Active Dataset
+        if (Tlv::GetOffset(aMessage, Tlv::kActiveDataset, offset) == kThreadError_None)
         {
-            // Active Dataset
-            if (Tlv::GetOffset(aMessage, Tlv::kActiveDataset, offset) == kThreadError_None)
-            {
-                aMessage.Read(offset, sizeof(tlv), &tlv);
-                mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
-            }
-        }
-        else
-        {
-            mNetif.GetActiveDataset().Clear();
+            aMessage.Read(offset, sizeof(tlv), &tlv);
+            mNetif.GetActiveDataset().Set(activeTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
         }
     }
 
@@ -2168,10 +2213,6 @@ ThreadError Mle::HandleChildIdResponse(const Message &aMessage, const Ip6::Messa
             aMessage.Read(offset, sizeof(tlv), &tlv);
             mNetif.GetPendingDataset().Set(pendingTimestamp, aMessage, offset + sizeof(tlv), tlv.GetLength());
         }
-    }
-    else
-    {
-        mNetif.GetPendingDataset().Clear();
     }
 
     // Parent Attach Success
@@ -2367,14 +2408,19 @@ ThreadError Mle::HandleAnnounce(const Message &aMessage, const Ip6::MessageInfo 
 
     localTimestamp = mNetif.GetActiveDataset().GetNetwork().GetTimestamp();
 
-    VerifyOrExit(localTimestamp == NULL || localTimestamp->Compare(timestamp) > 0,);
-
-    Stop();
-    mPreviousChannel = mMac.GetChannel();
-    mPreviousPanId = mMac.GetPanId();
-    mMac.SetChannel(static_cast<uint8_t>(channel.GetChannel()));
-    mMac.SetPanId(panid.GetPanId());
-    Start();
+    if (localTimestamp == NULL || localTimestamp->Compare(timestamp) > 0)
+    {
+        Stop();
+        mPreviousChannel = mMac.GetChannel();
+        mPreviousPanId = mMac.GetPanId();
+        mMac.SetChannel(static_cast<uint8_t>(channel.GetChannel()));
+        mMac.SetPanId(panid.GetPanId());
+        Start();
+    }
+    else
+    {
+        SendAnnounce(static_cast<uint8_t>(channel.GetChannel()));
+    }
 
 exit:
     (void)aMessageInfo;

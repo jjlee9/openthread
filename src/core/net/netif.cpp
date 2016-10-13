@@ -66,7 +66,7 @@ ThreadError Netif::RegisterCallback(NetifCallback &aCallback)
     {
         if (cur == &aCallback)
         {
-            ExitNow(error = kThreadError_Busy);
+            ExitNow(error = kThreadError_Already);
         }
     }
 
@@ -135,7 +135,7 @@ ThreadError Netif::SubscribeMulticast(NetifMulticastAddress &aAddress)
     {
         if (cur == &aAddress)
         {
-            ExitNow(error = kThreadError_Busy);
+            ExitNow(error = kThreadError_Already);
         }
     }
 
@@ -186,7 +186,7 @@ ThreadError Netif::AddUnicastAddress(NetifUnicastAddress &aAddress)
     {
         if (cur == &aAddress)
         {
-            ExitNow(error = kThreadError_Busy);
+            ExitNow(error = kThreadError_Already);
         }
     }
 
