@@ -38,6 +38,7 @@ clone_depth: 10
 install:
     - cmd: Bcdedit.exe -set TESTSIGNING ON
     # Configure logging
+    - cmd del /F %SystemRoot%\System32\LogFiles\WMI\Thread.*
     - cmd: reg import .appveyor\ThreadEtw.reg
     - ps: Restart-Computer -Force
     - ps: Start-Sleep -s 10
@@ -48,7 +49,6 @@ after_build:
     - ps: $env:Platform2 = $env:Platform
     - ps: If ($env:Platform2 -eq "x86") { $env:Platform2 = "Win32" }
     # Set up the release directories
-    - cmd: set
     - cmd: .appveyor\make_release.cmd
     - cmd: .appveyor\make_test_release.cmd
     # Install driver
