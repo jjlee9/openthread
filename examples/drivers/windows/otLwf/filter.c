@@ -793,7 +793,7 @@ NOTE: called at PASSIVE_LEVEL
 
         default:
             LogError(DRIVER_DEFAULT, "FilterDevicePnPEventNotify: Invalid event.\n");
-            FILTER_ASSERT(bFalse);
+            NT_ASSERT(bFalse);
             break;
     }
 

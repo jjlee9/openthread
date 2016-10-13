@@ -302,9 +302,9 @@ namespace otTestRunner
             Directory.CreateDirectory(ResultsFolder);
             Console.WriteLine("Test results saved: .\\{0}", ResultsFolder);
 
-            Console.WriteLine("Running the following tests:");
-            for (var i = 0; i < files.Length; i++)
-                Console.WriteLine(Path.GetFileName(files[i]));
+            Console.WriteLine("Running {0} tests, {1} at a time:", files.Length, NumberOfTestsToRunInParallel);
+            /*for (var i = 0; i < files.Length; i++)
+                Console.WriteLine(Path.GetFileName(files[i]));*/
             Console.WriteLine("");
 
             Timer.Start();

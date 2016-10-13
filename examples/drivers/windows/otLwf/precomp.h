@@ -86,20 +86,6 @@ RtlCopyBufferToMdl(
 
 typedef struct _MS_FILTER MS_FILTER, *PMS_FILTER;
 
-#if DBG
-#define FILTER_ASSERT(exp)                                      \
-{                                                               \
-    if (!(exp))                                                 \
-    {                                                           \
-        DbgPrint("otLwf: assert " #exp " failed in"             \
-            " file %s, line %d\n", __FILE__, __LINE__);         \
-        DbgBreakPoint();                                        \
-    }                                                           \
-}
-#else
-#define FILTER_ASSERT(exp)
-#endif
-
 //#define DEBUG_TIMING
 //#define LOG_BUFFERS
 //#define FORCE_SYNCHRONOUS_RECEIVE
