@@ -36,6 +36,7 @@ platform:
 - x86
 clone_depth: 10
 install:
+    - cmd: set
     - cmd: Bcdedit.exe -set TESTSIGNING ON
     - ps: Restart-Computer -Force
     - ps: Start-Sleep -s 10
@@ -66,6 +67,7 @@ test_script:
     # Flush the logging
     - cmd: logman stop Thread -ets
     - cmd: copy %SystemRoot%\System32\LogFiles\WMI\Thread.*
+    - cmd: copy %SystemRoot%\Logs\NetSetup\*
 artifacts:
 - path: release
   name: release
