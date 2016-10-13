@@ -45,6 +45,7 @@
 #include <common/crc16.hpp>
 #include <common/encoding.hpp>
 #include <common/logging.hpp>
+#include <mac/mac_frame.hpp>
 #include <meshcop/joiner.hpp>
 #include <platform/radio.h>
 #include <platform/random.h>
@@ -81,6 +82,8 @@ ThreadError Joiner::Start(const char *aPSKd, const char *aProvisioningUrl)
     SuccessOrExit(error = mNetif.GetDtls().SetPsk(reinterpret_cast<const uint8_t *>(aPSKd),
                                                   static_cast<uint8_t>(strlen(aPSKd))));
     SuccessOrExit(error = mNetif.GetDtls().mProvisioningUrl.SetProvisioningUrl(aProvisioningUrl));
+
+    mJoinerRouterPanId = Mac::kPanIdBroadcast;
     SuccessOrExit(error = mNetif.GetMle().Discover(0, 0, mNetif.GetMac().GetPanId(), HandleDiscoverResult, this));
 
 exit:
@@ -138,7 +141,7 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
             otLogDebgMeshCoP("Steering data not set\n");
         }
     }
-    else
+    else if (mJoinerRouterPanId != Mac::kPanIdBroadcast)
     {
         otLogFuncEntryMsg("aResult = NULL");
 
