@@ -2049,7 +2049,7 @@ otRemoveUnicastAddress(
 }
 
 OTAPI
-void 
+ThreadError 
 OTCALL
 otSetStateChangedCallback(
     _In_ otInstance *aInstance, 
@@ -2057,10 +2057,28 @@ otSetStateChangedCallback(
     _In_ void *aContext
     )
 {
+    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+    bool success = 
+        aInstance->ApiHandle->SetCallback(
+            aInstance->ApiHandle->StateChangedCallbacks,
+            aInstance->InterfaceGuid, aCallback, aContext
+            );
+    return success ? kThreadError_None : kThreadError_Already;
+}
+
+OTAPI
+void
+OTCALL
+otRemoveStateChangeCallback(
+    _In_ otInstance *aInstance,
+    _In_ otStateChangedCallback /* aCallback */,
+    _In_ void *aContext
+    )
+{
     if (aInstance == nullptr) return;
     aInstance->ApiHandle->SetCallback(
         aInstance->ApiHandle->StateChangedCallbacks,
-        aInstance->InterfaceGuid, aCallback, aContext
+        aInstance->InterfaceGuid, (otStateChangedCallback)nullptr, aContext
         );
 }
 
