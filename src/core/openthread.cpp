@@ -1060,7 +1060,7 @@ void otInstanceFinalize(otInstance *aInstance)
     (void)otThreadStop(aInstance);
     (void)otInterfaceDown(aInstance);
 
-    // Nothing to actually free, since the caller supplied the buffer
+    // Free the otInstance structure
     delete aInstance;
 
 #ifndef OPENTHREAD_MULTIPLE_INSTANCE
@@ -1257,9 +1257,16 @@ ThreadError otSendIp6Datagram(otInstance *aInstance, otMessage aMessage)
     return error;
 }
 
-otMessage otNewUdpMessage(otInstance *aInstance)
+otMessage otNewUdpMessage(otInstance *aInstance, bool aLinkSecurityEnabled)
 {
-    return aInstance->mIp6.mUdp.NewMessage(0);
+    Message *message = aInstance->mIp6.mUdp.NewMessage(0);
+
+    if (message)
+    {
+        message->SetLinkSecurityEnabled(aLinkSecurityEnabled);
+    }
+
+    return message;
 }
 
 otMessage otNewIp6Message(otInstance *aInstance, bool aLinkSecurityEnabled)
