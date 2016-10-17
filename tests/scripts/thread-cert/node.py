@@ -498,6 +498,15 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
+    def set_max_children(self, number):
+        if self.Api:
+            if self.Api.otNodeSetMaxChildren(self.otNode, ctypes.c_ubyte(number)) != 0:
+                raise OSError("otNodeSetMaxChildren failed!")
+        else:  
+            cmd = 'childmax %d' % number
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
     def get_weight(self):
         if self.Api:
             return int(self.Api.otNodeGetWeight(self.otNode))
@@ -850,15 +859,6 @@ class Node:
             if network_name != None:
                 cmd += 'networkname ' + network_name + ' '
 
-            self.send_command(cmd)
-            self.pexpect.expect('Done')
-
-    def set_max_children(self, number):
-        if self.Api:
-            if self.Api.otNodeSetMaxChildren(self.otNode, ctypes.c_ubyte(number)) != 0:
-                raise OSError("otNodeSetMaxChildren failed!")
-        else:  
-            cmd = 'childmax %d' % number
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
