@@ -1414,6 +1414,28 @@ OTAPI uint32_t OTCALL otGetKeySequenceCounter(otInstance *aInstance);
 OTAPI void OTCALL otSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceCounter);
 
 /**
+ * Get the thrKeySwitchGuardTime
+ *
+ * @param[in]  aInstance A pointer to an OpenThread instance.
+ *
+ * @returns The thrKeySwitchGuardTime value (in hours).
+ *
+ * @sa otSetKeySwitchGuardTime
+ */
+OTAPI uint32_t OTCALL otGetKeySwitchGuardTime(otInstance *aInstance);
+
+/**
+ * Set the thrKeySwitchGuardTime
+ *
+ * @param[in]  aInstance            A pointer to an OpenThread instance.
+ * @param[in]  aKeySwitchGuardTime  The thrKeySwitchGuardTime value (in hours).
+ *
+ * @sa otGetKeySwitchGuardTime
+ */
+OTAPI void OTCALL otSetKeySwitchGuardTime(otInstance *aInstance, uint32_t aKeySwitchGuardTime);
+
+
+/**
  * Get the NETWORK_ID_TIMEOUT parameter used in the Router role.
  *
  * @param[in]  aInstance A pointer to an OpenThread instance.

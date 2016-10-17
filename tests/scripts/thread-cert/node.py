@@ -332,23 +332,32 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
-    def get_key_sequence(self):
+    def get_key_sequence_counter(self):
         if self.Api:
-            return self.Api.otNodeGetKeySequence(self.otNode)
+            return self.Api.otNodeGetKeySequenceCounter(self.otNode)
         else:
-            self.send_command('keysequence')
+            self.send_command('keysequence counter')
             i = self.pexpect.expect('(\d+)\r\n')
             if i == 0:
-                key_sequence = int(self.pexpect.match.groups()[0])
+                key_sequence_counter = int(self.pexpect.match.groups()[0])
             self.pexpect.expect('Done')
-            return key_sequence
+            return key_sequence_counter
 
-    def set_key_sequence(self, key_sequence):
+    def set_key_sequence_counter(self, key_sequence_counter):
         if self.Api:
-            if self.Api.otNodeSetKeySequence(self.otNode, ctypes.c_uint(key_sequence)) != 0:
-                raise OSError("otNodeSetKeySequence failed!")
+            if self.Api.otNodeSetKeySequenceCounter(self.otNode, ctypes.c_uint(key_sequence)) != 0:
+                raise OSError("otNodeSetKeySequenceCounter failed!")
         else:     
-            cmd = 'keysequence %d' % key_sequence
+            cmd = 'keysequence counter %d' % key_sequence_counter
+            self.send_command(cmd)
+            self.pexpect.expect('Done')
+
+    def set_key_switch_guardtime(self, key_switch_guardtime):
+        if self.Api:
+            if self.Api.otNodeSetKeySwitchGuardTime(self.otNode, ctypes.c_uint(key_switch_guardtime)) != 0:
+                raise OSError("otNodeSetKeySwitchGuardTime failed!")
+        else:     
+            cmd = 'keysequence guardtime %d' % key_switch_guardtime
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
@@ -932,11 +941,14 @@ class Node:
         self.Api.otNodeGetMasterkey.argtypes = [ctypes.c_void_p]
         self.Api.otNodeGetMasterkey.restype = ctypes.c_char_p
         
-        self.Api.otNodeGetKeySequence.argtypes = [ctypes.c_void_p]
-        self.Api.otNodeGetKeySequence.restype = ctypes.c_uint
+        self.Api.otNodeGetKeySequenceCounter.argtypes = [ctypes.c_void_p]
+        self.Api.otNodeGetKeySequenceCounter.restype = ctypes.c_uint
 
-        self.Api.otNodeSetKeySequence.argtypes = [ctypes.c_void_p, 
-                                                  ctypes.c_uint]
+        self.Api.otNodeSetKeySequenceCounter.argtypes = [ctypes.c_void_p, 
+                                                         ctypes.c_uint]
+
+        self.Api.otNodeSetKeySwitchGuardTime.argtypes = [ctypes.c_void_p, 
+                                                         ctypes.c_uint]
 
         self.Api.otNodeSetNetworkIdTimeout.argtypes = [ctypes.c_void_p, 
                                                        ctypes.c_ubyte]

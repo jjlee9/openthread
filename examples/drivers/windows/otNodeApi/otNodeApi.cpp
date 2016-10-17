@@ -1094,7 +1094,7 @@ OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode)
     return str;
 }
 
-OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
+OTNODEAPI uint32_t OTCALL otNodeGetKeySequenceCounter(otNode* aNode)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto result = otGetKeySequenceCounter(aNode->mInstance);
@@ -1103,11 +1103,20 @@ OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode)
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence)
+OTNODEAPI int32_t OTCALL otNodeSetKeySequenceCounter(otNode* aNode, uint32_t aSequence)
 {
     otLogFuncEntryMsg("[%d]", aNode->mId);
-    printf("%d: keysequence %d\r\n", aNode->mId, aSequence);
+    printf("%d: keysequence counter %d\r\n", aNode->mId, aSequence);
     otSetKeySequenceCounter(aNode->mInstance, aSequence);
+    otLogFuncExit();
+    return 0;
+}
+
+OTNODEAPI int32_t OTCALL otNodeSetKeySwitchGuardTime(otNode* aNode, uint32_t aKeySwitchGuardTime)
+{
+    otLogFuncEntryMsg("[%d]", aNode->mId);
+    printf("%d: keysequence guardtime %d\r\n", aNode->mId, aKeySwitchGuardTime);
+    otSetKeySwitchGuardTime(aNode->mInstance, aKeySwitchGuardTime);
     otLogFuncExit();
     return 0;
 }

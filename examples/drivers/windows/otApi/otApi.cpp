@@ -2445,6 +2445,29 @@ otSetKeySequenceCounter(
 }
 
 OTAPI
+uint32_t 
+OTCALL
+otGetKeySwitchGuardTime(
+    _In_ otInstance *aInstance
+    )
+{
+    uint32_t Result = 0;
+    if (aInstance) (void)QueryIOCTL(aInstance, IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME, &Result);
+    return Result;
+}
+
+OTAPI
+void 
+OTCALL
+otSetKeySwitchGuardTime(
+    _In_ otInstance *aInstance, 
+    uint32_t aKeySwitchGuardTime
+    )
+{
+    if (aInstance) (void)SetIOCTL(aInstance, IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME, aKeySwitchGuardTime);
+}
+
+OTAPI
 uint8_t
 OTCALL
 otGetNetworkIdTimeout(

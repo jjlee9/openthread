@@ -171,14 +171,19 @@ OTNODEAPI int32_t OTCALL otNodeSetMasterkey(otNode* aNode, const char *aMasterke
 OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode);
 
 /**
- * Gets the key sequance for the node
+ * Gets the key sequence counter for the node
  */
-OTNODEAPI uint32_t OTCALL otNodeGetKeySequence(otNode* aNode);
+OTNODEAPI uint32_t OTCALL otNodeGetKeySequenceCounter(otNode* aNode);
 
 /**
- * Sets the network id timeout for the node
+ * Sets the key sequence counter for the node
  */
-OTNODEAPI int32_t OTCALL otNodeSetKeySequence(otNode* aNode, uint32_t aSequence);
+OTNODEAPI int32_t OTCALL otNodeSetKeySequenceCounter(otNode* aNode, uint32_t aSequence);
+
+/**
+ * Sets the key switch guard time for the node
+ */
+OTNODEAPI int32_t OTCALL otNodeSetKeySwitchGuardTime(otNode* aNode, uint32_t aSequence);
 
 /**
  * Sets the network id timeout for the node
