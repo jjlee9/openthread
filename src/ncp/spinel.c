@@ -104,6 +104,10 @@ static size_t spinel_strnlen_(const char *s, size_t maxlen)
 #define strnlen spinel_strnlen_
 #endif
 
+#ifdef _KERNEL_MODE
+#define va_copy(destination, source) ((destination) = (source))
+#endif
+
 #ifndef require_action
 #define require_action(c, l, a) \
     do { if (!(c)) { \
@@ -435,7 +439,7 @@ spinel_datatype_vunpack_(const uint8_t *data_ptr, spinel_size_t data_len, const 
                 *block_len_ptr = block_len;
             }
 
-            block_len += pui_len;
+            block_len += (uint16_t)pui_len;
             ret += block_len;
             data_ptr += block_len;
             data_len -= block_len;
@@ -472,7 +476,7 @@ spinel_datatype_vunpack_(const uint8_t *data_ptr, spinel_size_t data_len, const 
 
             if (pui_len)
             {
-                block_len += pui_len;
+                block_len += (uint16_t)pui_len;
             }
             else
             {
@@ -517,6 +521,7 @@ spinel_datatype_unpack(const uint8_t *data_ptr, spinel_size_t data_len, const ch
     return ret;
 }
 
+#
 spinel_ssize_t
 spinel_datatype_vunpack(const uint8_t *data_ptr, spinel_size_t data_len, const char *pack_format, va_list args)
 {
