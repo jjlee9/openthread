@@ -345,7 +345,7 @@ class Node:
 
     def set_key_sequence_counter(self, key_sequence_counter):
         if self.Api:
-            if self.Api.otNodeSetKeySequenceCounter(self.otNode, ctypes.c_uint(key_sequence)) != 0:
+            if self.Api.otNodeSetKeySequenceCounter(self.otNode, ctypes.c_uint(key_sequence_counter)) != 0:
                 raise OSError("otNodeSetKeySequenceCounter failed!")
         else:     
             cmd = 'keysequence counter %d' % key_sequence_counter
