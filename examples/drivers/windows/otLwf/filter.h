@@ -349,6 +349,18 @@ otLwfDisableDataPath(
 // OpenThread callbacks
 //
 
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NDIS_STATUS 
+otLwfInitializeThreadMode(
+    _In_ PMS_FILTER pFilter
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+void 
+otLwfUninitializeThreadMode(
+    _In_ PMS_FILTER pFilter
+    );
+
 void otLwfStateChangedCallback(uint32_t aFlags, _In_ void *aContext);
 void otLwfReceiveIp6DatagramCallback(_In_ otMessage aMessage, _In_ void *aContext);
 void otLwfActiveScanCallback(_In_ otActiveScanResult *aResult, _In_ void *aContext);
@@ -394,6 +406,22 @@ int
 otLwfFindCachedAddrIndex(
     _In_ PMS_FILTER pFilter, 
     _In_ PIN6_ADDR addr
+    );
+
+//
+// Tunnel Logic Functions
+//
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NDIS_STATUS 
+otLwfInitializeTunnelMode(
+    _In_ PMS_FILTER pFilter
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+void 
+otLwfUninitializeTunnelMode(
+    _In_ PMS_FILTER pFilter
     );
 
 //

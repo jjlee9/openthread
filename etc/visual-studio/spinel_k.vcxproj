@@ -56,11 +56,7 @@
       <PreprocessorDefinitions>
         %(PreprocessorDefinitions);
         HAVE_STRNLEN=1;
-        MBEDTLS_CONFIG_FILE="mbedtls-config.h";
-        OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";
-        OPENTHREAD_PORJECT_CORE_CONFIG_FILE="openthread-core-windows-config.h";
-        WINDOWS_LOGGING;
-        OPENTHREAD_MULTIPLE_INSTANCE;
+        SPINEL_PLATFORM_DOESNT_IMPLEMENT_ERRNO_VAR=1;
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         %(AdditionalIncludeDirectories);

@@ -178,9 +178,16 @@ otLwfIoCtlOpenThreadControl(
         status = STATUS_DEVICE_DOES_NOT_EXIST;
         goto error;
     }
-
-    // Pend the Irp for processing on the OpenThread event processing thread
-    otLwfEventProcessingIndicateIrp(pFilter, Irp);
+    
+    if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+    {
+        // Pend the Irp for processing on the OpenThread event processing thread
+        otLwfEventProcessingIndicateIrp(pFilter, Irp);
+    }
+    else
+    {
+        NT_ASSERT(FALSE); // TODO
+    }
 
     // Release our ref on the filter
     otLwfReleaseInterface(pFilter);

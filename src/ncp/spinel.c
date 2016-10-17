@@ -70,6 +70,12 @@
 #define EINVAL 1
 #endif
 
+#ifdef _KERNEL_MODE
+#define va_copy(destination, source) ((destination) = (source))
+#undef errno
+#define assert_printf(fmt, ...)
+#endif
+
 #if defined(errno) && SPINEL_PLATFORM_DOESNT_IMPLEMENT_ERRNO_VAR
 #error "SPINEL_PLATFORM_DOESNT_IMPLEMENT_ERRNO_VAR is set but errno is already defined."
 #endif
@@ -102,10 +108,6 @@ static size_t spinel_strnlen_(const char *s, size_t maxlen)
     return ret;
 }
 #define strnlen spinel_strnlen_
-#endif
-
-#ifdef _KERNEL_MODE
-#define va_copy(destination, source) ((destination) = (source))
 #endif
 
 #ifndef require_action

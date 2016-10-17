@@ -153,9 +153,16 @@ Arguments:
     
     LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p, NBL: %p", FilterModuleContext, NetBufferLists);
 
-    NT_ASSERT(NetBufferLists == pFilter->SendNetBufferList);
-    NT_ASSERT(kStateTransmit == pFilter->otPhyState);
-    KeSetEvent(&pFilter->SendNetBufferListComplete, 0, FALSE);
+    if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+    {
+        NT_ASSERT(NetBufferLists == pFilter->SendNetBufferList);
+        NT_ASSERT(kStateTransmit == pFilter->otPhyState);
+        KeSetEvent(&pFilter->SendNetBufferListComplete, 0, FALSE);
+    }
+    else
+    {
+        NT_ASSERT(FALSE); // TODO
+    }
     
     LogFuncExit(DRIVER_DATA_PATH);
 }
@@ -214,14 +221,21 @@ Arguments:
     }
     else
     {
-        // Indicate a new NBL to process on our worker thread
-        otLwfEventProcessingIndicateNewNetBufferLists(
-            pFilter,
-            DispatchLevel,
-            FALSE,
-            PortNumber,
-            NetBufferLists
-            );
+        if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+        {
+            // Indicate a new NBL to process on our worker thread
+            otLwfEventProcessingIndicateNewNetBufferLists(
+                pFilter,
+                DispatchLevel,
+                FALSE,
+                PortNumber,
+                NetBufferLists
+                );
+        }
+        else
+        {
+            NT_ASSERT(FALSE); // TODO
+        }
 
         // Release the data path ref now
         ExReleaseRundownProtection(&pFilter->DataPathRundown);
@@ -273,15 +287,22 @@ Arguments:
         {
             LogVerbose(DRIVER_DATA_PATH, "NBL failed on return: %!STATUS!", CurrNbl->Status);
         }
+        
+        if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+        {
+            PNET_BUFFER_LIST NblToFree = CurrNbl;
+            PNET_BUFFER NbToFree = NET_BUFFER_LIST_FIRST_NB(NblToFree);
 
-        PNET_BUFFER_LIST NblToFree = CurrNbl;
-        PNET_BUFFER NbToFree = NET_BUFFER_LIST_FIRST_NB(NblToFree);
+            CurrNbl = NET_BUFFER_LIST_NEXT_NBL(CurrNbl);
+            NET_BUFFER_LIST_NEXT_NBL(NblToFree) = NULL;
 
-        CurrNbl = NET_BUFFER_LIST_NEXT_NBL(CurrNbl);
-        NET_BUFFER_LIST_NEXT_NBL(NblToFree) = NULL;
-
-        NdisAdvanceNetBufferDataStart(NbToFree, NET_BUFFER_DATA_LENGTH(NbToFree), TRUE, NULL);
-        NdisFreeNetBufferList(NblToFree);
+            NdisAdvanceNetBufferDataStart(NbToFree, NET_BUFFER_DATA_LENGTH(NbToFree), TRUE, NULL);
+            NdisFreeNetBufferList(NblToFree);
+        }
+        else
+        {
+            NT_ASSERT(FALSE); // TODO
+        }
     }
     
     LogFuncExit(DRIVER_DATA_PATH);
@@ -363,24 +384,31 @@ N.B.: It is important to check the ReceiveFlags in NDIS_TEST_RECEIVE_CANNOT_PEND
     }
     else
     {
-#if DBG
-        PNET_BUFFER_LIST CurrNbl = NetBufferLists;
-        while (CurrNbl)
+        if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
         {
-            POT_NBL_CONTEXT NblContext = GetNBLContext(CurrNbl);
-            NT_ASSERT(NblContext->Channel >= 11 && NblContext->Channel <= 26);
-            CurrNbl = NET_BUFFER_LIST_NEXT_NBL(CurrNbl);
-        }
+#if DBG
+            PNET_BUFFER_LIST CurrNbl = NetBufferLists;
+            while (CurrNbl)
+            {
+                POT_NBL_CONTEXT NblContext = GetNBLContext(CurrNbl);
+                NT_ASSERT(NblContext->Channel >= 11 && NblContext->Channel <= 26);
+                CurrNbl = NET_BUFFER_LIST_NEXT_NBL(CurrNbl);
+            }
         
 #endif
-        // Indicate a new NBL to process on our worker thread
-        otLwfEventProcessingIndicateNewNetBufferLists(
-            pFilter,
-            DispatchLevel,
-            TRUE,
-            PortNumber,
-            NetBufferLists
-            );
+            // Indicate a new NBL to process on our worker thread
+            otLwfEventProcessingIndicateNewNetBufferLists(
+                pFilter,
+                DispatchLevel,
+                TRUE,
+                PortNumber,
+                NetBufferLists
+                );
+        }
+        else
+        {
+            NT_ASSERT(FALSE); // TODO
+        }
 
         // Release the data path ref now
         ExReleaseRundownProtection(&pFilter->DataPathRundown);
@@ -415,8 +443,15 @@ Arguments:
     PMS_FILTER pFilter = (PMS_FILTER)FilterModuleContext;
     
     LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p, CancelId: %p", FilterModuleContext, CancelId);
-
-    otLwfEventProcessingIndicateNetBufferListsCancelled(pFilter, CancelId);
+    
+    if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+    {
+        otLwfEventProcessingIndicateNetBufferListsCancelled(pFilter, CancelId);
+    }
+    else
+    {
+        NT_ASSERT(FALSE); // TODO
+    }
     
     LogFuncExit(DRIVER_DATA_PATH);
 }
