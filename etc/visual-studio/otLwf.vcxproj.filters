@@ -48,6 +48,12 @@
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\radio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\examples\drivers\windows\otLwf\thread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\drivers\windows\otLwf\tunnel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\filter.c">

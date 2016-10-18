@@ -206,20 +206,8 @@ typedef struct _MS_FILTER
 
 } MS_FILTER, * PMS_FILTER;
 
-// Helper function that converts an otInstance pointer to a MS_FILTER pointer
-__inline PMS_FILTER otCtxToFilter(_In_ otInstance* otCtx)
-{
-    return *(PMS_FILTER*)((PUCHAR)otCtx - sizeof(PMS_FILTER));
-}
-
-// Helper function to indicate if a role means it is attached or not
-_inline BOOLEAN IsAttached(_In_ otDeviceRole role)
-{
-    return role > kDeviceRoleDetached;
-}
-
 //
-// function prototypes
+// NDIS Filter Functions
 //
 
 FILTER_ATTACH FilterAttach;
@@ -234,6 +222,10 @@ FILTER_RETURN_NET_BUFFER_LISTS FilterReturnNetBufferLists;
 FILTER_SEND_NET_BUFFER_LISTS_COMPLETE FilterSendNetBufferListsComplete;
 FILTER_RECEIVE_NET_BUFFER_LISTS FilterReceiveNetBufferLists;
 FILTER_CANCEL_SEND_NET_BUFFER_LISTS FilterCancelSendNetBufferLists;
+
+//
+// Link State Functions
+//
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
@@ -260,76 +252,6 @@ otLwfRevertCompartment(
     );
 
 //
-// Event Processing Functions
-//
-
-EXT_CALLBACK otLwfEventProcessingTimer;
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-NTSTATUS
-otLwfEventProcessingStart(
-    _In_ PMS_FILTER             pFilter
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-VOID
-otLwfEventProcessingStop(
-    _In_ PMS_FILTER             pFilter
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-VOID
-otLwfEventProcessingIndicateNewWaitTime(
-    _In_ PMS_FILTER             pFilter,
-    _In_ ULONG                  waitTime
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-VOID
-otLwfEventProcessingIndicateNewTasklet(
-    _In_ PMS_FILTER             pFilter
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-VOID
-otLwfEventProcessingIndicateAddressChange(
-    _In_ PMS_FILTER             pFilter,
-    _In_ MIB_NOTIFICATION_TYPE  NotificationType,
-    _In_ PIN6_ADDR              pAddr
-    );
-
-_IRQL_requires_max_(DISPATCH_LEVEL)
-VOID
-otLwfEventProcessingIndicateNewNetBufferLists(
-    _In_ PMS_FILTER             pFilter,
-    _In_ BOOLEAN                DispatchLevel,
-    _In_ BOOLEAN                Received,
-    _In_ NDIS_PORT_NUMBER       PortNumber,
-    _In_ PNET_BUFFER_LIST       NetBufferLists
-    );
-
-_IRQL_requires_max_(DISPATCH_LEVEL)
-VOID
-otLwfEventProcessingIndicateNetBufferListsCancelled(
-    _In_ PMS_FILTER             pFilter,
-    _In_ PVOID                  CancelId
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-VOID
-otLwfEventProcessingIndicateIrp(
-    _In_ PMS_FILTER pFilter,
-    _In_ PIRP       Irp
-    );
-
-_IRQL_requires_max_(DISPATCH_LEVEL)
-VOID
-otLwfEventProcessingIndicateEnergyScanResult(
-    _In_ PMS_FILTER pFilter,
-    _In_ CHAR       MaxRssi
-    );
-
-//
 // Data Path functions
 //
 
@@ -344,30 +266,6 @@ VOID
 otLwfDisableDataPath(
     _In_ PMS_FILTER             pFilter
     );
-
-//
-// OpenThread callbacks
-//
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-NDIS_STATUS 
-otLwfInitializeThreadMode(
-    _In_ PMS_FILTER pFilter
-    );
-
-_IRQL_requires_max_(PASSIVE_LEVEL)
-void 
-otLwfUninitializeThreadMode(
-    _In_ PMS_FILTER pFilter
-    );
-
-void otLwfStateChangedCallback(uint32_t aFlags, _In_ void *aContext);
-void otLwfReceiveIp6DatagramCallback(_In_ otMessage aMessage, _In_ void *aContext);
-void otLwfActiveScanCallback(_In_ otActiveScanResult *aResult, _In_ void *aContext);
-void otLwfEnergyScanCallback(_In_ otEnergyScanResult *aResult, _In_ void *aContext);
-void otLwfDiscoverCallback(_In_ otActiveScanResult *aResult, _In_ void *aContext);
-void otLwfCommissionerEnergyReportCallback(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength, void *aContext);
-void otLwfCommissionerPanIdConflictCallback(uint16_t aPanId, uint32_t aChannelMask, _In_ void *aContext);
 
 //
 // Address Functions

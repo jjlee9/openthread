@@ -97,3 +97,5 @@ typedef struct _MS_FILTER MS_FILTER, *PMS_FILTER;
 #include "oid.h"
 #include "radio.h"
 #include "filter.h"
+#include "thread.h"
+#include "tunnel.h"

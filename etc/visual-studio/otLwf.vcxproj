@@ -131,6 +131,8 @@
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\nsihelper.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\oid.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\radio.h" />
+    <ClInclude Include="..\..\examples\drivers\windows\otLwf\thread.h" />
+    <ClInclude Include="..\..\examples\drivers\windows\otLwf\tunnel.h" />
     <ResourceCompile Include="..\..\examples\drivers\windows\otLwf\filter.rc" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\precomp.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\filter.h" />
