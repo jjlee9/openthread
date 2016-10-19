@@ -124,85 +124,102 @@ typedef struct _MS_FILTER
     NDIS_EVENT                      IoControlShutdownComplete;
 
     //
-    // Event processing
-    //
-    PVOID                           EventWorkerThread;
-    KEVENT                          EventWorkerThreadStopEvent;
-    KEVENT                          EventWorkerThreadProcessAddressChanges;
-    KEVENT                          EventWorkerThreadProcessNBLs;
-    NDIS_SPIN_LOCK                  EventsLock;
-    LIST_ENTRY                      AddressChangesHead;
-    LIST_ENTRY                      NBLsHead;
-    ULONG                           CountPendingRecvNBLs;
-    LARGE_INTEGER                   NextAlarmTickCount;
-    KEVENT                          EventWorkerThreadWaitTimeUpdated;
-    KEVENT                          EventWorkerThreadProcessTasklets;
-    PEX_TIMER                       EventHighPrecisionTimer;
-    UCHAR                           EventTimerState;
-    LIST_ENTRY                      EventIrpListHead;
-    KEVENT                          EventWorkerThreadProcessIrp;
-    KEVENT                          EventWorkerThreadEnergyScanComplete;
-
-    //
-    // Data Path Synchronization
+    // Data Path
     //
     EX_RUNDOWN_REF                  DataPathRundown;
     NDIS_HANDLE                     NetBufferListPool;
-    BOOLEAN                         SendPending;
-    PNET_BUFFER_LIST                SendNetBufferList;
-    KEVENT                          SendNetBufferListComplete;
 
-    //
-    // OpenThread state management
-    //
-    otDeviceRole                    otCachedRole;
+    union
+    {
+    struct // Thread Mode Variables
+    {
+        //
+        // OpenThread Event processing
+        //
+        PVOID                           EventWorkerThread;
+        KEVENT                          EventWorkerThreadStopEvent;
+        KEVENT                          EventWorkerThreadProcessAddressChanges;
+        KEVENT                          EventWorkerThreadProcessNBLs;
+        NDIS_SPIN_LOCK                  EventsLock;
+        LIST_ENTRY                      AddressChangesHead;
+        LIST_ENTRY                      NBLsHead;
+        ULONG                           CountPendingRecvNBLs;
+        LARGE_INTEGER                   NextAlarmTickCount;
+        KEVENT                          EventWorkerThreadWaitTimeUpdated;
+        KEVENT                          EventWorkerThreadProcessTasklets;
+        PEX_TIMER                       EventHighPrecisionTimer;
+        UCHAR                           EventTimerState;
+        LIST_ENTRY                      EventIrpListHead;
+        KEVENT                          EventWorkerThreadProcessIrp;
+        KEVENT                          EventWorkerThreadEnergyScanComplete;
 
-    //
-    // OpenThread addresses
-    //
-    IN6_ADDR                        otCachedAddr[OT_MAX_ADDRESSES];
-    ULONG                           otCachedAddrCount;
-    IN6_ADDR                        otLinkLocalAddr;
-    otNetifAddress                  otAutoAddresses[OT_MAX_AUTO_ADDRESSES];
+        //
+        // OpenThread state management
+        //
+        otDeviceRole                    otCachedRole;
+
+        //
+        // OpenThread addresses
+        //
+        IN6_ADDR                        otCachedAddr[OT_MAX_ADDRESSES];
+        ULONG                           otCachedAddrCount;
+        IN6_ADDR                        otLinkLocalAddr;
+        otNetifAddress                  otAutoAddresses[OT_MAX_AUTO_ADDRESSES];
+
+        //
+        // OpenThread data path state
+        //
+        BOOLEAN                         SendPending;
+        PNET_BUFFER_LIST                SendNetBufferList;
+        KEVENT                          SendNetBufferListComplete;
     
-    //
-    // OpenThread radio variables
-    //
-    otRadioCaps                     otRadioCapabilities;
-    PhyState                        otPhyState;
-    uint8_t                         otCurrentListenChannel;
-    uint8_t                         otReceiveMessage[kMaxPHYPacketSize];
-    uint8_t                         otTransmitMessage[kMaxPHYPacketSize];
-    RadioPacket                     otReceiveFrame;
-    RadioPacket                     otTransmitFrame;
-    CHAR                            otLastEnergyScanMaxRssi;
+        //
+        // OpenThread radio variables
+        //
+        otRadioCaps                     otRadioCapabilities;
+        PhyState                        otPhyState;
+        uint8_t                         otCurrentListenChannel;
+        uint8_t                         otReceiveMessage[kMaxPHYPacketSize];
+        uint8_t                         otTransmitMessage[kMaxPHYPacketSize];
+        RadioPacket                     otReceiveFrame;
+        RadioPacket                     otTransmitFrame;
+        CHAR                            otLastEnergyScanMaxRssi;
 
-    BOOLEAN                         otPromiscuous;
-    uint16_t                        otPanID;
-    uint64_t                        otFactoryAddress;
-    uint64_t                        otExtendedAddress;
-    uint16_t                        otShortAddress;
+        BOOLEAN                         otPromiscuous;
+        uint16_t                        otPanID;
+        uint64_t                        otFactoryAddress;
+        uint64_t                        otExtendedAddress;
+        uint16_t                        otShortAddress;
 
-    BOOLEAN                         otPendingMacOffloadEnabled;
-    uint8_t                         otPendingShortAddressCount;
-    uint16_t                        otPendingShortAddresses[MAX_PENDING_MAC_SIZE];
-    uint8_t                         otPendingExtendedAddressCount;
-    uint64_t                        otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
+        BOOLEAN                         otPendingMacOffloadEnabled;
+        uint8_t                         otPendingShortAddressCount;
+        uint16_t                        otPendingShortAddresses[MAX_PENDING_MAC_SIZE];
+        uint8_t                         otPendingExtendedAddressCount;
+        uint64_t                        otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
 
 #if DBG
-    // Used for tracking memory allocations
-    HANDLE                          otThreadId;
-    volatile LONG                   otOutstandingAllocationCount;
-    volatile LONG                   otOutstandingMemoryAllocated;
-    LIST_ENTRY                      otOutStandingAllocations;
-    ULONG                           otAllocationID;
+        // Used for tracking memory allocations
+        HANDLE                          otThreadId;
+        volatile LONG                   otOutstandingAllocationCount;
+        volatile LONG                   otOutstandingMemoryAllocated;
+        LIST_ENTRY                      otOutStandingAllocations;
+        ULONG                           otAllocationID;
 #endif
 
-    //
-    // OpenThread context buffer
-    //
-    otInstance*                     otCtx;
-    PUCHAR                          otInstanceBuffer;
+        //
+        // OpenThread context buffer
+        //
+        otInstance*                     otCtx;
+        PUCHAR                          otInstanceBuffer;
+    };
+    struct // Tunnel Mode Variables
+    {
+        NDIS_SPIN_LOCK                  tunCommandLock;
+        LIST_ENTRY                      tunCommandHandlers;
+        USHORT                          tunTIDsInUse;
+        spinel_tid_t                    tunNextTID;
+    };
+    };
 
 } MS_FILTER, * PMS_FILTER;
 

@@ -35,6 +35,32 @@
 #ifndef _TUNNEL_H_
 #define _TUNNEL_H_
 
+typedef
+_IRQL_requires_max_(DISPATCH_LEVEL)
+VOID
+(SPINEL_CMD_HANDLER)(
+    _In_ PMS_FILTER pFilter,
+    _In_ PVOID Context,
+    _In_ UINT Command,
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength
+    );
+
+typedef struct _SPINEL_CMD_HANDLER_ENTRY
+{
+    LIST_ENTRY          Link;
+    SPINEL_CMD_HANDLER *Handler;
+    PVOID               Context;
+    spinel_tid_t        TransactionId;
+} SPINEL_CMD_HANDLER_ENTRY;
+
+typedef struct _SPINEL_IRP_CMD_CONTEXT
+{
+    PIRP                    Irp;
+    SPINEL_IRP_CMD_HANDLER *Handler;
+} SPINEL_IRP_CMD_CONTEXT;
+
 //
 // Initialization Functions
 //
@@ -56,11 +82,83 @@ otLwfUninitializeTunnelMode(
 //
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfSendTunnelCommandWithHandlerV(
+    _In_ PMS_FILTER pFilter,
+    _In_opt_ SPINEL_CMD_HANDLER *Handler,
+    _In_opt_ PVOID HandlerContext,
+    _In_ UINT Command,
+    _In_ spinel_prop_key_t Key,
+    _In_ ULONG MaxDataLength,
+    _In_opt_ const char *pack_format, 
+    _In_opt_ va_list args
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfSendTunnelCommandWithHandler(
+    _In_ PMS_FILTER pFilter,
+    _In_opt_ SPINEL_CMD_HANDLER *Handler,
+    _In_opt_ PVOID HandlerContext,
+    _In_ UINT Command,
+    _In_ spinel_prop_key_t Key,
+    _In_ ULONG MaxDataLength,
+    _In_opt_ const char *pack_format, 
+    ...
+    );
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfSendTunnelPacket(
+    _In_ PMS_FILTER pFilter,
+    _In_ BOOLEAN DispatchLevel,
+    _In_ PNET_BUFFER IpNetBuffer,
+    _In_ BOOLEAN Secured
+    );
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
 void 
 otLwfReceiveTunnelPacket(
     _In_ PMS_FILTER pFilter,
+    _In_ BOOLEAN DispatchLevel,
     _In_reads_bytes_(BufferLength) const PUCHAR Buffer,
     _In_ ULONG BufferLength
+    );
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+void 
+otLwfProcessSpinelIPv6Packet(
+    _In_ PMS_FILTER pFilter,
+    _In_ BOOLEAN DispatchLevel,
+    _In_ BOOLEAN Secure,
+    _In_reads_bytes_(BufferLength) const uint8_t* Buffer,
+    _In_ UINT BufferLength
+    );
+
+//
+// Irp Commands
+//
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfSendTunnelCommandForIrp(
+    _In_ PMS_FILTER pFilter,
+    _In_ PIRP Irp,
+    _In_opt_ SPINEL_IRP_CMD_HANDLER *Handler,
+    _In_ UINT Command,
+    _In_ spinel_prop_key_t Key,
+    _In_ ULONG MaxDataLength,
+    _In_opt_ const char *pack_format, 
+    ...
+    );
+
+//
+// Spinel Helper Functions
+//
+
+ThreadError
+SpinelStatusToThreadError(
+    spinel_status_t error
     );
 
 #endif  //_TUNNEL_H_

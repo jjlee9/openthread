@@ -32,6 +32,7 @@
 //
 // Function prototype for general Io Control functions
 //
+
 typedef 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
@@ -69,9 +70,16 @@ otLwfCompleteOpenThreadIrp(
     _In_ PIRP           Irp
     );
 
+// Helper for converting IoCtl to string
+const char*
+IoCtlString(
+    ULONG IoControlCode
+    );
+
 //
 // Function prototype for OpenThread Io Control functions
 //
+
 typedef 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
@@ -85,96 +93,135 @@ OTLWF_OT_IOCTL_FUNC(
     _Inout_ PULONG          OutBufferLength
     );
 
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otInterface;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otThread;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otActiveScan;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otDiscover;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otChannel;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otChildTimeout;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otExtendedAddress;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otExtendedPanId;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLeaderRloc;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLinkMode;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMasterKey;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMeshLocalEid;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMeshLocalPrefix;
-//OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otNetworkDataLeader
-//OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otNetworkDataLocal
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otNetworkName;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otPanId;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterRollEnabled;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otShortAddress;
-//OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otUnicastAddresses
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otActiveDataset;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otPendingDataset;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLocalLeaderWeight;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otAddBorderRouter;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRemoveBorderRouter;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otAddExternalRoute;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRemoveExternalRoute;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendServerData;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otContextIdReuseDelay;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otKeySequenceCounter;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otNetworkIdTimeout;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterUpgradeThreshold;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otReleaseRouterId;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMacWhitelistEnabled;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otAddMacWhitelist;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRemoveMacWhitelist;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMacWhitelistEntry;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otClearMacWhitelist;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otDeviceRole;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otChildInfoById;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otChildInfoByIndex;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otEidCacheEntry;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLeaderData;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLeaderRouterId;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLeaderWeight;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otNetworkDataVersion;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otPartitionId;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRloc16;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterIdSequence;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterInfo;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otStableNetworkDataVersion;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMacBlacklistEnabled;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otAddMacBlacklist;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRemoveMacBlacklist;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMacBlacklistEntry;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otClearMacBlacklist;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMaxTransmitPower;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otNextOnMeshPrefix;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otPollPeriod;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otLocalLeaderPartitionId;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otAssignLinkQuality;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otPlatformReset;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otParentInfo;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSingleton;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMacCounters;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otMaxChildren;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerStart;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerStop;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otJoinerStart;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otJoinerStop;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otFactoryAssignedIeeeEui64;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otHashMacAddress;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterDowngradeThreshold;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerPanIdQuery;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerEnergyScan;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otRouterSelectionJitter;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otJoinerUdpPort;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticGet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendDiagnosticReset;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAddJoiner;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerRemoveJoiner;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerProvisioningUrl;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otCommissionerAnnounceBegin;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otEnergyScan;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendActiveGet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendActiveSet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendPendingGet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendPendingSet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendMgmtCommissionerGet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otSendMgmtCommissionerSet;
-OTLWF_OT_IOCTL_FUNC otLwfIoCtl_otKeySwitchGuardtime;
+typedef 
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+OTLWF_TUN_IOCTL_FUNC(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               Irp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    );
+
+typedef
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+(SPINEL_IRP_CMD_HANDLER)(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    );
+
+#define DECL_IOCTL_FUNC(X) \
+    OTLWF_OT_IOCTL_FUNC otLwfIoCtl_##X
+
+#define DECL_IOCTL_FUNC_WITH_TUN(X) \
+    OTLWF_OT_IOCTL_FUNC otLwfIoCtl_##X; \
+    OTLWF_TUN_IOCTL_FUNC otLwfTunIoCtl_##X
+
+#define DECL_IOCTL_FUNC_WITH_TUN2(X) \
+    OTLWF_OT_IOCTL_FUNC otLwfIoCtl_##X; \
+    OTLWF_TUN_IOCTL_FUNC otLwfTunIoCtl_##X; \
+    SPINEL_IRP_CMD_HANDLER otLwfTunIoCtl_##X##_Handler
+
+#define REF_IOCTL_FUNC(X) otLwfIoCtl_##X
+
+#define REF_IOCTL_FUNC_WITH_TUN(X) otLwfIoCtl_##X , otLwfTunIoCtl_##X
+
+DECL_IOCTL_FUNC_WITH_TUN2(otInterface);
+DECL_IOCTL_FUNC_WITH_TUN2(otThread);
+DECL_IOCTL_FUNC(otActiveScan);
+DECL_IOCTL_FUNC(otDiscover);
+DECL_IOCTL_FUNC_WITH_TUN2(otChannel);
+DECL_IOCTL_FUNC_WITH_TUN2(otChildTimeout);
+DECL_IOCTL_FUNC(otExtendedAddress);
+DECL_IOCTL_FUNC(otExtendedPanId);
+DECL_IOCTL_FUNC(otLeaderRloc);
+DECL_IOCTL_FUNC(otLinkMode);
+DECL_IOCTL_FUNC(otMasterKey);
+DECL_IOCTL_FUNC(otMeshLocalEid);
+DECL_IOCTL_FUNC(otMeshLocalPrefix);
+//DECL_IOCTL_FUNC(otNetworkDataLeader);
+//DECL_IOCTL_FUNC(otNetworkDataLocal);
+DECL_IOCTL_FUNC(otNetworkName);
+DECL_IOCTL_FUNC(otPanId);
+DECL_IOCTL_FUNC(otRouterRollEnabled);
+DECL_IOCTL_FUNC(otShortAddress);
+DECL_IOCTL_FUNC(otActiveDataset);
+DECL_IOCTL_FUNC(otPendingDataset);
+DECL_IOCTL_FUNC(otLocalLeaderWeight);
+DECL_IOCTL_FUNC(otAddBorderRouter);
+DECL_IOCTL_FUNC(otRemoveBorderRouter);
+DECL_IOCTL_FUNC(otAddExternalRoute);
+DECL_IOCTL_FUNC(otRemoveExternalRoute);
+DECL_IOCTL_FUNC(otSendServerData);
+DECL_IOCTL_FUNC(otContextIdReuseDelay);
+DECL_IOCTL_FUNC(otKeySequenceCounter);
+DECL_IOCTL_FUNC(otNetworkIdTimeout);
+DECL_IOCTL_FUNC(otRouterUpgradeThreshold);
+DECL_IOCTL_FUNC(otReleaseRouterId);
+DECL_IOCTL_FUNC(otMacWhitelistEnabled);
+DECL_IOCTL_FUNC(otAddMacWhitelist);
+DECL_IOCTL_FUNC(otRemoveMacWhitelist);
+DECL_IOCTL_FUNC(otMacWhitelistEntry);
+DECL_IOCTL_FUNC(otClearMacWhitelist);
+DECL_IOCTL_FUNC(otDeviceRole);
+DECL_IOCTL_FUNC(otChildInfoById);
+DECL_IOCTL_FUNC(otChildInfoByIndex);
+DECL_IOCTL_FUNC(otEidCacheEntry);
+DECL_IOCTL_FUNC(otLeaderData);
+DECL_IOCTL_FUNC(otLeaderRouterId);
+DECL_IOCTL_FUNC(otLeaderWeight);
+DECL_IOCTL_FUNC(otNetworkDataVersion);
+DECL_IOCTL_FUNC(otPartitionId);
+DECL_IOCTL_FUNC(otRloc16);
+DECL_IOCTL_FUNC(otRouterIdSequence);
+DECL_IOCTL_FUNC(otRouterInfo);
+DECL_IOCTL_FUNC(otStableNetworkDataVersion);
+DECL_IOCTL_FUNC(otMacBlacklistEnabled);
+DECL_IOCTL_FUNC(otAddMacBlacklist);
+DECL_IOCTL_FUNC(otRemoveMacBlacklist);
+DECL_IOCTL_FUNC(otMacBlacklistEntry);
+DECL_IOCTL_FUNC(otClearMacBlacklist);
+DECL_IOCTL_FUNC(otMaxTransmitPower);
+DECL_IOCTL_FUNC(otNextOnMeshPrefix);
+DECL_IOCTL_FUNC(otPollPeriod);
+DECL_IOCTL_FUNC(otLocalLeaderPartitionId);
+DECL_IOCTL_FUNC(otAssignLinkQuality);
+DECL_IOCTL_FUNC(otPlatformReset);
+DECL_IOCTL_FUNC(otParentInfo);
+DECL_IOCTL_FUNC(otSingleton);
+DECL_IOCTL_FUNC(otMacCounters);
+DECL_IOCTL_FUNC(otMaxChildren);
+DECL_IOCTL_FUNC(otCommissionerStart);
+DECL_IOCTL_FUNC(otCommissionerStop);
+DECL_IOCTL_FUNC(otJoinerStart);
+DECL_IOCTL_FUNC(otJoinerStop);
+DECL_IOCTL_FUNC(otFactoryAssignedIeeeEui64);
+DECL_IOCTL_FUNC(otHashMacAddress);
+DECL_IOCTL_FUNC(otRouterDowngradeThreshold);
+DECL_IOCTL_FUNC(otCommissionerPanIdQuery);
+DECL_IOCTL_FUNC(otCommissionerEnergyScan);
+DECL_IOCTL_FUNC(otRouterSelectionJitter);
+DECL_IOCTL_FUNC(otJoinerUdpPort);
+DECL_IOCTL_FUNC(otSendDiagnosticGet);
+DECL_IOCTL_FUNC(otSendDiagnosticReset);
+DECL_IOCTL_FUNC(otCommissionerAddJoiner);
+DECL_IOCTL_FUNC(otCommissionerRemoveJoiner);
+DECL_IOCTL_FUNC(otCommissionerProvisioningUrl);
+DECL_IOCTL_FUNC(otCommissionerAnnounceBegin);
+DECL_IOCTL_FUNC(otEnergyScan);
+DECL_IOCTL_FUNC(otSendActiveGet);
+DECL_IOCTL_FUNC(otSendActiveSet);
+DECL_IOCTL_FUNC(otSendPendingGet);
+DECL_IOCTL_FUNC(otSendPendingSet);
+DECL_IOCTL_FUNC(otSendMgmtCommissionerGet);
+DECL_IOCTL_FUNC(otSendMgmtCommissionerSet);
+DECL_IOCTL_FUNC(otKeySwitchGuardtime);
 
 #endif // _IOCONTROL_H

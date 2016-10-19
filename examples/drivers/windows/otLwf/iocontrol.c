@@ -29,6 +29,128 @@
 #include "precomp.h"
 #include "iocontrol.tmh"
 
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl(
+    _In_ PMS_FILTER     pFilter,
+    _In_ PIRP           Irp
+    );
+
+typedef struct _OTLWF_IOCTL_HANDLER
+{
+    const char*             Name;
+    OTLWF_OT_IOCTL_FUNC*    otFunc;
+    OTLWF_TUN_IOCTL_FUNC*   tunFunc;
+} OTLWF_IOCTL_HANDLER;
+
+OTLWF_IOCTL_HANDLER IoCtls[] = 
+{
+    { "IOCTL_OTLWF_OT_ENABLED",                     NULL },
+    { "IOCTL_OTLWF_OT_INTERFACE",                   REF_IOCTL_FUNC_WITH_TUN(otInterface) },
+    { "IOCTL_OTLWF_OT_THREAD",                      REF_IOCTL_FUNC_WITH_TUN(otThread) },
+    { "IOCTL_OTLWF_OT_ACTIVE_SCAN",                 REF_IOCTL_FUNC(otActiveScan) },
+    { "IOCTL_OTLWF_OT_DISCOVER",                    REF_IOCTL_FUNC(otDiscover) },
+    { "IOCTL_OTLWF_OT_CHANNEL",                     REF_IOCTL_FUNC_WITH_TUN(otChannel) },
+    { "IOCTL_OTLWF_OT_CHILD_TIMEOUT",               REF_IOCTL_FUNC_WITH_TUN(otChildTimeout) },
+    { "IOCTL_OTLWF_OT_EXTENDED_ADDRESS",            REF_IOCTL_FUNC(otExtendedAddress) },
+    { "IOCTL_OTLWF_OT_EXTENDED_PANID",              REF_IOCTL_FUNC(otExtendedPanId) },
+    { "IOCTL_OTLWF_OT_LEADER_RLOC",                 REF_IOCTL_FUNC(otLeaderRloc) },
+    { "IOCTL_OTLWF_OT_LINK_MODE",                   REF_IOCTL_FUNC(otLinkMode) },
+    { "IOCTL_OTLWF_OT_MASTER_KEY",                  REF_IOCTL_FUNC(otThread) },
+    { "IOCTL_OTLWF_OT_MESH_LOCAL_EID",              REF_IOCTL_FUNC(otMeshLocalEid) },
+    { "IOCTL_OTLWF_OT_MESH_LOCAL_PREFIX",           REF_IOCTL_FUNC(otMeshLocalPrefix) },
+    { "IOCTL_OTLWF_OT_NETWORK_DATA_LEADER",         NULL },
+    { "IOCTL_OTLWF_OT_NETWORK_DATA_LOCAL",          NULL },
+    { "IOCTL_OTLWF_OT_NETWORK_NAME",                REF_IOCTL_FUNC(otNetworkName) },
+    { "IOCTL_OTLWF_OT_PAN_ID",                      REF_IOCTL_FUNC(otPanId) },
+    { "IOCTL_OTLWF_OT_ROUTER_ROLL_ENABLED",         REF_IOCTL_FUNC(otRouterRollEnabled) },
+    { "IOCTL_OTLWF_OT_SHORT_ADDRESS",               REF_IOCTL_FUNC(otShortAddress) },
+    { "IOCTL_OTLWF_OT_UNICAST_ADDRESSES",           NULL },
+    { "IOCTL_OTLWF_OT_ACTIVE_DATASET",              REF_IOCTL_FUNC(otActiveDataset) },
+    { "IOCTL_OTLWF_OT_PENDING_DATASET",             REF_IOCTL_FUNC(otPendingDataset) },
+    { "IOCTL_OTLWF_OT_LOCAL_LEADER_WEIGHT",         REF_IOCTL_FUNC(otLocalLeaderWeight) },
+    { "IOCTL_OTLWF_OT_ADD_BORDER_ROUTER",           REF_IOCTL_FUNC(otAddBorderRouter) },
+    { "IOCTL_OTLWF_OT_REMOVE_BORDER_ROUTER",        REF_IOCTL_FUNC(otRemoveBorderRouter) },
+    { "IOCTL_OTLWF_OT_ADD_EXTERNAL_ROUTE",          REF_IOCTL_FUNC(otAddExternalRoute) },
+    { "IOCTL_OTLWF_OT_REMOVE_EXTERNAL_ROUTE",       REF_IOCTL_FUNC(otRemoveExternalRoute) },
+    { "IOCTL_OTLWF_OT_SEND_SERVER_DATA",            REF_IOCTL_FUNC(otSendServerData) },
+    { "IOCTL_OTLWF_OT_CONTEXT_ID_REUSE_DELAY",      REF_IOCTL_FUNC(otContextIdReuseDelay) },
+    { "IOCTL_OTLWF_OT_KEY_SEQUENCE_COUNTER",        REF_IOCTL_FUNC(otKeySequenceCounter) },
+    { "IOCTL_OTLWF_OT_NETWORK_ID_TIMEOUT",          REF_IOCTL_FUNC(otNetworkIdTimeout) },
+    { "IOCTL_OTLWF_OT_ROUTER_UPGRADE_THRESHOLD",    REF_IOCTL_FUNC(otRouterUpgradeThreshold) },
+    { "IOCTL_OTLWF_OT_RELEASE_ROUTER_ID",           REF_IOCTL_FUNC(otReleaseRouterId) },
+    { "IOCTL_OTLWF_OT_MAC_WHITELIST_ENABLED",       REF_IOCTL_FUNC(otMacWhitelistEnabled) },
+    { "IOCTL_OTLWF_OT_ADD_MAC_WHITELIST",           REF_IOCTL_FUNC(otAddMacWhitelist) },
+    { "IOCTL_OTLWF_OT_REMOVE_MAC_WHITELIST",        REF_IOCTL_FUNC(otRemoveMacWhitelist) },
+    { "IOCTL_OTLWF_OT_MAC_WHITELIST_ENTRY",         REF_IOCTL_FUNC(otMacWhitelistEntry) },
+    { "IOCTL_OTLWF_OT_CLEAR_MAC_WHITELIST",         REF_IOCTL_FUNC(otClearMacWhitelist) },
+    { "IOCTL_OTLWF_OT_DEVICE_ROLE",                 REF_IOCTL_FUNC(otDeviceRole) },
+    { "IOCTL_OTLWF_OT_CHILD_INFO_BY_ID",            REF_IOCTL_FUNC(otChildInfoById) },
+    { "IOCTL_OTLWF_OT_CHILD_INFO_BY_INDEX",         REF_IOCTL_FUNC(otChildInfoByIndex) },
+    { "IOCTL_OTLWF_OT_EID_CACHE_ENTRY",             REF_IOCTL_FUNC(otEidCacheEntry) },
+    { "IOCTL_OTLWF_OT_LEADER_DATA",                 REF_IOCTL_FUNC(otLeaderData) },
+    { "IOCTL_OTLWF_OT_LEADER_ROUTER_ID",            REF_IOCTL_FUNC(otLeaderRouterId) },
+    { "IOCTL_OTLWF_OT_LEADER_WEIGHT",               REF_IOCTL_FUNC(otLeaderWeight) },
+    { "IOCTL_OTLWF_OT_NETWORK_DATA_VERSION",        REF_IOCTL_FUNC(otNetworkDataVersion) },
+    { "IOCTL_OTLWF_OT_PARTITION_ID",                REF_IOCTL_FUNC(otPartitionId) },
+    { "IOCTL_OTLWF_OT_RLOC16",                      REF_IOCTL_FUNC(otRloc16) },
+    { "IOCTL_OTLWF_OT_ROUTER_ID_SEQUENCE",          REF_IOCTL_FUNC(otRouterIdSequence) },
+    { "IOCTL_OTLWF_OT_ROUTER_INFO",                 REF_IOCTL_FUNC(otRouterInfo) },
+    { "IOCTL_OTLWF_OT_STABLE_NETWORK_DATA_VERSION", REF_IOCTL_FUNC(otStableNetworkDataVersion) },
+    { "IOCTL_OTLWF_OT_MAC_BLACKLIST_ENABLED",       REF_IOCTL_FUNC(otMacBlacklistEnabled) },
+    { "IOCTL_OTLWF_OT_ADD_MAC_BLACKLIST",           REF_IOCTL_FUNC(otAddMacBlacklist) },
+    { "IOCTL_OTLWF_OT_REMOVE_MAC_BLACKLIST",        REF_IOCTL_FUNC(otRemoveMacBlacklist) },
+    { "IOCTL_OTLWF_OT_MAC_BLACKLIST_ENTRY",         REF_IOCTL_FUNC(otMacBlacklistEntry) },
+    { "IOCTL_OTLWF_OT_CLEAR_MAC_BLACKLIST",         REF_IOCTL_FUNC(otClearMacBlacklist) },
+    { "IOCTL_OTLWF_OT_MAX_TRANSMIT_POWER",          REF_IOCTL_FUNC(otMaxTransmitPower) },
+    { "IOCTL_OTLWF_OT_NEXT_ON_MESH_PREFIX",         REF_IOCTL_FUNC(otNextOnMeshPrefix) },
+    { "IOCTL_OTLWF_OT_POLL_PERIOD",                 REF_IOCTL_FUNC(otPollPeriod) },
+    { "IOCTL_OTLWF_OT_LOCAL_LEADER_PARTITION_ID",   REF_IOCTL_FUNC(otLocalLeaderPartitionId) },
+    { "IOCTL_OTLWF_OT_ASSIGN_LINK_QUALITY",         REF_IOCTL_FUNC(otAssignLinkQuality) },
+    { "IOCTL_OTLWF_OT_PLATFORM_RESET",              REF_IOCTL_FUNC(otPlatformReset) },
+    { "IOCTL_OTLWF_OT_PARENT_INFO",                 REF_IOCTL_FUNC(otParentInfo) },
+    { "IOCTL_OTLWF_OT_SINGLETON",                   REF_IOCTL_FUNC(otSingleton) },
+    { "IOCTL_OTLWF_OT_MAC_COUNTERS",                REF_IOCTL_FUNC(otMacCounters) },
+    { "IOCTL_OTLWF_OT_MAX_CHILDREN",                REF_IOCTL_FUNC(otMaxChildren) },
+    { "IOCTL_OTLWF_OT_COMMISIONER_START",           REF_IOCTL_FUNC(otCommissionerStart) },
+    { "IOCTL_OTLWF_OT_COMMISIONER_STOP",            REF_IOCTL_FUNC(otCommissionerStop) },
+    { "IOCTL_OTLWF_OT_JOINER_START",                REF_IOCTL_FUNC(otJoinerStart) },
+    { "IOCTL_OTLWF_OT_JOINER_STOP",                 REF_IOCTL_FUNC(otJoinerStop) },
+    { "IOCTL_OTLWF_OT_FACTORY_EUI64",               REF_IOCTL_FUNC(otFactoryAssignedIeeeEui64) },
+    { "IOCTL_OTLWF_OT_HASH_MAC_ADDRESS",            REF_IOCTL_FUNC(otHashMacAddress) },
+    { "IOCTL_OTLWF_OT_ROUTER_DOWNGRADE_THRESHOLD",  REF_IOCTL_FUNC(otRouterDowngradeThreshold) },
+    { "IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY",    REF_IOCTL_FUNC(otCommissionerPanIdQuery) },
+    { "IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN",    REF_IOCTL_FUNC(otCommissionerEnergyScan) },
+    { "IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER",     REF_IOCTL_FUNC(otRouterSelectionJitter) },
+    { "IOCTL_OTLWF_OT_JOINER_UDP_PORT",             REF_IOCTL_FUNC(otJoinerUdpPort) },
+    { "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET",         REF_IOCTL_FUNC(otSendDiagnosticGet) },
+    { "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET",       REF_IOCTL_FUNC(otSendDiagnosticReset) },
+    { "IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER",      REF_IOCTL_FUNC(otCommissionerAddJoiner) },
+    { "IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER",   REF_IOCTL_FUNC(otCommissionerRemoveJoiner) },
+    { "IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL", REF_IOCTL_FUNC(otCommissionerProvisioningUrl) },
+    { "IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN",  REF_IOCTL_FUNC(otCommissionerAnnounceBegin) },
+    { "IOCTL_OTLWF_OT_ENERGY_SCAN",                 REF_IOCTL_FUNC(otEnergyScan) },
+    { "IOCTL_OTLWF_OT_SEND_ACTIVE_GET",             REF_IOCTL_FUNC(otSendActiveGet) },
+    { "IOCTL_OTLWF_OT_SEND_ACTIVE_SET",             REF_IOCTL_FUNC(otSendActiveSet) },
+    { "IOCTL_OTLWF_OT_SEND_PENDING_GET",            REF_IOCTL_FUNC(otSendPendingGet) },
+    { "IOCTL_OTLWF_OT_SEND_PENDING_SET",            REF_IOCTL_FUNC(otSendPendingSet) },
+    { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET",  REF_IOCTL_FUNC(otSendMgmtCommissionerGet) },
+    { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET",  REF_IOCTL_FUNC(otSendMgmtCommissionerSet) },
+    { "IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME",        REF_IOCTL_FUNC(otKeySwitchGuardtime) }
+};
+
+static_assert(ARRAYSIZE(IoCtls) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE) + 1,
+              "The IoCtl strings should be up to date with the actual IoCtl list.");
+
+const char*
+IoCtlString(
+    ULONG IoControlCode
+)
+{
+    ULONG FuncCode = ((IoControlCode >> 2) & 0xFFF) - 100;
+    return FuncCode < ARRAYSIZE(IoCtls) ? IoCtls[FuncCode].Name : "UNKNOWN IOCTL";
+}
+
 // Handles queries for the current list of Thread interfaces
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
@@ -186,7 +308,7 @@ otLwfIoCtlOpenThreadControl(
     }
     else
     {
-        NT_ASSERT(FALSE); // TODO
+        status = otLwfTunIoCtl(pFilter, Irp);
     }
 
     // Release our ref on the filter
@@ -208,114 +330,6 @@ error:
     return status;
 }
 
-const char* IoCtlStrings[] = 
-{
-    "IOCTL_OTLWF_OT_ENABLED",
-    "IOCTL_OTLWF_OT_INTERFACE",
-    "IOCTL_OTLWF_OT_THREAD",
-    "IOCTL_OTLWF_OT_ACTIVE_SCAN",
-    "IOCTL_OTLWF_OT_DISCOVER",
-    "IOCTL_OTLWF_OT_CHANNEL",
-    "IOCTL_OTLWF_OT_CHILD_TIMEOUT",
-    "IOCTL_OTLWF_OT_EXTENDED_ADDRESS",
-    "IOCTL_OTLWF_OT_EXTENDED_PANID",
-    "IOCTL_OTLWF_OT_LEADER_RLOC",
-    "IOCTL_OTLWF_OT_LINK_MODE",
-    "IOCTL_OTLWF_OT_MASTER_KEY",
-    "IOCTL_OTLWF_OT_MESH_LOCAL_EID",
-    "IOCTL_OTLWF_OT_MESH_LOCAL_PREFIX",
-    "IOCTL_OTLWF_OT_NETWORK_DATA_LEADER",
-    "IOCTL_OTLWF_OT_NETWORK_DATA_LOCAL",
-    "IOCTL_OTLWF_OT_NETWORK_NAME",
-    "IOCTL_OTLWF_OT_PAN_ID",
-    "IOCTL_OTLWF_OT_ROUTER_ROLL_ENABLED",
-    "IOCTL_OTLWF_OT_SHORT_ADDRESS",
-    "IOCTL_OTLWF_OT_UNICAST_ADDRESSES",
-    "IOCTL_OTLWF_OT_ACTIVE_DATASET",
-    "IOCTL_OTLWF_OT_PENDING_DATASET",
-    "IOCTL_OTLWF_OT_LOCAL_LEADER_WEIGHT",
-    "IOCTL_OTLWF_OT_ADD_BORDER_ROUTER",
-    "IOCTL_OTLWF_OT_REMOVE_BORDER_ROUTER",
-    "IOCTL_OTLWF_OT_ADD_EXTERNAL_ROUTE",
-    "IOCTL_OTLWF_OT_REMOVE_EXTERNAL_ROUTE",
-    "IOCTL_OTLWF_OT_SEND_SERVER_DATA",
-    "IOCTL_OTLWF_OT_CONTEXT_ID_REUSE_DELAY",
-    "IOCTL_OTLWF_OT_KEY_SEQUENCE_COUNTER",
-    "IOCTL_OTLWF_OT_NETWORK_ID_TIMEOUT",
-    "IOCTL_OTLWF_OT_ROUTER_UPGRADE_THRESHOLD",
-    "IOCTL_OTLWF_OT_RELEASE_ROUTER_ID",
-    "IOCTL_OTLWF_OT_MAC_WHITELIST_ENABLED",
-    "IOCTL_OTLWF_OT_ADD_MAC_WHITELIST",
-    "IOCTL_OTLWF_OT_REMOVE_MAC_WHITELIST",
-    "IOCTL_OTLWF_OT_MAC_WHITELIST_ENTRY",
-    "IOCTL_OTLWF_OT_CLEAR_MAC_WHITELIST",
-    "IOCTL_OTLWF_OT_DEVICE_ROLE",
-    "IOCTL_OTLWF_OT_CHILD_INFO_BY_ID",
-    "IOCTL_OTLWF_OT_CHILD_INFO_BY_INDEX",
-    "IOCTL_OTLWF_OT_EID_CACHE_ENTRY",
-    "IOCTL_OTLWF_OT_LEADER_DATA",
-    "IOCTL_OTLWF_OT_LEADER_ROUTER_ID",
-    "IOCTL_OTLWF_OT_LEADER_WEIGHT",
-    "IOCTL_OTLWF_OT_NETWORK_DATA_VERSION",
-    "IOCTL_OTLWF_OT_PARTITION_ID",
-    "IOCTL_OTLWF_OT_RLOC16",
-    "IOCTL_OTLWF_OT_ROUTER_ID_SEQUENCE",
-    "IOCTL_OTLWF_OT_ROUTER_INFO",
-    "IOCTL_OTLWF_OT_STABLE_NETWORK_DATA_VERSION",
-    "IOCTL_OTLWF_OT_MAC_BLACKLIST_ENABLED",
-    "IOCTL_OTLWF_OT_ADD_MAC_BLACKLIST",
-    "IOCTL_OTLWF_OT_REMOVE_MAC_BLACKLIST",
-    "IOCTL_OTLWF_OT_MAC_BLACKLIST_ENTRY",
-    "IOCTL_OTLWF_OT_CLEAR_MAC_BLACKLIST",
-    "IOCTL_OTLWF_OT_MAX_TRANSMIT_POWER",
-    "IOCTL_OTLWF_OT_NEXT_ON_MESH_PREFIX",
-    "IOCTL_OTLWF_OT_POLL_PERIOD",
-    "IOCTL_OTLWF_OT_LOCAL_LEADER_PARTITION_ID",
-    "IOCTL_OTLWF_OT_ASSIGN_LINK_QUALITY",
-    "IOCTL_OTLWF_OT_PLATFORM_RESET",
-    "IOCTL_OTLWF_OT_PARENT_INFO",
-    "IOCTL_OTLWF_OT_SINGLETON"
-    "IOCTL_OTLWF_OT_MAC_COUNTERS",
-    "IOCTL_OTLWF_OT_MAX_CHILDREN",
-    "IOCTL_OTLWF_OT_COMMISIONER_START",
-    "IOCTL_OTLWF_OT_COMMISIONER_STOP",
-    "IOCTL_OTLWF_OT_JOINER_START",
-    "IOCTL_OTLWF_OT_JOINER_STOP",
-    "IOCTL_OTLWF_OT_FACTORY_EUI64",
-    "IOCTL_OTLWF_OT_HASH_MAC_ADDRESS",
-    "IOCTL_OTLWF_OT_ROUTER_DOWNGRADE_THRESHOLD",
-    "IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY",
-    "IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN",
-    "IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER",
-    "IOCTL_OTLWF_OT_JOINER_UDP_PORT",
-    "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET",
-    "IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET",
-    "IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER",
-    "IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER",
-    "IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL",
-    "IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN",
-    "IOCTL_OTLWF_OT_ENERGY_SCAN",
-    "IOCTL_OTLWF_OT_SEND_ACTIVE_GET",
-    "IOCTL_OTLWF_OT_SEND_ACTIVE_SET",
-    "IOCTL_OTLWF_OT_SEND_PENDING_GET",
-    "IOCTL_OTLWF_OT_SEND_PENDING_SET",
-    "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET",
-    "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET",
-    "IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME",
-};
-
-static_assert(ARRAYSIZE(IoCtlStrings) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE),
-              "The IoCtl strings should be up to date with the actual IoCtl list.");
-
-const char*
-IoCtlString(
-    ULONG IoControlCode
-)
-{
-    ULONG FuncCode = ((IoControlCode >> 2) & 0xFFF) - 100;
-    return FuncCode < ARRAYSIZE(IoCtlStrings) ? IoCtlStrings[FuncCode] : "UNKNOWN IOCTL";
-}
-
 // Handles Irp for IOTCLs for OpenThread control on the OpenThread thread
 _IRQL_requires_max_(PASSIVE_LEVEL)
 VOID
@@ -335,288 +349,28 @@ otLwfCompleteOpenThreadIrp(
 
     ULONG OrigOutBufferLength = OutBufferLength;
         
-    NTSTATUS status = STATUS_SUCCESS;
-        
-    LogVerbose(DRIVER_IOCTL, "Processing Irp=%p, for %s (In:%u,Out:%u)", 
-                Irp, IoCtlString(IoControlCode), InBufferLength, OutBufferLength);
-
-    switch (IoControlCode)
+    NTSTATUS status = STATUS_NOT_IMPLEMENTED;
+    
+    ULONG FuncCode = ((IoControlCode >> 2) & 0xFFF) - 100;
+    if (FuncCode < ARRAYSIZE(IoCtls))
     {
-    case IOCTL_OTLWF_OT_INTERFACE:
-        status = otLwfIoCtl_otInterface(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_THREAD:
-        status = otLwfIoCtl_otThread(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ACTIVE_SCAN:
-        status = otLwfIoCtl_otActiveScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_DISCOVER:
-        status = otLwfIoCtl_otDiscover(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_CHANNEL:
-        status = otLwfIoCtl_otChannel(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_CHILD_TIMEOUT:
-        status = otLwfIoCtl_otChildTimeout(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_EXTENDED_ADDRESS:
-        status = otLwfIoCtl_otExtendedAddress(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_EXTENDED_PANID:
-        status = otLwfIoCtl_otExtendedPanId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_LEADER_RLOC:
-        status = otLwfIoCtl_otLeaderRloc(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_LINK_MODE:
-        status = otLwfIoCtl_otLinkMode(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MASTER_KEY:
-        status = otLwfIoCtl_otMasterKey(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;            
-    case IOCTL_OTLWF_OT_MESH_LOCAL_EID:
-        status = otLwfIoCtl_otMeshLocalEid(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;    
-    case IOCTL_OTLWF_OT_MESH_LOCAL_PREFIX:
-        status = otLwfIoCtl_otMeshLocalPrefix(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;    
-    case IOCTL_OTLWF_OT_NETWORK_DATA_LEADER:
-        status = STATUS_NOT_IMPLEMENTED;
-        break;    
-    case IOCTL_OTLWF_OT_NETWORK_DATA_LOCAL:
-        status = STATUS_NOT_IMPLEMENTED;
-        break;    
-    case IOCTL_OTLWF_OT_NETWORK_NAME:
-        status = otLwfIoCtl_otNetworkName(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;    
-    case IOCTL_OTLWF_OT_PAN_ID:
-        status = otLwfIoCtl_otPanId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;    
-    case IOCTL_OTLWF_OT_ROUTER_ROLL_ENABLED:
-        status = otLwfIoCtl_otRouterRollEnabled(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;    
-    case IOCTL_OTLWF_OT_SHORT_ADDRESS:
-        status = otLwfIoCtl_otShortAddress(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;    
-    case IOCTL_OTLWF_OT_UNICAST_ADDRESSES:
-        status = STATUS_NOT_IMPLEMENTED;
-        break;    
-    case IOCTL_OTLWF_OT_ACTIVE_DATASET:
-        status = otLwfIoCtl_otActiveDataset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_PENDING_DATASET:
-        status = otLwfIoCtl_otPendingDataset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_LOCAL_LEADER_WEIGHT:
-        status = otLwfIoCtl_otLocalLeaderWeight(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ADD_BORDER_ROUTER:
-        status = otLwfIoCtl_otAddBorderRouter(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_REMOVE_BORDER_ROUTER:
-        status = otLwfIoCtl_otRemoveBorderRouter(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ADD_EXTERNAL_ROUTE:
-        status = otLwfIoCtl_otAddExternalRoute(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_REMOVE_EXTERNAL_ROUTE:
-        status = otLwfIoCtl_otRemoveExternalRoute(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_SERVER_DATA:
-        status = otLwfIoCtl_otSendServerData(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_CONTEXT_ID_REUSE_DELAY:
-        status = otLwfIoCtl_otContextIdReuseDelay(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_KEY_SEQUENCE_COUNTER:
-        status = otLwfIoCtl_otKeySequenceCounter(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_NETWORK_ID_TIMEOUT:
-        status = otLwfIoCtl_otNetworkIdTimeout(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ROUTER_UPGRADE_THRESHOLD:
-        status = otLwfIoCtl_otRouterUpgradeThreshold(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_RELEASE_ROUTER_ID:
-        status = otLwfIoCtl_otReleaseRouterId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAC_WHITELIST_ENABLED:
-        status = otLwfIoCtl_otMacWhitelistEnabled(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ADD_MAC_WHITELIST:
-        status = otLwfIoCtl_otAddMacWhitelist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_REMOVE_MAC_WHITELIST:
-        status = otLwfIoCtl_otRemoveMacWhitelist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAC_WHITELIST_ENTRY:
-        status = otLwfIoCtl_otMacWhitelistEntry(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_CLEAR_MAC_WHITELIST:
-        status = otLwfIoCtl_otClearMacWhitelist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;            
-    case IOCTL_OTLWF_OT_DEVICE_ROLE:
-        status = otLwfIoCtl_otDeviceRole(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_CHILD_INFO_BY_ID:
-        status = otLwfIoCtl_otChildInfoById(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_CHILD_INFO_BY_INDEX:
-        status = otLwfIoCtl_otChildInfoByIndex(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_EID_CACHE_ENTRY:
-        status = otLwfIoCtl_otEidCacheEntry(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_LEADER_DATA:
-        status = otLwfIoCtl_otLeaderData(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_LEADER_ROUTER_ID:
-        status = otLwfIoCtl_otLeaderRouterId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_LEADER_WEIGHT:
-        status = otLwfIoCtl_otLeaderWeight(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_NETWORK_DATA_VERSION:
-        status = otLwfIoCtl_otNetworkDataVersion(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_PARTITION_ID:
-        status = otLwfIoCtl_otPartitionId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_RLOC16:
-        status = otLwfIoCtl_otRloc16(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_ROUTER_ID_SEQUENCE:
-        status = otLwfIoCtl_otRouterIdSequence(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_ROUTER_INFO:
-        status = otLwfIoCtl_otRouterInfo(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;        
-    case IOCTL_OTLWF_OT_STABLE_NETWORK_DATA_VERSION:
-        status = otLwfIoCtl_otStableNetworkDataVersion(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAC_BLACKLIST_ENABLED:
-        status = otLwfIoCtl_otMacBlacklistEnabled(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ADD_MAC_BLACKLIST:
-        status = otLwfIoCtl_otAddMacBlacklist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_REMOVE_MAC_BLACKLIST:
-        status = otLwfIoCtl_otRemoveMacBlacklist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAC_BLACKLIST_ENTRY:
-        status = otLwfIoCtl_otMacBlacklistEntry(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_CLEAR_MAC_BLACKLIST:
-        status = otLwfIoCtl_otClearMacBlacklist(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAX_TRANSMIT_POWER:
-        status = otLwfIoCtl_otMaxTransmitPower(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_NEXT_ON_MESH_PREFIX:
-        status = otLwfIoCtl_otNextOnMeshPrefix(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_POLL_PERIOD:
-        status = otLwfIoCtl_otPollPeriod(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_LOCAL_LEADER_PARTITION_ID:
-        status = otLwfIoCtl_otLocalLeaderPartitionId(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ASSIGN_LINK_QUALITY:
-        status = otLwfIoCtl_otAssignLinkQuality(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_PLATFORM_RESET:
-        status = otLwfIoCtl_otPlatformReset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_PARENT_INFO:
-        status = otLwfIoCtl_otParentInfo(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SINGLETON:
-        status = otLwfIoCtl_otSingleton(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAC_COUNTERS:
-        status = otLwfIoCtl_otMacCounters(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_MAX_CHILDREN:
-        status = otLwfIoCtl_otMaxChildren(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISIONER_START:
-        status = otLwfIoCtl_otCommissionerStart(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISIONER_STOP:
-        status = otLwfIoCtl_otCommissionerStop(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_JOINER_START:
-        status = otLwfIoCtl_otJoinerStart(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_JOINER_STOP:
-        status = otLwfIoCtl_otJoinerStop(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_FACTORY_EUI64:
-        status = otLwfIoCtl_otFactoryAssignedIeeeEui64(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_HASH_MAC_ADDRESS:
-        status = otLwfIoCtl_otHashMacAddress(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ROUTER_DOWNGRADE_THRESHOLD:
-        status = otLwfIoCtl_otRouterDowngradeThreshold(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISSIONER_PANID_QUERY:
-        status = otLwfIoCtl_otCommissionerPanIdQuery(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISSIONER_ENERGY_SCAN:
-        status = otLwfIoCtl_otCommissionerEnergyScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ROUTER_SELECTION_JITTER:
-        status = otLwfIoCtl_otRouterSelectionJitter(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_JOINER_UDP_PORT:
-        status = otLwfIoCtl_otJoinerUdpPort(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_GET:
-        status = otLwfIoCtl_otSendDiagnosticGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_DIAGNOSTIC_RESET:
-        status = otLwfIoCtl_otSendDiagnosticReset(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISIONER_ADD_JOINER:
-        status = otLwfIoCtl_otCommissionerAddJoiner(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISIONER_REMOVE_JOINER:
-        status = otLwfIoCtl_otCommissionerRemoveJoiner(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISIONER_PROVISIONING_URL:
-        status = otLwfIoCtl_otCommissionerProvisioningUrl(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_COMMISIONER_ANNOUNCE_BEGIN:
-        status = otLwfIoCtl_otCommissionerAnnounceBegin(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_ENERGY_SCAN:
-        status = otLwfIoCtl_otEnergyScan(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_ACTIVE_GET:
-        status = otLwfIoCtl_otSendActiveGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_ACTIVE_SET:
-        status = otLwfIoCtl_otSendActiveSet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_PENDING_GET:
-        status = otLwfIoCtl_otSendPendingGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_PENDING_SET:
-        status = otLwfIoCtl_otSendPendingSet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET:
-        status = otLwfIoCtl_otSendMgmtCommissionerGet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET:
-        status = otLwfIoCtl_otSendMgmtCommissionerSet(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    case IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME:
-        status = otLwfIoCtl_otKeySwitchGuardtime(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
-        break;
-    default:
-        status = STATUS_NOT_IMPLEMENTED;
+        LogVerbose(DRIVER_IOCTL, "Processing Irp=%p, for %s (In:%u,Out:%u)", 
+                    Irp, IoCtls[FuncCode].Name, InBufferLength, OutBufferLength);
+
+        if (IoCtls[FuncCode].otFunc)
+        {
+            status = IoCtls[FuncCode].otFunc(pFilter, InBuffer, InBufferLength, OutBuffer, &OutBufferLength);
+        }
+        else
+        {
+            OutBufferLength = 0;
+        }
+
+        LogVerbose(DRIVER_IOCTL, "Completing Irp=%p, with %!STATUS! for %s (Out:%u)", 
+                    Irp, status, IoCtls[FuncCode].Name, OutBufferLength);
+    }
+    else
+    {
         OutBufferLength = 0;
     }
 
@@ -626,13 +380,53 @@ otLwfCompleteOpenThreadIrp(
         RtlZeroMemory((PUCHAR)OutBuffer + OutBufferLength, OrigOutBufferLength - OutBufferLength);
     }
 
-    LogVerbose(DRIVER_IOCTL, "Completing Irp=%p, with %!STATUS! for %s (Out:%u)", 
-                Irp, status, IoCtlString(IoControlCode), OutBufferLength);
-
     // Complete the IRP
     Irp->IoStatus.Information = OutBufferLength;
     Irp->IoStatus.Status = status;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
+}
+
+// Handles Irp for IOTCLs for OpenThread control on the OpenThread thread
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl(
+    _In_ PMS_FILTER     pFilter,
+    _In_ PIRP           Irp
+    )
+{
+    PIO_STACK_LOCATION  IrpSp = IoGetCurrentIrpStackLocation(Irp);
+
+    PUCHAR InBuffer = (PUCHAR)Irp->AssociatedIrp.SystemBuffer + sizeof(GUID);
+    ULONG InBufferLength = IrpSp->Parameters.DeviceIoControl.InputBufferLength - sizeof(GUID);
+    ULONG OutBufferLength = IrpSp->Parameters.DeviceIoControl.OutputBufferLength;
+    ULONG IoControlCode = IrpSp->Parameters.DeviceIoControl.IoControlCode;
+        
+    NTSTATUS status = STATUS_NOT_IMPLEMENTED;
+    
+    ULONG FuncCode = ((IoControlCode >> 2) & 0xFFF) - 100;
+    if (FuncCode < ARRAYSIZE(IoCtls))
+    {
+        LogVerbose(DRIVER_IOCTL, "Processing Irp=%p, for %s (In:%u,Out:%u)", 
+                    Irp, IoCtls[FuncCode].Name, InBufferLength, OutBufferLength);
+
+        if (IoCtls[FuncCode].tunFunc)
+        {
+            status = IoCtls[FuncCode].tunFunc(pFilter, Irp, InBuffer, InBufferLength, OutBufferLength);
+        }
+
+        if (!NT_SUCCESS(status))
+        {
+            LogVerbose(DRIVER_IOCTL, "Completing Irp=%p, with %!STATUS! for %s", 
+                        Irp, status, IoCtls[FuncCode].Name);
+        }
+    }
+
+    if (NT_SUCCESS(status))
+    {
+        status = STATUS_PENDING;
+    }
+
+    return status;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -683,6 +477,82 @@ otLwfIoCtl_otInterface(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
+otLwfTunIoCtl_otInterface(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(BOOLEAN))
+    {
+        BOOLEAN IsEnabled = *(BOOLEAN*)InBuffer;
+        if (IsEnabled)
+        {
+            // Make sure our addresses are in sync
+            (void)otLwfInitializeAddresses(pFilter);
+            otLwfAddressesUpdated(pFilter);
+        }
+
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_NET_IF_UP,
+                1,
+                SPINEL_DATATYPE_BOOL_S,
+                IsEnabled);
+    }
+    else if (OutBufferLength >= sizeof(BOOLEAN))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otInterface_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_NET_IF_UP,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otInterface_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_NET_IF_UP)
+    {
+		BOOLEAN IsEnabled = FALSE;
+		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_BOOL_S, &IsEnabled);
+        if (!(packed_len < 0 || (ULONG)packed_len > DataLength))
+        {
+            *(BOOLEAN*)OutBuffer = IsEnabled;
+            *OutBufferLength = sizeof(BOOLEAN);
+            status = STATUS_SUCCESS;
+        }
+    }
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
 otLwfIoCtl_otThread(
     _In_ PMS_FILTER         pFilter,
     _In_reads_bytes_(InBufferLength)
@@ -694,9 +564,6 @@ otLwfIoCtl_otThread(
     )
 {
     NTSTATUS status = STATUS_INVALID_PARAMETER;
-    
-    *OutBufferLength = 0;
-    UNREFERENCED_PARAMETER(OutBuffer);
 
     if (InBufferLength >= sizeof(BOOLEAN))
     {
@@ -709,8 +576,90 @@ otLwfIoCtl_otThread(
         {
             status = ThreadErrorToNtstatus(otThreadStop(pFilter->otCtx));
         }
+        
+        *OutBufferLength = 0;
+    }
+    else if (*OutBufferLength >= sizeof(BOOLEAN))
+    {
+        *(BOOLEAN*)OutBuffer = (otGetDeviceRole(pFilter->otCtx) > kDeviceRoleDisabled) ? TRUE : FALSE;
+        *OutBufferLength = sizeof(BOOLEAN);
+        status = STATUS_SUCCESS;
+    }
+    else
+    {
+        *OutBufferLength = 0;
     }
 
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otThread(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(BOOLEAN))
+    {
+        BOOLEAN IsEnabled = *(BOOLEAN*)InBuffer;
+
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_NET_STACK_UP,
+                1,
+                SPINEL_DATATYPE_BOOL_S,
+                IsEnabled);
+    }
+    else if (OutBufferLength >= sizeof(BOOLEAN))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otThread_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_NET_STACK_UP,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otThread_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_NET_STACK_UP)
+    {
+		BOOLEAN IsEnabled = FALSE;
+		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_BOOL_S, &IsEnabled);
+        if (!(packed_len < 0 || (ULONG)packed_len > DataLength))
+        {
+            *(BOOLEAN*)OutBuffer = IsEnabled;
+            *OutBufferLength = sizeof(BOOLEAN);
+            status = STATUS_SUCCESS;
+        }
+    }
     return status;
 }
 
@@ -877,6 +826,76 @@ otLwfIoCtl_otChannel(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
+otLwfTunIoCtl_otChannel(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(uint8_t))
+    {
+        uint8_t aChannel = *(uint8_t*)InBuffer;
+
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_PHY_CHAN,
+                1,
+                SPINEL_DATATYPE_UINT8_S,
+                aChannel);
+    }
+    else if (OutBufferLength >= sizeof(uint8_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otChannel_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_PHY_CHAN,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otChannel_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_PHY_CHAN)
+    {
+		uint8_t aChannel = 0;
+		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT8_S, &aChannel);
+        if (!(packed_len < 0 || (ULONG)packed_len > DataLength))
+        {
+            *(uint8_t*)OutBuffer = aChannel;
+            *OutBufferLength = sizeof(uint8_t);
+            status = STATUS_SUCCESS;
+        }
+    }
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
 otLwfIoCtl_otChildTimeout(
     _In_ PMS_FILTER         pFilter,
     _In_reads_bytes_(InBufferLength)
@@ -907,6 +926,76 @@ otLwfIoCtl_otChildTimeout(
         *OutBufferLength = 0;
     }
 
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otChildTimeout(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(uint32_t))
+    {
+        uint32_t aTimeout = *(uint32_t*)InBuffer;
+
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_THREAD_CHILD_TIMEOUT,
+                1,
+                SPINEL_DATATYPE_UINT32_S,
+                aTimeout);
+    }
+    else if (OutBufferLength >= sizeof(uint32_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otChildTimeout_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_THREAD_CHILD_TIMEOUT,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otChildTimeout_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_THREAD_CHILD_TIMEOUT)
+    {
+		uint32_t aTimeout = 0;
+		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT32_S, &aTimeout);
+        if (!(packed_len < 0 || (ULONG)packed_len > DataLength))
+        {
+            *(uint32_t*)OutBuffer = aTimeout;
+            *OutBufferLength = sizeof(uint32_t);
+            status = STATUS_SUCCESS;
+        }
+    }
     return status;
 }
 

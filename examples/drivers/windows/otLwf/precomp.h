@@ -87,6 +87,20 @@ RtlCopyBufferToMdl(
 
 typedef struct _MS_FILTER MS_FILTER, *PMS_FILTER;
 
+#pragma pack(push)
+#pragma pack(1)
+
+typedef struct UDPHeader
+{
+    USHORT SourcePort;
+    USHORT DestinationPort;
+    USHORT TotalLength;
+    USHORT Checksum;
+
+} UDPHeader;
+
+#pragma pack(pop)
+
 //#define DEBUG_TIMING
 //#define LOG_BUFFERS
 //#define FORCE_SYNCHRONOUS_RECEIVE
