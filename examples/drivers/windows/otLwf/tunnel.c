@@ -167,10 +167,6 @@ otLwfProcessSpinelValueIs(
         {
             LogInfo(DRIVER_DEFAULT, "Interface %!GUID! was reset.", &pFilter->InterfaceGuid);
 			// TODO - Handle reset
-		} 
-        else if (status == SPINEL_STATUS_INVALID_COMMAND) 
-        {
-			LogVerbose(DRIVER_DEFAULT, "NCP command not recognized");
 		}
 	} 
     else if (key == SPINEL_PROP_NET_ROLE) 
@@ -294,8 +290,6 @@ otLwfProcessSpinelCommand(
 	spinel_prop_key_t key;
 	uint8_t* value_data_ptr = NULL;
 	spinel_size_t value_data_len = 0;
-    PLIST_ENTRY Link;
-    LIST_ENTRY Handlers;
 
     // Make sure it's an expected command
     if (command < SPINEL_CMD_PROP_VALUE_IS || command >SPINEL_CMD_PROP_VALUE_REMOVED)
@@ -311,53 +305,59 @@ otLwfProcessSpinelCommand(
         return;
     }
 
-    // If this is a 'Value Is' command, process it for notification of state changes
-    if (command == SPINEL_CMD_PROP_VALUE_IS)
+    // If this is a 'Value Is' command, process it for notification of state changes.
+    // Only process it if it isn't linked to a particular transaction.
+    if (command == SPINEL_CMD_PROP_VALUE_IS && SPINEL_HEADER_GET_TID(Header) == 0)
     {
 		otLwfProcessSpinelValueIs(pFilter, DispatchLevel, key, value_data_ptr, value_data_len);
     }
 
-    InitializeListHead(&Handlers);
-    NT_ASSERT(SPINEL_HEADER_GET_TID(Header));
-
-    FILTER_ACQUIRE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
-
-    // Search for matching handlers for this command
-    Link = pFilter->tunCommandHandlers.Flink;
-    while (Link != &pFilter->tunCommandHandlers)
+    // If there was a transaction ID, then look for the corresponding command handler
+    if (SPINEL_HEADER_GET_TID(Header) != 0)
     {
-        SPINEL_CMD_HANDLER_ENTRY* pEntry = CONTAINING_RECORD(Link, SPINEL_CMD_HANDLER_ENTRY, Link);
-        Link = Link->Flink;
+        PLIST_ENTRY Link;
+        LIST_ENTRY Handlers;
+        InitializeListHead(&Handlers);
 
-        if (SPINEL_HEADER_GET_TID(Header) == pEntry->TransactionId)
+        FILTER_ACQUIRE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
+
+        // Search for matching handlers for this command
+        Link = pFilter->tunCommandHandlers.Flink;
+        while (Link != &pFilter->tunCommandHandlers)
         {
-            // Remove from the main list
-            RemoveEntryList(&pEntry->Link);
+            SPINEL_CMD_HANDLER_ENTRY* pEntry = CONTAINING_RECORD(Link, SPINEL_CMD_HANDLER_ENTRY, Link);
+            Link = Link->Flink;
 
-            // Add to the list to be handled outside the lock
-            InsertTailList(&Handlers, &pEntry->Link);
+            if (SPINEL_HEADER_GET_TID(Header) == pEntry->TransactionId)
+            {
+                // Remove from the main list
+                RemoveEntryList(&pEntry->Link);
 
-            // Remove the transaction ID from the 'in use' bit field
-            pFilter->tunTIDsInUse &= ~(1 << pEntry->TransactionId);
+                // Add to the list to be handled outside the lock
+                InsertTailList(&Handlers, &pEntry->Link);
+
+                // Remove the transaction ID from the 'in use' bit field
+                pFilter->tunTIDsInUse &= ~(1 << pEntry->TransactionId);
+            }
         }
-    }
 
-    FILTER_RELEASE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
+        FILTER_RELEASE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
 
-    // TODO - Set event
+        // TODO - Set event
 
-    // Process all the handlers we found, outside the lock
-    Link = Handlers.Flink;
-    while (Link != &Handlers)
-    {
-        SPINEL_CMD_HANDLER_ENTRY* pEntry = CONTAINING_RECORD(Link, SPINEL_CMD_HANDLER_ENTRY, Link);
-        Link = Link->Flink;
+        // Process all the handlers we found, outside the lock
+        Link = Handlers.Flink;
+        while (Link != &Handlers)
+        {
+            SPINEL_CMD_HANDLER_ENTRY* pEntry = CONTAINING_RECORD(Link, SPINEL_CMD_HANDLER_ENTRY, Link);
+            Link = Link->Flink;
         
-        // Call the handler function
-        pEntry->Handler(pFilter, pEntry->Context, command, key, value_data_ptr, value_data_len);
+            // Call the handler function
+            pEntry->Handler(pFilter, pEntry->Context, command, key, value_data_ptr, value_data_len);
 
-        // Free the entry
-        FILTER_FREE_MEM(pEntry);
+            // Free the entry
+            FILTER_FREE_MEM(pEntry);
+        }
     }
 }
 
@@ -391,14 +391,6 @@ otLwfReceiveTunnelPacket(
 	if (SPINEL_HEADER_GET_IID(Header) != 0) 
     {
         LogVerbose(DRIVER_DEFAULT, "Recieved unsupported IID, %u", SPINEL_HEADER_GET_IID(Header));
-		return;
-	}
-    
-	// Ignore responses with no transaction ID, as a 0 specifically means we didn't want a return.
-    // If we get a response, it likely means there was a failure, but we don't care.
-	if (SPINEL_HEADER_GET_TID(Header) == 0) 
-    {
-        LogVerbose(DRIVER_DEFAULT, "Recieved null TID");
 		return;
 	}
 
