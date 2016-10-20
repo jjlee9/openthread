@@ -249,6 +249,10 @@ otLwfProcessSpinelValueIs(
                 frame_len);
 		}
 	}
+    else if (key == SPINEL_PROP_MAC_SCAN_STATE) 
+    {
+		// TODO - If pending scan, send notification of completion
+	} 
     else if (key == SPINEL_PROP_STREAM_RAW) 
     {
         // May be used in the future
@@ -278,6 +282,92 @@ otLwfProcessSpinelValueIs(
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
 void 
+otLwfProcessSpinelValueInserted(
+    _In_ PMS_FILTER pFilter,
+    _In_ BOOLEAN DispatchLevel,
+    _In_ spinel_prop_key_t key,
+    _In_reads_bytes_(value_data_len) const uint8_t* value_data_ptr,
+    _In_ spinel_size_t value_data_len
+    )
+{
+    LogFuncEntryMsg(DRIVER_DEFAULT, "[%p] received Value Inserted for %s", pFilter, spinel_prop_key_to_cstr(key));
+
+    UNREFERENCED_PARAMETER(pFilter);
+    UNREFERENCED_PARAMETER(DispatchLevel);
+    UNREFERENCED_PARAMETER(value_data_ptr);
+    UNREFERENCED_PARAMETER(value_data_len);
+
+	if (key == SPINEL_PROP_MAC_SCAN_BEACON) 
+    {
+        PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
+        if (NotifEntry)
+        {
+            RtlZeroMemory(NotifEntry, sizeof(FILTER_NOTIFICATION_ENTRY));
+            NotifEntry->Notif.InterfaceGuid = pFilter->InterfaceGuid;
+            NotifEntry->Notif.NotifType = OTLWF_NOTIF_ACTIVE_SCAN;
+            NotifEntry->Notif.ActiveScanPayload.Valid = TRUE;
+
+            unsigned int xpanid_len = 0;
+            
+            //chan,rssi,(laddr,saddr,panid,lqi),(proto,flags,networkid,xpanid) [CcT(ESSC)T(iCUD.).]
+            if (try_spinel_datatype_unpack(
+                    value_data_ptr, 
+                    value_data_len, 
+                    "CcT(ESSC.)T(iCUD.).",
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mChannel,
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mRssi,
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mExtAddress.m8,
+                    NULL, // saddr (don't care)
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mPanId,
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mLqi,
+                    NULL, // proto (don't care)
+                    NULL, // flags (don't care)
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mNetworkName.m8,
+                    &NotifEntry->Notif.ActiveScanPayload.Results.mExtendedPanId.m8,
+                    &xpanid_len
+                ) &&
+                xpanid_len == OT_EXT_PAN_ID_SIZE)
+            {
+                otLwfIndicateNotification(NotifEntry);
+            }
+            else
+            {
+                FILTER_FREE_MEM(NotifEntry);
+            }
+        }
+	} 
+    else if (key == SPINEL_PROP_MAC_ENERGY_SCAN_RESULT) 
+    {
+        PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
+        if (NotifEntry)
+        {
+            RtlZeroMemory(NotifEntry, sizeof(FILTER_NOTIFICATION_ENTRY));
+            NotifEntry->Notif.InterfaceGuid = pFilter->InterfaceGuid;
+            NotifEntry->Notif.NotifType = OTLWF_NOTIF_ENERGY_SCAN;
+            NotifEntry->Notif.EnergyScanPayload.Valid = TRUE;
+            
+            if (try_spinel_datatype_unpack(
+                    value_data_ptr, 
+                    value_data_len, 
+                    "Cc",
+                    &NotifEntry->Notif.EnergyScanPayload.Results.mChannel,
+                    &NotifEntry->Notif.EnergyScanPayload.Results.mMaxRssi
+                ))
+            {
+                otLwfIndicateNotification(NotifEntry);
+            }
+            else
+            {
+                FILTER_FREE_MEM(NotifEntry);
+            }
+        }
+	} 
+
+    LogFuncExit(DRIVER_DEFAULT);
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+void 
 otLwfProcessSpinelCommand(
     _In_ PMS_FILTER pFilter,
     _In_ BOOLEAN DispatchLevel,
@@ -292,7 +382,7 @@ otLwfProcessSpinelCommand(
 	spinel_size_t value_data_len = 0;
 
     // Make sure it's an expected command
-    if (command < SPINEL_CMD_PROP_VALUE_IS || command >SPINEL_CMD_PROP_VALUE_REMOVED)
+    if (command < SPINEL_CMD_PROP_VALUE_IS || command > SPINEL_CMD_PROP_VALUE_REMOVED)
     {
         LogVerbose(DRIVER_DEFAULT, "Recieved unhandled command, %u", command);
         return;
@@ -305,15 +395,20 @@ otLwfProcessSpinelCommand(
         return;
     }
 
-    // If this is a 'Value Is' command, process it for notification of state changes.
-    // Only process it if it isn't linked to a particular transaction.
-    if (command == SPINEL_CMD_PROP_VALUE_IS && SPINEL_HEADER_GET_TID(Header) == 0)
+    if (SPINEL_HEADER_GET_TID(Header) == 0)
     {
-		otLwfProcessSpinelValueIs(pFilter, DispatchLevel, key, value_data_ptr, value_data_len);
+        // If this is a 'Value Is' command, process it for notification of state changes.
+        if (command == SPINEL_CMD_PROP_VALUE_IS)
+        {
+		    otLwfProcessSpinelValueIs(pFilter, DispatchLevel, key, value_data_ptr, value_data_len);
+        }
+        else if (command == SPINEL_CMD_PROP_VALUE_INSERTED)
+        {
+            otLwfProcessSpinelValueInserted(pFilter, DispatchLevel, key, value_data_ptr, value_data_len);
+        }
     }
-
     // If there was a transaction ID, then look for the corresponding command handler
-    if (SPINEL_HEADER_GET_TID(Header) != 0)
+    else
     {
         PLIST_ENTRY Link;
         LIST_ENTRY Handlers;
@@ -802,7 +897,7 @@ otLwfIrpCommandHandler(
         status = STATUS_CANCELLED;
         OutBufferLength = 0;
     }
-    else if (Key == SPINEL_PROP_LAST_STATUS)
+    else if (Command == SPINEL_CMD_PROP_VALUE_IS && Key == SPINEL_PROP_LAST_STATUS)
     {
 		spinel_status_t spinel_status = SPINEL_STATUS_OK;
 		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);

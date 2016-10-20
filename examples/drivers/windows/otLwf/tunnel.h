@@ -161,4 +161,12 @@ SpinelStatusToThreadError(
     spinel_status_t error
     );
 
+BOOLEAN
+try_spinel_datatype_unpack(
+    const uint8_t *data_in,
+    spinel_size_t data_len,
+    const char *pack_format,
+    ...
+    );
+
 #endif  //_TUNNEL_H_
