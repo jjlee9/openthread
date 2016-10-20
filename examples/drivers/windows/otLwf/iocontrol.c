@@ -57,12 +57,12 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_LEADER_RLOC",                 REF_IOCTL_FUNC_WITH_TUN(otLeaderRloc) },
     { "IOCTL_OTLWF_OT_LINK_MODE",                   REF_IOCTL_FUNC_WITH_TUN(otLinkMode) },
     { "IOCTL_OTLWF_OT_MASTER_KEY",                  REF_IOCTL_FUNC_WITH_TUN(otMasterKey) },
-    { "IOCTL_OTLWF_OT_MESH_LOCAL_EID",              REF_IOCTL_FUNC(otMeshLocalEid) },
-    { "IOCTL_OTLWF_OT_MESH_LOCAL_PREFIX",           REF_IOCTL_FUNC(otMeshLocalPrefix) },
+    { "IOCTL_OTLWF_OT_MESH_LOCAL_EID",              REF_IOCTL_FUNC_WITH_TUN(otMeshLocalEid) },
+    { "IOCTL_OTLWF_OT_MESH_LOCAL_PREFIX",           REF_IOCTL_FUNC_WITH_TUN(otMeshLocalPrefix) },
     { "IOCTL_OTLWF_OT_NETWORK_DATA_LEADER",         NULL },
     { "IOCTL_OTLWF_OT_NETWORK_DATA_LOCAL",          NULL },
-    { "IOCTL_OTLWF_OT_NETWORK_NAME",                REF_IOCTL_FUNC(otNetworkName) },
-    { "IOCTL_OTLWF_OT_PAN_ID",                      REF_IOCTL_FUNC(otPanId) },
+    { "IOCTL_OTLWF_OT_NETWORK_NAME",                REF_IOCTL_FUNC_WITH_TUN(otNetworkName) },
+    { "IOCTL_OTLWF_OT_PAN_ID",                      REF_IOCTL_FUNC_WITH_TUN(otPanId) },
     { "IOCTL_OTLWF_OT_ROUTER_ROLL_ENABLED",         REF_IOCTL_FUNC(otRouterRollEnabled) },
     { "IOCTL_OTLWF_OT_SHORT_ADDRESS",               REF_IOCTL_FUNC(otShortAddress) },
     { "IOCTL_OTLWF_OT_UNICAST_ADDRESSES",           NULL },
@@ -1837,6 +1837,74 @@ otLwfIoCtl_otNetworkName(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
+otLwfTunIoCtl_otNetworkName(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(otNetworkName))
+    {
+        const otNetworkName *aNetworkName = (otNetworkName*)InBuffer;
+
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_NET_NETWORK_NAME,
+                sizeof(otIp6Address),
+                SPINEL_DATATYPE_UTF8_S,
+                aNetworkName);
+    }
+    else if (OutBufferLength >= sizeof(otNetworkName))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otNetworkName_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_NET_NETWORK_NAME,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otNetworkName_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_NET_NETWORK_NAME)
+    {
+		otNetworkName *aNetworkName = (otNetworkName*)OutBuffer;
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UTF8_S, aNetworkName))
+        {
+            *OutBufferLength = sizeof(otNetworkName);
+            status = STATUS_SUCCESS;
+        }
+    }
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
 otLwfIoCtl_otPanId(
     _In_ PMS_FILTER         pFilter,
     _In_reads_bytes_(InBufferLength)
@@ -1865,6 +1933,75 @@ otLwfIoCtl_otPanId(
         *OutBufferLength = 0;
     }
 
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otPanId(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(otPanId))
+    {
+        otPanId aPanId = *(otPanId*)InBuffer;
+
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_MAC_15_4_PANID,
+                sizeof(uint8_t),
+                SPINEL_DATATYPE_UINT16_S,
+                aPanId);
+    }
+    else if (OutBufferLength >= sizeof(uint8_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otPanId_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_MAC_15_4_PANID,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otPanId_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_MAC_15_4_PANID)
+    {
+		otPanId aPanId = 0;
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT16_S, &aPanId))
+        {
+            *(otPanId*)OutBuffer = aPanId;
+            *OutBufferLength = sizeof(otPanId);
+            status = STATUS_SUCCESS;
+        }
+    }
     return status;
 }
 
