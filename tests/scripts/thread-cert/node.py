@@ -780,16 +780,34 @@ class Node:
         if self.Api:
             if active_timestamp == None:
                 active_timestamp = 0
-            if channel == None:
-                channel = 0
             if panid == None:
                 panid = 0
+            if channel == None:
+                channel = 0
+            if channel_mask == None:
+                channel_mask = 0
+            if extended_panid == None:
+                extended_panid = ""
+            if master_key == None:
+                master_key = ""
             if mesh_local == None:
                 mesh_local = ""
             if network_name == None:
                 network_name = ""
-            # TODO ...
-            if self.Api.otNodeSendActiveSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel), mesh_local.encode('utf-8'), network_name.encode('utf-8')) != 0:
+            if binary == None:
+                binary = ""
+            if self.Api.otNodeSendActiveSet(
+                    self.otNode, 
+                    ctypes.c_ulonglong(active_timestamp), 
+                    ctypes.c_ushort(panid), 
+                    ctypes.c_ushort(channel), 
+                    ctypes.c_uint(channel_mask), 
+                    extended_panid.encode('utf-8'), 
+                    master_key.encode('utf-8'), 
+                    mesh_local.encode('utf-8'), 
+                    network_name.encode('utf-8'), 
+                    binary.encode('utf-8')
+                ) != 0:
                 raise OSError("otNodeSendActiveSet failed!")
         else:
             cmd = 'dataset mgmtsetcommand active '

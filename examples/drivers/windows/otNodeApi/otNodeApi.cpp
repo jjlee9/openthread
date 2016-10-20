@@ -1911,12 +1911,14 @@ OTNODEAPI int32_t OTCALL otNodeSendPendingSet(otNode* aNode, uint64_t aActiveTim
     return result;
 }
 
-OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTimestamp, uint16_t aPanId, uint16_t aChannel, const char *aMeshLocal, const char *aNetworkName)
+OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTimestamp, uint16_t aPanId, uint16_t aChannel, uint32_t aChannelMask, const char *aExtPanId, const char *aMasterKey, const char *aMeshLocal, const char *aNetworkName, const char *aBinary)
 {
     otLogFuncEntryMsg("[%d] 0x%llX %d %d", aNode->mId, aActiveTimestamp, aPanId, aChannel);
     printf("%d: dataset send active 0x%llX %d %d\r\n", aNode->mId, aActiveTimestamp, aPanId, aChannel);
 
     otOperationalDataset aDataset = {};
+    uint8_t tlvs[128];
+    uint8_t tlvsLength = 0;
 
     if (aActiveTimestamp != 0)
     {
@@ -1935,6 +1937,34 @@ OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTime
         aDataset.mIsChannelSet = true;
     }
 
+    if (aChannelMask != 0)
+    {
+        aDataset.mChannelMaskPage0 = aChannelMask;
+        aDataset.mIsChannelMaskPage0Set = true;
+    }
+
+    if (aExtPanId != NULL && strlen(aExtPanId) != 0)
+    {
+        int keyLength;
+        if ((keyLength = Hex2Bin(aExtPanId, aDataset.mExtendedPanId.m8, sizeof(aDataset.mExtendedPanId))) != OT_MASTER_KEY_SIZE)
+        {
+            printf("invalid length ext pan id %d\r\n", keyLength);
+            return kThreadError_Parse;
+        }
+        aDataset.mIsExtendedPanIdSet = true;
+    }
+
+    if (aMasterKey != NULL && strlen(aMasterKey) != 0)
+    {
+        int keyLength;
+        if ((keyLength = Hex2Bin(aMasterKey, aDataset.mMasterKey.m8, sizeof(aDataset.mMasterKey))) != OT_MASTER_KEY_SIZE)
+        {
+            printf("invalid length key %d\r\n", keyLength);
+            return kThreadError_Parse;
+        }
+        aDataset.mIsMasterKeySet = true;
+    }
+
     if (aMeshLocal != NULL && strlen(aMeshLocal) != 0)
     {
         otIp6Address prefix;
@@ -1950,7 +1980,18 @@ OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTime
         aDataset.mIsNetworkNameSet = true;
     }
 
-    auto result = otSendActiveSet(aNode->mInstance, &aDataset, nullptr, 0);
+    if (aBinary != NULL && strlen(aBinary) != 0)
+    {
+        int length;
+        if ((length = Hex2Bin(aBinary,tlvs, sizeof(tlvs))) < 0)
+        {
+            printf("invalid length tlvs %d\r\n", length);
+            return kThreadError_Parse;
+        }
+        tlvsLength = (uint8_t)length;
+    }
+
+    auto result = otSendActiveSet(aNode->mInstance, &aDataset, tlvsLength == 0 ? nullptr : tlvs, tlvsLength);
     otLogFuncExit();
     return result;
 }
