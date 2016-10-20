@@ -775,8 +775,8 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
-    def send_mgmt_active_set(self, active_timestamp=None, channel=None, panid=None, mesh_local=None,
-                              network_name=None):
+    def send_mgmt_active_set(self, active_timestamp=None, channel=None, channel_mask=None, extended_panid=None,
+                             panid=None, master_key=None, mesh_local=None, network_name=None, binary=None):
         if self.Api:
             if active_timestamp == None:
                 active_timestamp = 0
@@ -788,6 +788,7 @@ class Node:
                 mesh_local = ""
             if network_name == None:
                 network_name = ""
+            # TODO ...
             if self.Api.otNodeSendActiveSet(self.otNode, ctypes.c_ulonglong(active_timestamp), ctypes.c_ushort(panid), ctypes.c_ushort(channel), mesh_local.encode('utf-8'), network_name.encode('utf-8')) != 0:
                 raise OSError("otNodeSendActiveSet failed!")
         else:
@@ -799,14 +800,26 @@ class Node:
             if channel != None:
                 cmd += 'channel %d ' % channel
 
+            if channel_mask != None:
+                cmd += 'channelmask %d ' % channel_mask
+
+            if extended_panid != None:
+                cmd += 'extpanid ' + extended_panid + ' '
+
             if panid != None:
                 cmd += 'panid %d ' % panid
+
+            if master_key != None:
+                cmd += 'masterkey ' + master_key + ' '
 
             if mesh_local != None:
                 cmd += 'localprefix ' + mesh_local + ' '
 
             if network_name != None:
                 cmd += 'networkname ' + network_name + ' '
+
+            if binary != None:
+                cmd += 'binary ' + binary + ' '
 
             self.send_command(cmd)
             self.pexpect.expect('Done')

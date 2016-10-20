@@ -418,7 +418,7 @@ ThreadError Mle::SetStateChild(uint16_t aRloc16)
     mNetif.GetNetworkDataLocal().ClearResubmitDelayTimer();
     mNetif.GetIp6().SetForwardingEnabled(false);
 
-    if (mPreviousPanId != Mac::kPanIdBroadcast)
+    if (mPreviousPanId != Mac::kPanIdBroadcast && (mDeviceMode & ModeTlv::kModeFFD))
     {
         mPreviousPanId = Mac::kPanIdBroadcast;
         mNetif.GetAnnounceBeginServer().SendAnnounce(1 << mPreviousChannel);
@@ -1433,7 +1433,6 @@ ThreadError Mle::SendAnnounce(uint8_t aChannel)
     PanIdTlv panid;
     Ip6::Address destination;
     Message *message;
-    (void)aChannel;
 
     VerifyOrExit((message = mSocket.NewMessage(0)) != NULL, ;);
     message->SetSubType(Message::kSubTypeMleAnnounce);
@@ -1507,8 +1506,6 @@ void Mle::SendOrphanAnnounce(void)
 exit:
     return;
 }
-
-
 
 ThreadError Mle::SendMessage(Message &aMessage, const Ip6::Address &aDestination)
 {
@@ -2008,6 +2005,12 @@ ThreadError Mle::HandleDataResponse(const Message &aMessage, const Ip6::MessageI
         mNetif.GetPendingDataset().Clear();
     }
 
+    if (mPreviousPanId != Mac::kPanIdBroadcast && ((mDeviceMode & ModeTlv::kModeFFD) == 0))
+    {
+        mPreviousPanId = Mac::kPanIdBroadcast;
+        mNetif.GetAnnounceBeginServer().SendAnnounce(1 << mPreviousChannel);
+    }
+
     mRetrieveNewNetworkData = false;
 
 exit:
@@ -2463,6 +2466,11 @@ ThreadError Mle::HandleAnnounce(const Message &aMessage, const Ip6::MessageInfo 
 
     if (localTimestamp == NULL || localTimestamp->Compare(timestamp) > 0)
     {
+        if ((mDeviceMode & ModeTlv::kModeFFD) == 0)
+        {
+            mRetrieveNewNetworkData = true;
+        }
+
         Stop();
         mPreviousChannel = mMac.GetChannel();
         mPreviousPanId = mMac.GetPanId();
