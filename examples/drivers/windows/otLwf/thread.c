@@ -194,7 +194,7 @@ otLwfUninitializeThreadMode(
     LogFuncExit(DRIVER_DEFAULT);
 }
 
-#if DBG
+#if DEBUG_ALLOC
 PMS_FILTER
 otLwfFindFromCurrentThread()
 {
@@ -228,14 +228,14 @@ otLwfFindFromCurrentThread()
 void *otPlatCAlloc(size_t aNum, size_t aSize)
 {
     size_t totalSize = aNum * aSize;
-#if DBG
+#if DEBUG_ALLOC
     totalSize += sizeof(OT_ALLOC);
 #endif
     PVOID mem = ExAllocatePoolWithTag(NonPagedPoolNx, totalSize, 'OTDM');
     if (mem)
     {
         RtlZeroMemory(mem, totalSize);
-#if DBG
+#if DEBUG_ALLOC
         PMS_FILTER pFilter = otLwfFindFromCurrentThread();
         //LogVerbose(DRIVER_DEFAULT, "otPlatAlloc(%u) = ID:%u %p", (ULONG)totalSize, pFilter->otAllocationID, mem);
 
@@ -256,7 +256,7 @@ void *otPlatCAlloc(size_t aNum, size_t aSize)
 void otPlatFree(void *aPtr)
 {
     if (aPtr == NULL) return;
-#if DBG
+#if DEBUG_ALLOC
     aPtr = (PUCHAR)(aPtr) - sizeof(OT_ALLOC);
     //LogVerbose(DRIVER_DEFAULT, "otPlatFree(%p)", aPtr);
     OT_ALLOC* AllocHeader = (OT_ALLOC*)aPtr;

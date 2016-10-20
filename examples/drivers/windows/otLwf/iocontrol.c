@@ -91,12 +91,12 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_LEADER_DATA",                 REF_IOCTL_FUNC(otLeaderData) },
     { "IOCTL_OTLWF_OT_LEADER_ROUTER_ID",            REF_IOCTL_FUNC_WITH_TUN(otLeaderRouterId) },
     { "IOCTL_OTLWF_OT_LEADER_WEIGHT",               REF_IOCTL_FUNC_WITH_TUN(otLeaderWeight) },
-    { "IOCTL_OTLWF_OT_NETWORK_DATA_VERSION",        REF_IOCTL_FUNC(otNetworkDataVersion) },
-    { "IOCTL_OTLWF_OT_PARTITION_ID",                REF_IOCTL_FUNC(otPartitionId) },
-    { "IOCTL_OTLWF_OT_RLOC16",                      REF_IOCTL_FUNC(otRloc16) },
+    { "IOCTL_OTLWF_OT_NETWORK_DATA_VERSION",        REF_IOCTL_FUNC_WITH_TUN(otNetworkDataVersion) },
+    { "IOCTL_OTLWF_OT_PARTITION_ID",                REF_IOCTL_FUNC_WITH_TUN(otPartitionId) },
+    { "IOCTL_OTLWF_OT_RLOC16",                      REF_IOCTL_FUNC_WITH_TUN(otRloc16) },
     { "IOCTL_OTLWF_OT_ROUTER_ID_SEQUENCE",          REF_IOCTL_FUNC(otRouterIdSequence) },
     { "IOCTL_OTLWF_OT_ROUTER_INFO",                 REF_IOCTL_FUNC(otRouterInfo) },
-    { "IOCTL_OTLWF_OT_STABLE_NETWORK_DATA_VERSION", REF_IOCTL_FUNC(otStableNetworkDataVersion) },
+    { "IOCTL_OTLWF_OT_STABLE_NETWORK_DATA_VERSION", REF_IOCTL_FUNC_WITH_TUN(otStableNetworkDataVersion) },
     { "IOCTL_OTLWF_OT_MAC_BLACKLIST_ENABLED",       REF_IOCTL_FUNC(otMacBlacklistEnabled) },
     { "IOCTL_OTLWF_OT_ADD_MAC_BLACKLIST",           REF_IOCTL_FUNC(otAddMacBlacklist) },
     { "IOCTL_OTLWF_OT_REMOVE_MAC_BLACKLIST",        REF_IOCTL_FUNC(otRemoveMacBlacklist) },
@@ -107,7 +107,7 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_POLL_PERIOD",                 REF_IOCTL_FUNC(otPollPeriod) },
     { "IOCTL_OTLWF_OT_LOCAL_LEADER_PARTITION_ID",   REF_IOCTL_FUNC(otLocalLeaderPartitionId) },
     { "IOCTL_OTLWF_OT_ASSIGN_LINK_QUALITY",         REF_IOCTL_FUNC(otAssignLinkQuality) },
-    { "IOCTL_OTLWF_OT_PLATFORM_RESET",              REF_IOCTL_FUNC(otPlatformReset) },
+    { "IOCTL_OTLWF_OT_PLATFORM_RESET",              REF_IOCTL_FUNC_WITH_TUN(otPlatformReset) },
     { "IOCTL_OTLWF_OT_PARENT_INFO",                 REF_IOCTL_FUNC(otParentInfo) },
     { "IOCTL_OTLWF_OT_SINGLETON",                   REF_IOCTL_FUNC(otSingleton) },
     { "IOCTL_OTLWF_OT_MAC_COUNTERS",                REF_IOCTL_FUNC(otMacCounters) },
@@ -2114,7 +2114,7 @@ otLwfTunIoCtl_otShortAddress(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
 
     UNREFERENCED_PARAMETER(InBuffer);
-    UNREFERENCED_PARAMETER(OutBufferLength);
+    UNREFERENCED_PARAMETER(InBufferLength);
 
     if (OutBufferLength >= sizeof(otShortAddress))
     {
@@ -3648,6 +3648,61 @@ otLwfIoCtl_otNetworkDataVersion(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
+otLwfTunIoCtl_otNetworkDataVersion(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
+
+    if (OutBufferLength >= sizeof(uint8_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otNetworkDataVersion_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_THREAD_NETWORK_DATA_VERSION,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otNetworkDataVersion_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_THREAD_NETWORK_DATA_VERSION)
+    {
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT8_S, (uint8_t*)OutBuffer))
+        {
+            *OutBufferLength = sizeof(uint8_t);
+            status = STATUS_SUCCESS;
+        }
+    }
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
 otLwfIoCtl_otPartitionId(
     _In_ PMS_FILTER         pFilter,
     _In_reads_bytes_(InBufferLength)
@@ -3679,6 +3734,61 @@ otLwfIoCtl_otPartitionId(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
+otLwfTunIoCtl_otPartitionId(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
+
+    if (OutBufferLength >= sizeof(uint32_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otPartitionId_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_NET_PARTITION_ID,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otPartitionId_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_NET_PARTITION_ID)
+    {
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT32_S, (uint32_t*)OutBuffer))
+        {
+            *OutBufferLength = sizeof(uint32_t);
+            status = STATUS_SUCCESS;
+        }
+    }
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
 otLwfIoCtl_otRloc16(
     _In_ PMS_FILTER         pFilter,
     _In_reads_bytes_(InBufferLength)
@@ -3705,6 +3815,61 @@ otLwfIoCtl_otRloc16(
         *OutBufferLength = 0;
     }
 
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otRloc16(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
+
+    if (OutBufferLength >= sizeof(uint16_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otRloc16_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_THREAD_RLOC16,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otRloc16_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_THREAD_RLOC16)
+    {
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT16_S, (uint16_t*)OutBuffer))
+        {
+            *OutBufferLength = sizeof(uint16_t);
+            status = STATUS_SUCCESS;
+        }
+    }
     return status;
 }
 
@@ -3800,6 +3965,61 @@ otLwfIoCtl_otStableNetworkDataVersion(
         *OutBufferLength = 0;
     }
 
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otStableNetworkDataVersion(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
+
+    if (OutBufferLength >= sizeof(uint8_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otStableNetworkDataVersion_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_THREAD_STABLE_NETWORK_DATA_VERSION,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otStableNetworkDataVersion_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_THREAD_STABLE_NETWORK_DATA_VERSION)
+    {
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT8_S, (uint8_t*)OutBuffer))
+        {
+            *OutBufferLength = sizeof(uint8_t);
+            status = STATUS_SUCCESS;
+        }
+    }
     return status;
 }
 
@@ -4158,6 +4378,36 @@ otLwfIoCtl_otPlatformReset(
     *OutBufferLength = 0;
     
     otPlatformReset(pFilter->otCtx);
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otPlatformReset(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
+    UNREFERENCED_PARAMETER(OutBufferLength);
+    
+    status = 
+        otLwfSendTunnelCommandForIrp(
+            pFilter,
+            pIrp,
+            NULL,
+            SPINEL_CMD_RESET,
+            0,
+            0,
+            NULL);
 
     return status;
 }

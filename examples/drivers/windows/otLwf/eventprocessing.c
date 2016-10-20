@@ -689,7 +689,7 @@ otLwfEventWorkerThread(
         return;
     }
 
-#if DBG
+#if DEBUG_ALLOC
     // Initialize the list head for allocations
     InitializeListHead(&pFilter->otOutStandingAllocations);
 
@@ -1017,7 +1017,7 @@ exit:
         otInstanceFinalize(pFilter->otCtx);
         pFilter->otCtx = NULL;
         
-#if DBG
+#if DEBUG_ALLOC
         {
             NT_ASSERT(pFilter->otOutstandingAllocationCount == 0);
             NT_ASSERT(pFilter->otOutstandingMemoryAllocated == 0);

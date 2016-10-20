@@ -197,7 +197,7 @@ typedef struct _MS_FILTER
         uint8_t                         otPendingExtendedAddressCount;
         uint64_t                        otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
 
-#if DBG
+#if DEBUG_ALLOC
         // Used for tracking memory allocations
         HANDLE                          otThreadId;
         volatile LONG                   otOutstandingAllocationCount;
@@ -355,7 +355,7 @@ otLogBuffer(
 // Debug Helpers
 //
 
-#if DBG
+#if DEBUG_ALLOC
 
 typedef struct _OT_ALLOC
 {

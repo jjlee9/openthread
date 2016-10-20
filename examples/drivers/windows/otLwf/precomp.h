@@ -102,6 +102,7 @@ typedef struct UDPHeader
 #pragma pack(pop)
 
 //#define DEBUG_TIMING
+//#define DEBUG_ALLOC
 //#define LOG_BUFFERS
 //#define FORCE_SYNCHRONOUS_RECEIVE
 
