@@ -62,6 +62,7 @@ Joiner::Joiner(ThreadNetif &aNetif):
     mTransmitMessage(NULL),
     mSocket(aNetif.GetIp6().mUdp),
     mTransmitTask(aNetif.GetIp6().mTaskletScheduler, &Joiner::HandleUdpTransmit, this),
+    mTimer(aNetif.GetIp6().mTimerScheduler, &Joiner::HandleTimer, this),
     mJoinerEntrust(OPENTHREAD_URI_JOINER_ENTRUST, &Joiner::HandleJoinerEntrust, this),
     mNetif(aNetif)
 {
@@ -73,6 +74,8 @@ ThreadError Joiner::Start(const char *aPSKd, const char *aProvisioningUrl)
     otLogFuncEntry();
     ThreadError error;
     Mac::ExtAddress extAddress;
+
+    otLogFuncEntry();
 
     // use extended address based on factory-assigned IEEE EUI-64
     mNetif.GetMac().GetHashMacAddress(&extAddress);
@@ -110,7 +113,7 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
 {
     if (aResult != NULL)
     {
-        otLogFuncEntryMsg("aResult = %llX", HostSwap64(*(uint64_t *)&aResult->mExtAddress));
+        otLogFuncEntryMsg("aResult = %llX", HostSwap64(*reinterpret_cast<uint64_t *>(&aResult->mExtAddress)));
 
         SteeringDataTlv steeringData;
         Mac::ExtAddress extAddress;
@@ -169,8 +172,9 @@ ThreadError Joiner::HandleDtlsSend(void *aContext, const uint8_t *aBuf, uint16_t
 
 ThreadError Joiner::HandleDtlsSend(const unsigned char *aBuf, uint16_t aLength)
 {
-    otLogFuncEntry();
     ThreadError error = kThreadError_None;
+
+    otLogFuncEntry();
 
     if (mTransmitMessage == NULL)
     {
@@ -241,13 +245,14 @@ void Joiner::HandleUdpTransmit(void)
 
     VerifyOrExit(mTransmitMessage != NULL, error = kThreadError_NoBufs);
 
-    otLogInfoMeshCoP("transmit %d (to %llX)\n", mTransmitMessage->GetLength(), HostSwap64(*(uint64_t *)&mJoinerRouter));
+    otLogInfoMeshCoP("transmit %d (to %llX)\n", mTransmitMessage->GetLength(),
+                     HostSwap64(*reinterpret_cast<uint64_t *>(&mJoinerRouter)));
 
     memset(&messageInfo, 0, sizeof(messageInfo));
     messageInfo.GetPeerAddr().mFields.m16[0] = HostSwap16(0xfe80);
     messageInfo.GetPeerAddr().SetIid(mJoinerRouter);
     messageInfo.mPeerPort = mJoinerUdpPort;
-    messageInfo.mInterfaceId = 1;
+    messageInfo.mInterfaceId = OT_NETIF_INTERFACE_ID_THREAD;
 
     SuccessOrExit(error = mSocket.SendTo(*mTransmitMessage, messageInfo));
 
@@ -355,7 +360,7 @@ void Joiner::HandleJoinerEntrust(Coap::Header &aHeader, Message &aMessage, const
     ExtendedPanIdTlv extendedPanId;
     NetworkNameTlv networkName;
     ActiveTimestampTlv activeTimestamp;
-    Mac::ExtAddress extAddress;
+
 
     otLogFuncEntry();
 
@@ -387,7 +392,23 @@ void Joiner::HandleJoinerEntrust(Coap::Header &aHeader, Message &aMessage, const
 
     otLogInfoMeshCoP("join success!\n");
 
-    // configure a random Extended Address
+    // Delay extended address configuration to allow DTLS wrap up.
+    mTimer.Start(kConfigExtAddressDelay);
+
+exit:
+    (void)aMessageInfo;
+    otLogFuncExit();
+}
+
+void Joiner::HandleTimer(void *aContext)
+{
+    static_cast<Joiner *>(aContext)->HandleTimer();
+}
+
+void Joiner::HandleTimer(void)
+{
+    Mac::ExtAddress extAddress;
+
     for (size_t i = 0; i < sizeof(extAddress); i++)
     {
         extAddress.m8[i] = static_cast<uint8_t>(otPlatRandomGet());
@@ -395,10 +416,6 @@ void Joiner::HandleJoinerEntrust(Coap::Header &aHeader, Message &aMessage, const
 
     mNetif.GetMac().SetExtAddress(extAddress);
     mNetif.GetMle().UpdateLinkLocalAddress();
-
-exit:
-    (void)aMessageInfo;
-    otLogFuncExit();
 }
 
 void Joiner::Close(void)

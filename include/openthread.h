@@ -69,6 +69,7 @@ extern "C" {
  * @defgroup messages Message Buffers
  * @defgroup ip6 IPv6
  * @defgroup udp UDP
+ * @defgroup coap CoAP
  *
  * @}
  *

@@ -89,7 +89,7 @@ void Mac::StartCsmaBackoff(void)
     }
 
     backoff = kMinBackoff + (kUnitBackoffPeriod * kPhyUsPerSymbol * (1 << backoffExponent)) / 1000;
-    backoff = otPlatRandomGet() % backoff;
+    backoff = (otPlatRandomGet() % backoff);
 
     mBackoffTimer.Start(backoff);
 }
@@ -390,7 +390,7 @@ void Mac::GetHashMacAddress(ExtAddress *aHashMacAddress)
     memcpy(aHashMacAddress->m8, buf, OT_EXT_ADDRESS_SIZE);
     aHashMacAddress->SetLocal(true);
 
-    otLogFuncExitMsg("%llX", HostSwap64(*(uint64_t *)aHashMacAddress));
+    otLogFuncExitMsg("%llX", HostSwap64(*reinterpret_cast<uint64_t *>(aHashMacAddress)));
 }
 
 ShortAddress Mac::GetShortAddress(void) const
@@ -444,6 +444,7 @@ const char *Mac::GetNetworkName(void) const
 ThreadError Mac::SetNetworkName(const char *aNetworkName)
 {
     ThreadError error = kThreadError_None;
+
     otLogFuncEntryMsg("%s", aNetworkName);
 
     VerifyOrExit(strlen(aNetworkName) <= OT_NETWORK_NAME_MAX_SIZE, error = kThreadError_InvalidArgs);
@@ -676,11 +677,15 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
         break;
 
     case Frame::kKeyIdMode2:
+    {
+        const uint8_t keySource[] = {0xff, 0xff, 0xff, 0xff};
         key = sMode2Key;
         frameCounter = 0xffffffff;
+        aFrame.SetKeySource(keySource);
         aFrame.SetKeyId(0xff);
         extAddress = static_cast<const ExtAddress *>(&sMode2ExtAddress);
         break;
+    }
 
     default:
         assert(false);

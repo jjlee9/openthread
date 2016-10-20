@@ -33,20 +33,29 @@ import unittest
 import node
 
 COMMISSIONER = 1
-JOINER = 2
+JOINER_ROUTER = 2
+JOINER = 3
 
-class Cert_8_1_01_Commissioning(unittest.TestCase):
+class Cert_8_2_02_JoinerRouter(unittest.TestCase):
     def setUp(self):
         self.nodes = {}
-        for i in range(1,3):
+        for i in range(1,4):
             self.nodes[i] = node.Node(i)
 
         self.nodes[COMMISSIONER].set_panid(0xface)
         self.nodes[COMMISSIONER].set_mode('rsdn')
         self.nodes[COMMISSIONER].set_masterkey('deadbeefdeadbeefdeadbeefdeadbeef')
+        self.nodes[COMMISSIONER].enable_whitelist()
+        self.nodes[COMMISSIONER].set_router_selection_jitter(1)
+
+        self.nodes[JOINER_ROUTER].set_mode('rsdn')
+        self.nodes[JOINER_ROUTER].set_masterkey('00112233445566778899aabbccddeeff')
+        self.nodes[JOINER_ROUTER].enable_whitelist()
+        self.nodes[JOINER_ROUTER].set_router_selection_jitter(1)
 
         self.nodes[JOINER].set_mode('rsdn')
         self.nodes[JOINER].set_masterkey('00112233445566778899aabbccddeeff')
+        self.nodes[JOINER].enable_whitelist()
         self.nodes[JOINER].set_router_selection_jitter(1)
 
     def tearDown(self):
@@ -59,18 +68,34 @@ class Cert_8_1_01_Commissioning(unittest.TestCase):
         self.nodes[COMMISSIONER].thread_start()
         time.sleep(5)
         self.assertEqual(self.nodes[COMMISSIONER].get_state(), 'leader')
+
         self.nodes[COMMISSIONER].commissioner_start()
-        time.sleep(3)
-        self.nodes[COMMISSIONER].commissioner_add_joiner(self.nodes[JOINER].get_hashmacaddr(), 'openthread')
+        time.sleep(5)
+        self.nodes[COMMISSIONER].commissioner_add_joiner(self.nodes[JOINER_ROUTER].get_hashmacaddr(), 'openthread')
+        self.nodes[COMMISSIONER].commissioner_add_joiner(self.nodes[JOINER].get_hashmacaddr(), 'openthread2')
+        time.sleep(5)
+
+        self.nodes[COMMISSIONER].add_whitelist(self.nodes[JOINER_ROUTER].get_hashmacaddr())
+        self.nodes[JOINER_ROUTER].add_whitelist(self.nodes[COMMISSIONER].get_addr64())
+
+        self.nodes[JOINER_ROUTER].interface_up()
+        self.nodes[JOINER_ROUTER].joiner_start('openthread')
+        time.sleep(10)
+        self.assertEqual(self.nodes[JOINER_ROUTER].get_masterkey(), self.nodes[COMMISSIONER].get_masterkey())
+
+        self.nodes[COMMISSIONER].add_whitelist(self.nodes[JOINER_ROUTER].get_addr64())
+
+        self.nodes[JOINER_ROUTER].thread_start()
+        time.sleep(5)
+        self.assertEqual(self.nodes[JOINER_ROUTER].get_state(), 'router')
+
+        self.nodes[JOINER_ROUTER].add_whitelist(self.nodes[JOINER].get_hashmacaddr())
+        self.nodes[JOINER].add_whitelist(self.nodes[JOINER_ROUTER].get_addr64())
 
         self.nodes[JOINER].interface_up()
-        self.nodes[JOINER].joiner_start('openthread')
+        self.nodes[JOINER].joiner_start('2daerhtnepo')
         time.sleep(10)
-        self.assertEqual(self.nodes[JOINER].get_masterkey(), self.nodes[COMMISSIONER].get_masterkey())
-
-        self.nodes[JOINER].thread_start()
-        time.sleep(5)
-        self.assertEqual(self.nodes[JOINER].get_state(), 'router')
+        self.assertNotEqual(self.nodes[JOINER].get_masterkey(), self.nodes[COMMISSIONER].get_masterkey())
 
 if __name__ == '__main__':
     unittest.main()
