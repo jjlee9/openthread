@@ -1115,6 +1115,10 @@ class Node:
                                                  ctypes.c_ulonglong,
                                                  ctypes.c_ushort,
                                                  ctypes.c_ushort,
+                                                 ctypes.c_uint,
+                                                 ctypes.c_char_p,
+                                                 ctypes.c_char_p,
+                                                 ctypes.c_char_p,
                                                  ctypes.c_char_p,
                                                  ctypes.c_char_p]
 

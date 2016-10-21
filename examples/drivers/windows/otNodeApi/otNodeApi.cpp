@@ -324,7 +324,7 @@ PingHandlerRecvCallback(
         // TODO - Fix this hack...
         auto RecvDest = (const otIp6Address*)aPingHandler->mRecvBuffer;
         if (memcmp(RecvDest, &LinkLocalAllRoutersAddress, sizeof(IN6_ADDR)) == 0 ||
-            memcmp(RecvDest, &RealmLocalAllNodesAddress, sizeof(IN6_ADDR)) == 0)
+            memcmp(RecvDest, &RealmLocalAllRoutersAddress, sizeof(IN6_ADDR)) == 0)
         {
             auto Role = otGetDeviceRole(aPingHandler->mParentNode->mInstance);
             if (Role != kDeviceRoleLeader && Role != kDeviceRoleRouter)
@@ -381,8 +381,20 @@ PingHandlerRecvCallback(
     }
 }
 
+bool IsMeshLocalEID(otNode *aNode, const otIp6Address *aAddress)
+{
+    auto ML_EID = otGetMeshLocalEid(aNode->mInstance);
+    if (ML_EID == nullptr) return false;
+    bool result = memcmp(ML_EID->mFields.m8, aAddress->mFields.m8, sizeof(otIp6Address)) == 0;
+    otFreeMemory(ML_EID);
+    return result;
+}
+
 void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
 {
+    // Only want to register on link-local and mesh-local EID, not RLOC or global addresses
+    if (!IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)aAddress) || !IsMeshLocalEID(aNode, aAddress)) return;
+
     otPingHandler *aPingHandler = new otPingHandler();
     aPingHandler->mParentNode = aNode;
     aPingHandler->mAddress = *aAddress;
