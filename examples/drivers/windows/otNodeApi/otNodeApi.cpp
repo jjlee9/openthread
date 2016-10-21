@@ -392,9 +392,6 @@ bool IsMeshLocalEID(otNode *aNode, const otIp6Address *aAddress)
 
 void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
 {
-    // Only want to register on link-local and mesh-local EID, not RLOC or global addresses
-    if (!IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)aAddress) || !IsMeshLocalEID(aNode, aAddress)) return;
-
     otPingHandler *aPingHandler = new otPingHandler();
     aPingHandler->mParentNode = aNode;
     aPingHandler->mAddress = *aAddress;
@@ -484,7 +481,7 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
             goto exit;
         }
     }
-    else
+    else if (IsMeshLocalEID(aNode, aAddress))
     {
         // All nodes address
         MCReg.ipv6mr_multiaddr = RealmLocalAllNodesAddress;
