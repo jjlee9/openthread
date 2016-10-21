@@ -1955,7 +1955,7 @@ OTNODEAPI int32_t OTCALL otNodeSendActiveSet(otNode* aNode, uint64_t aActiveTime
     if (aExtPanId != NULL && strlen(aExtPanId) != 0)
     {
         int keyLength;
-        if ((keyLength = Hex2Bin(aExtPanId, aDataset.mExtendedPanId.m8, sizeof(aDataset.mExtendedPanId))) != OT_MASTER_KEY_SIZE)
+        if ((keyLength = Hex2Bin(aExtPanId, aDataset.mExtendedPanId.m8, sizeof(aDataset.mExtendedPanId))) != OT_EXT_PAN_ID_SIZE)
         {
             printf("invalid length ext pan id %d\r\n", keyLength);
             return kThreadError_Parse;
