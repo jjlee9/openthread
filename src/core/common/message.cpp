@@ -93,7 +93,7 @@ Buffer *MessagePool::NewBuffer(void)
 
     if (mFreeBuffers == NULL)
     {
-        otLogInfoMac("No available message buffer\n");
+        otLogInfoMac("No available message buffer");
         ExitNow();
     }
 
@@ -271,8 +271,24 @@ exit:
 ThreadError Message::Prepend(const void *aBuf, uint16_t aLength)
 {
     ThreadError error = kThreadError_None;
+    Buffer *newBuffer = NULL;
 
-    VerifyOrExit(aLength <= GetReserved(), error = kThreadError_NoBufs);
+    while (aLength > GetReserved())
+    {
+        VerifyOrExit((newBuffer = GetMessagePool()->NewBuffer()) != NULL, error = kThreadError_NoBufs);
+
+        newBuffer->SetNextBuffer(GetNextBuffer());
+        SetNextBuffer(newBuffer);
+
+        if (GetReserved() < sizeof(mHeadData))
+        {
+            // Copy payload from the first buffer.
+            memcpy(newBuffer->mHeadData + GetReserved(), mHeadData + GetReserved(),
+                   sizeof(mHeadData) - GetReserved());
+        }
+
+        SetReserved(GetReserved() + kBufferDataSize);
+    }
 
     SetReserved(GetReserved() - aLength);
     mInfo.mLength += aLength;
@@ -458,14 +474,14 @@ int Message::CopyTo(uint16_t aSourceOffset, uint16_t aDestinationOffset, uint16_
     return bytesCopied;
 }
 
-Message *Message::Clone(void) const
+Message *Message::Clone(uint16_t aLength) const
 {
     ThreadError error = kThreadError_None;
     Message *messageCopy;
 
     VerifyOrExit((messageCopy = GetMessagePool()->New(GetType(), GetReserved())) != NULL, error = kThreadError_NoBufs);
-    SuccessOrExit(error = messageCopy->SetLength(GetLength()));
-    CopyTo(0, 0, GetLength(), *messageCopy);
+    SuccessOrExit(error = messageCopy->SetLength(aLength));
+    CopyTo(0, 0, aLength, *messageCopy);
 
     // Copy selected message information.
     messageCopy->SetOffset(GetOffset());

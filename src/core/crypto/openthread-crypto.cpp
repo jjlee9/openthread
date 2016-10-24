@@ -28,58 +28,71 @@
 
 /**
  * @file
- *   This file includes definitions for responding to Announce Requests.
+ *   This file implements the C APIs for openthread crypto library.
  */
 
-#ifndef ANNOUNCE_BEGIN_CLIENT_HPP_
-#define ANNOUNCE_BEGIN_CLIENT_HPP_
-
-#include <openthread-core-config.h>
-#include <openthread-types.h>
-#include <commissioning/commissioner.h>
-#include <coap/coap_client.hpp>
-#include <net/ip6_address.hpp>
-#include <net/udp6.hpp>
+#include <openthread.h>
+#include <common/debug.hpp>
+#include <common/code_utils.hpp>
+#include <openthread-crypto.h>
+#include <crypto/hmac_sha256.hpp>
+#include <crypto/aes_ccm.hpp>
 
 namespace Thread {
+namespace Crypto {
 
-class ThreadNetif;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/**
- * This class implements handling Announce Begin Requests.
- *
- */
-class AnnounceBeginClient
+void otCryptoHmacSha256(
+    const uint8_t *aKey, uint16_t aKeyLength,
+    const uint8_t *aBuf, uint16_t aBufLength,
+    uint8_t *aHash)
 {
-public:
-    /**
-     * This constructor initializes the object.
-     *
-     */
-    AnnounceBeginClient(ThreadNetif &aThreadNetif);
+    HmacSha256 hmac;
 
-    /**
-     * This method sends a Announce Begin message.
-     *
-     * @param[in]  aChannelMask   The channel mask value.
-     * @param[in]  aCount         The number of energy measurements per channel.
-     * @param[in]  aPeriod        The time between energy measurements (milliseconds).
-     *
-     * @retval kThreadError_None    Successfully enqueued the Announce Begin message.
-     * @retval kThreadError_NoBufs  Insufficient buffers to generate a Announce Begin message.
-     *
-     */
-    ThreadError SendRequest(uint32_t aChannelMask, uint8_t aCount, uint16_t mPeriod, const Ip6::Address &aAddress);
+    assert((aKey != NULL) && (aBuf != NULL) && (aHash != NULL));
 
-private:
-    ThreadNetif &mNetif;
-    Coap::Client &mCoapClient;
-};
+    hmac.Start(aKey, aKeyLength);
+    hmac.Update(aBuf, aBufLength);
+    hmac.Finish(aHash);
+}
 
-/**
- * @}
- */
+void otCryptoAesCcm(
+    const uint8_t *aKey, uint16_t aKeyLength,
+    uint8_t aTagLength,
+    const void *aNonce, uint8_t aNonceLength,
+    const void *aHeader, uint32_t aHeaderLength,
+    void *aPlainText, void *aCipherText, uint32_t aLength, bool aEncrypt,
+    void *aTag)
+{
+    AesCcm aesCcm;
+    uint8_t tagLength;
 
+    assert((aKey != NULL) && (aNonce != NULL) && (aPlainText != NULL) && (aCipherText != NULL) && (aTag != NULL));
+
+    SuccessOrExit(aesCcm.SetKey(aKey, aKeyLength));
+    aesCcm.Init(aHeaderLength, aLength, aTagLength, aNonce, aNonceLength);
+
+    if (aHeaderLength != 0)
+    {
+        assert(aHeader != NULL);
+        aesCcm.Header(aHeader, aHeaderLength);
+    }
+
+    aesCcm.Payload(aPlainText, aCipherText, aLength, aEncrypt);
+    aesCcm.Finalize(aTag, &tagLength);
+
+    assert(aTagLength == tagLength);
+
+exit:
+    return;
+}
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+
+}  // namespace Crypto
 }  // namespace Thread
-
-#endif  // ANNOUNCE_BEGIN_CLIENT_HPP_
