@@ -240,6 +240,8 @@ ThreadError Ip6::HandleOptions(Message &message, Header &header, bool &forward)
     OptionHeader optionHeader;
     uint16_t endOffset;
 
+    otLogFuncEntry();
+
     message.Read(message.GetOffset(), sizeof(hbhHeader), &hbhHeader);
     endOffset = message.GetOffset() + (hbhHeader.GetLength() + 1) * 8;
 
@@ -289,6 +291,8 @@ ThreadError Ip6::HandleOptions(Message &message, Header &header, bool &forward)
     }
 
 exit:
+
+    otLogFuncExitMsg("forward=%d, %!otError!", (forward ? 1 : 0), error);
     return error;
 }
 
@@ -314,11 +318,15 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
     ThreadError error = kThreadError_None;
     ExtensionHeader extensionHeader;
 
+    otLogFuncEntryMsg("forward=%d, receive=%d", (forward ? 1 : 0), (receive ? 1 : 0));
+
     while (receive == true || nextHeader == kProtoHopOpts)
     {
         VerifyOrExit(message.GetOffset() <= message.GetLength(), error = kThreadError_Drop);
 
         message.Read(message.GetOffset(), sizeof(extensionHeader), &extensionHeader);
+
+        otLogDebgIp6("processing extension header, %u", nextHeader);
 
         switch (nextHeader)
         {
@@ -347,6 +355,8 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
     }
 
 exit:
+
+    otLogFuncExitMsg("forward=%d, %!otError!", (forward ? 1 : 0), error);
     return error;
 }
 

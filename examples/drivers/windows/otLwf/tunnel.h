@@ -55,12 +55,6 @@ typedef struct _SPINEL_CMD_HANDLER_ENTRY
     spinel_tid_t        TransactionId;
 } SPINEL_CMD_HANDLER_ENTRY;
 
-typedef struct _SPINEL_IRP_CMD_CONTEXT
-{
-    PIRP                    Irp;
-    SPINEL_IRP_CMD_HANDLER *Handler;
-} SPINEL_IRP_CMD_CONTEXT;
-
 //
 // Initialization Functions
 //
@@ -166,6 +160,24 @@ try_spinel_datatype_unpack(
     const uint8_t *data_in,
     spinel_size_t data_len,
     const char *pack_format,
+    ...
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfGetTunProp(
+    _In_ PMS_FILTER pFilter,
+    _In_ spinel_prop_key_t Key,
+    _In_ const char *pack_format, 
+    ...
+    );
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfSetTunProp(
+    _In_ PMS_FILTER pFilter,
+    _In_ spinel_prop_key_t Key,
+    _In_ const char *pack_format, 
     ...
     );
 

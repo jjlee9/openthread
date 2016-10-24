@@ -31,7 +31,11 @@
  *   This file implements MPL.
  */
 
+#define WPP_NAME "ip6_mpl.tmh"
+
 #include <common/code_utils.hpp>
+#include <common/debug.hpp>
+#include <common/logging.hpp>
 #include <common/message.hpp>
 #include <net/ip6.hpp>
 #include <net/ip6_mpl.hpp>
@@ -75,6 +79,8 @@ ThreadError Mpl::ProcessOption(const Message &aMessage, const Address &aAddress,
     MplEntry *entry = NULL;
     int8_t diff;
 
+    otLogFuncEntry();
+
     VerifyOrExit(aMessage.Read(aMessage.GetOffset(), sizeof(option), &option) >= OptionMpl::kMinLength &&
                  (option.GetSeedLength() == OptionMpl::kSeedLength0 ||
                   option.GetSeedLength() == OptionMpl::kSeedLength2),
@@ -113,6 +119,7 @@ ThreadError Mpl::ProcessOption(const Message &aMessage, const Address &aAddress,
     mTimer.Start(1000);
 
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 

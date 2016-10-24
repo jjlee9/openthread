@@ -118,6 +118,7 @@ otLwfInitializeTunnelMode(
     )
 {
     NDIS_STATUS Status = NDIS_STATUS_SUCCESS;
+    uint32_t InterfaceType = 0;
 
     LogFuncEntry(DRIVER_DEFAULT);
 
@@ -126,6 +127,29 @@ otLwfInitializeTunnelMode(
     
     NdisAllocateSpinLock(&pFilter->tunCommandLock);
     InitializeListHead(&pFilter->tunCommandHandlers);
+
+    // Query the interface type to make sure it is a Thread device
+    Status = otLwfGetTunProp(pFilter, SPINEL_PROP_INTERFACE_TYPE, SPINEL_DATATYPE_UINT_PACKED_S, &InterfaceType);
+    if (!NT_SUCCESS(Status))
+    {
+        LogError(DRIVER_DEFAULT, "Failed to query SPINEL_PROP_INTERFACE_TYPE, %!STATUS!", Status);
+        goto error;
+    }
+    if (InterfaceType != SPINEL_PROTOCOL_TYPE_THREAD)
+    {
+        Status = STATUS_NOT_SUPPORTED;
+        LogError(DRIVER_DEFAULT, "SPINEL_PROP_INTERFACE_TYPE is invalid, %d", InterfaceType);
+        goto error;
+    }
+
+    // TODO - Query other values and capabilities
+
+error:
+
+    if (!NT_SUCCESS(Status))
+    {
+        otLwfUninitializeTunnelMode(pFilter);
+    }
 
     LogFuncExitNDIS(DRIVER_DEFAULT, Status);
 
@@ -868,6 +892,12 @@ otLwfSendTunnelCommandWithHandler(
 
 SPINEL_CMD_HANDLER otLwfIrpCommandHandler;
 
+typedef struct _SPINEL_IRP_CMD_CONTEXT
+{
+    PIRP                    Irp;
+    SPINEL_IRP_CMD_HANDLER *Handler;
+} SPINEL_IRP_CMD_CONTEXT;
+
 _IRQL_requires_max_(DISPATCH_LEVEL)
 VOID
 otLwfIrpCommandHandler(
@@ -890,7 +920,6 @@ otLwfIrpCommandHandler(
     NTSTATUS status;
 
     UNREFERENCED_PARAMETER(pFilter);
-    UNREFERENCED_PARAMETER(Command);
     
     if (Data == NULL)
     {
@@ -988,6 +1017,237 @@ otLwfSendTunnelCommandForIrp(
 exit:
 
     return status;
+}
+
+typedef struct _SPINEL_GET_PROP_CONTEXT
+{
+    KEVENT              CompletionEvent;
+    spinel_prop_key_t   Key;
+    const char*         Format;
+    va_list             Args;
+    NTSTATUS            Status;
+} SPINEL_GET_PROP_CONTEXT;
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+VOID
+otLwfGetPropHandler(
+    _In_ PMS_FILTER pFilter,
+    _In_ PVOID Context,
+    _In_ UINT Command,
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength
+    )
+{
+    SPINEL_GET_PROP_CONTEXT* CmdContext = (SPINEL_GET_PROP_CONTEXT*)Context;
+
+    UNREFERENCED_PARAMETER(pFilter);
+    
+    if (Data == NULL)
+    {
+        CmdContext->Status = STATUS_CANCELLED;
+    }
+    else if (Command != SPINEL_CMD_PROP_VALUE_IS)
+    {
+        CmdContext->Status = STATUS_INVALID_PARAMETER;
+    }
+    else if (Key == SPINEL_PROP_LAST_STATUS)
+    {
+		spinel_status_t spinel_status = SPINEL_STATUS_OK;
+		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
+        if (packed_len < 0 || (ULONG)packed_len > DataLength)
+        {
+            CmdContext->Status = STATUS_INSUFFICIENT_RESOURCES;
+        }
+        else
+        {
+            CmdContext->Status = ThreadErrorToNtstatus(SpinelStatusToThreadError(spinel_status));
+        }
+    }
+    else if (Key == CmdContext->Key)
+    {
+        spinel_ssize_t packed_len = spinel_datatype_vunpack(Data, DataLength, CmdContext->Format, CmdContext->Args);
+        if (packed_len < 0 || (ULONG)packed_len > DataLength)
+        {
+            CmdContext->Status = STATUS_INSUFFICIENT_RESOURCES;
+        }
+        else
+        {
+            CmdContext->Status = STATUS_SUCCESS;
+        }
+    }
+    else
+    {
+        CmdContext->Status = STATUS_INVALID_PARAMETER;
+    }
+
+    // Set the completion event
+    KeSetEvent(&CmdContext->CompletionEvent, 0, FALSE);
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfGetTunProp(
+    _In_ PMS_FILTER pFilter,
+    _In_ spinel_prop_key_t Key,
+    _In_ const char *pack_format, 
+    ...
+    )
+{
+    LARGE_INTEGER WaitTimeout;
+
+    // Create the context structure
+    SPINEL_GET_PROP_CONTEXT Context;
+    KeInitializeEvent(&Context.CompletionEvent, SynchronizationEvent, FALSE);
+    Context.Key = Key;
+    Context.Format = pack_format;
+    Context.Status = STATUS_TIMEOUT;
+    va_start(Context.Args, pack_format);
+
+    // Send the request transaction
+    Context.Status = 
+        otLwfSendTunnelCommandWithHandlerV(
+            pFilter, 
+            otLwfGetPropHandler, 
+            &Context, 
+            SPINEL_CMD_PROP_VALUE_GET, 
+            Key, 
+            0, 
+            NULL,
+            NULL);
+    if (NT_SUCCESS(Context.Status))
+    {
+        // Set a 1 second wait timeout
+        WaitTimeout.QuadPart = -1000 * 10000;
+
+        // Wait for the response
+        if (!NT_SUCCESS(
+            KeWaitForSingleObject(
+                &Context.CompletionEvent,
+                Executive,
+                KernelMode,
+                FALSE,
+                &WaitTimeout)
+            ))
+        {
+            // TODO - Cancel transaction
+        }
+    }
+    
+    va_end(Context.Args);
+
+    return Context.Status;
+}
+
+typedef struct _SPINEL_SET_PROP_CONTEXT
+{
+    KEVENT              CompletionEvent;
+    spinel_prop_key_t   Key;
+    NTSTATUS            Status;
+} SPINEL_SET_PROP_CONTEXT;
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+VOID
+otLwfSetPropHandler(
+    _In_ PMS_FILTER pFilter,
+    _In_ PVOID Context,
+    _In_ UINT Command,
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength
+    )
+{
+    SPINEL_SET_PROP_CONTEXT* CmdContext = (SPINEL_SET_PROP_CONTEXT*)Context;
+
+    UNREFERENCED_PARAMETER(pFilter);
+    
+    if (Data == NULL)
+    {
+        CmdContext->Status = STATUS_CANCELLED;
+    }
+    else if (Command != SPINEL_CMD_PROP_VALUE_IS)
+    {
+        CmdContext->Status = STATUS_INVALID_PARAMETER;
+    }
+    else if (Key == SPINEL_PROP_LAST_STATUS)
+    {
+		spinel_status_t spinel_status = SPINEL_STATUS_OK;
+		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
+        if (packed_len < 0 || (ULONG)packed_len > DataLength)
+        {
+            CmdContext->Status = STATUS_INSUFFICIENT_RESOURCES;
+        }
+        else
+        {
+            CmdContext->Status = ThreadErrorToNtstatus(SpinelStatusToThreadError(spinel_status));
+        }
+    }
+    else if (Key == CmdContext->Key)
+    {
+        CmdContext->Status = STATUS_SUCCESS;
+    }
+    else
+    {
+        CmdContext->Status = STATUS_INVALID_PARAMETER;
+    }
+
+    // Set the completion event
+    KeSetEvent(&CmdContext->CompletionEvent, 0, FALSE);
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfSetTunProp(
+    _In_ PMS_FILTER pFilter,
+    _In_ spinel_prop_key_t Key,
+    _In_ const char *pack_format, 
+    ...
+    )
+{
+    LARGE_INTEGER WaitTimeout;
+
+    // Create the context structure
+    SPINEL_SET_PROP_CONTEXT Context;
+    KeInitializeEvent(&Context.CompletionEvent, SynchronizationEvent, FALSE);
+    Context.Key = Key;
+    Context.Status = STATUS_TIMEOUT;
+
+    va_list args;
+    va_start(args, pack_format);
+
+    // Send the request transaction
+    Context.Status = 
+        otLwfSendTunnelCommandWithHandlerV(
+            pFilter, 
+            otLwfGetPropHandler, 
+            &Context, 
+            SPINEL_CMD_PROP_VALUE_SET, 
+            Key, 
+            8, 
+            pack_format,
+            args);
+    if (NT_SUCCESS(Context.Status))
+    {
+        // Set a 1 second wait timeout
+        WaitTimeout.QuadPart = -1000 * 10000;
+
+        // Wait for the response
+        if (!NT_SUCCESS(
+            KeWaitForSingleObject(
+                &Context.CompletionEvent,
+                Executive,
+                KernelMode,
+                FALSE,
+                &WaitTimeout)
+            ))
+        {
+            // TODO - Cancel transaction
+        }
+    }
+    
+    va_end(args);
+
+    return Context.Status;
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL)

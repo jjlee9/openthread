@@ -734,7 +734,8 @@ otLwfTunIoCtl_otActiveScan(
 
         // TODO - Send down scan channel & duration first
         UNREFERENCED_PARAMETER(aScanChannels);
-        UNREFERENCED_PARAMETER(aScanDuration);
+        status = otLwfSetTunProp(pFilter, SPINEL_PROP_MAC_SCAN_MASK, SPINEL_DATATYPE_UINT16_S, aScanDuration);
+        if (!NT_SUCCESS(status)) goto error;
 
         status = 
             otLwfSendTunnelCommandForIrp(
@@ -759,6 +760,8 @@ otLwfTunIoCtl_otActiveScan(
                 0,
                 NULL);
     }
+
+error:
 
     return status;
 }
@@ -851,7 +854,8 @@ otLwfTunIoCtl_otEnergyScan(
 
         // TODO - Send down scan channel & duration first
         UNREFERENCED_PARAMETER(aScanChannels);
-        UNREFERENCED_PARAMETER(aScanDuration);
+        status = otLwfSetTunProp(pFilter, SPINEL_PROP_MAC_SCAN_MASK, SPINEL_DATATYPE_UINT16_S, aScanDuration);
+        if (!NT_SUCCESS(status)) goto error;
 
         status = 
             otLwfSendTunnelCommandForIrp(
@@ -876,6 +880,8 @@ otLwfTunIoCtl_otEnergyScan(
                 0,
                 NULL);
     }
+
+error:
 
     return status;
 }
