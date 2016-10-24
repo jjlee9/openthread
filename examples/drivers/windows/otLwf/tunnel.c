@@ -182,21 +182,21 @@ otLwfProcessSpinelValueIs(
 
     LogFuncEntryMsg(DRIVER_DEFAULT, "[%p] received Value for %s", pFilter, spinel_prop_key_to_cstr(key));
 
-	if (key == SPINEL_PROP_LAST_STATUS) 
+    if (key == SPINEL_PROP_LAST_STATUS) 
     {
-		spinel_status_t status = SPINEL_STATUS_OK;
-		spinel_datatype_unpack(value_data_ptr, value_data_len, "i", &status);
+        spinel_status_t status = SPINEL_STATUS_OK;
+        spinel_datatype_unpack(value_data_ptr, value_data_len, "i", &status);
 
-		if ((status >= SPINEL_STATUS_RESET__BEGIN) && (status <= SPINEL_STATUS_RESET__END)) 
+        if ((status >= SPINEL_STATUS_RESET__BEGIN) && (status <= SPINEL_STATUS_RESET__END)) 
         {
             LogInfo(DRIVER_DEFAULT, "Interface %!GUID! was reset.", &pFilter->InterfaceGuid);
-			// TODO - Handle reset
-		}
-	} 
+            // TODO - Handle reset
+        }
+    } 
     else if (key == SPINEL_PROP_NET_ROLE) 
     {
-		uint8_t value;
-		spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT8_S, &value);
+        uint8_t value;
+        spinel_datatype_unpack(value_data_ptr, value_data_len, SPINEL_DATATYPE_UINT8_S, &value);
 
         LogInfo(DRIVER_DEFAULT, "Interface %!GUID! new spinel role: %u", &pFilter->InterfaceGuid, value);
 
@@ -209,82 +209,82 @@ otLwfProcessSpinelValueIs(
 
         // Set flag to indicate we should send a notification
         aNotifFlags = OT_NET_ROLE;
-	} 
+    } 
     else if (key == SPINEL_PROP_IPV6_LL_ADDR) 
     {
         // Set flag to indicate we should send a notification
         aNotifFlags = OT_IP6_LL_ADDR_CHANGED;
-	}
+    }
     else if (key == SPINEL_PROP_IPV6_ML_ADDR) 
     {
         // Set flag to indicate we should send a notification
         aNotifFlags = OT_IP6_ML_ADDR_CHANGED;
-	}
+    }
     else if (key == SPINEL_PROP_NET_PARTITION_ID) 
     {
         // Set flag to indicate we should send a notification
         aNotifFlags = OT_NET_PARTITION_ID;
-	}
+    }
     else if (key == SPINEL_PROP_NET_KEY_SEQUENCE_COUNTER) 
     {
         // Set flag to indicate we should send a notification
         aNotifFlags = OT_NET_KEY_SEQUENCE_COUNTER;
-	}
+    }
     else if (key == SPINEL_PROP_IPV6_ADDRESS_TABLE) 
     {
         // TODO - Update cached addresses
         // TODO - Send notification
-	} 
+    } 
     else if (key == SPINEL_PROP_THREAD_CHILD_TABLE) 
     {
         // TODO - Update cached children
         // TODO - Send notification
-	} 
+    } 
     else if (key == SPINEL_PROP_THREAD_ON_MESH_NETS) 
     {
-		// TODO - Slaac
+        // TODO - Slaac
 
         // Set flag to indicate we should send a notification
         aNotifFlags = OT_THREAD_NETDATA_UPDATED;
-	} 
+    } 
     else if ((key == SPINEL_PROP_STREAM_NET) || (key == SPINEL_PROP_STREAM_NET_INSECURE)) 
     {
-		const uint8_t* frame_ptr = NULL;
-		UINT frame_len = 0;
-		spinel_ssize_t ret;
+        const uint8_t* frame_ptr = NULL;
+        UINT frame_len = 0;
+        spinel_ssize_t ret;
 
-		ret = spinel_datatype_unpack(
-			value_data_ptr,
-			value_data_len,
-			SPINEL_DATATYPE_DATA_S SPINEL_DATATYPE_DATA_S,
-			&frame_ptr,
-			&frame_len,
-			NULL,
-			NULL);
+        ret = spinel_datatype_unpack(
+            value_data_ptr,
+            value_data_len,
+            SPINEL_DATATYPE_DATA_S SPINEL_DATATYPE_DATA_S,
+            &frame_ptr,
+            &frame_len,
+            NULL,
+            NULL);
 
-		NT_ASSERT(ret > 0);
-		if (ret > 0) 
+        NT_ASSERT(ret > 0);
+        if (ret > 0) 
         {
-			otLwfProcessSpinelIPv6Packet(
+            otLwfProcessSpinelIPv6Packet(
                 pFilter, 
                 DispatchLevel,
                 (SPINEL_PROP_STREAM_NET_INSECURE == key) ? FALSE : TRUE,
                 frame_ptr,
                 frame_len);
-		}
-	}
+        }
+    }
     else if (key == SPINEL_PROP_MAC_SCAN_STATE) 
     {
-		// TODO - If pending scan, send notification of completion
-	} 
+        // TODO - If pending scan, send notification of completion
+    } 
     else if (key == SPINEL_PROP_STREAM_RAW) 
     {
         // May be used in the future
-	} 
+    } 
     else if (key == SPINEL_PROP_STREAM_DEBUG) 
     {
         // TODO - Log
-	} 
+    } 
 
     // Send notification
     if (aNotifFlags != 0)
@@ -321,7 +321,7 @@ otLwfProcessSpinelValueInserted(
     UNREFERENCED_PARAMETER(value_data_ptr);
     UNREFERENCED_PARAMETER(value_data_len);
 
-	if (key == SPINEL_PROP_MAC_SCAN_BEACON) 
+    if (key == SPINEL_PROP_MAC_SCAN_BEACON) 
     {
         PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
         if (NotifEntry)
@@ -359,7 +359,7 @@ otLwfProcessSpinelValueInserted(
                 FILTER_FREE_MEM(NotifEntry);
             }
         }
-	} 
+    } 
     else if (key == SPINEL_PROP_MAC_ENERGY_SCAN_RESULT) 
     {
         PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
@@ -385,7 +385,7 @@ otLwfProcessSpinelValueInserted(
                 FILTER_FREE_MEM(NotifEntry);
             }
         }
-	} 
+    } 
 
     LogFuncExit(DRIVER_DEFAULT);
 }
@@ -401,9 +401,9 @@ otLwfProcessSpinelCommand(
     )
 {
     uint8_t Header;
-	spinel_prop_key_t key;
-	uint8_t* value_data_ptr = NULL;
-	spinel_size_t value_data_len = 0;
+    spinel_prop_key_t key;
+    uint8_t* value_data_ptr = NULL;
+    spinel_size_t value_data_len = 0;
 
     // Make sure it's an expected command
     if (command < SPINEL_CMD_PROP_VALUE_IS || command > SPINEL_CMD_PROP_VALUE_REMOVED)
@@ -424,7 +424,7 @@ otLwfProcessSpinelCommand(
         // If this is a 'Value Is' command, process it for notification of state changes.
         if (command == SPINEL_CMD_PROP_VALUE_IS)
         {
-		    otLwfProcessSpinelValueIs(pFilter, DispatchLevel, key, value_data_ptr, value_data_len);
+            otLwfProcessSpinelValueIs(pFilter, DispatchLevel, key, value_data_ptr, value_data_len);
         }
         else if (command == SPINEL_CMD_PROP_VALUE_INSERTED)
         {
@@ -435,8 +435,7 @@ otLwfProcessSpinelCommand(
     else
     {
         PLIST_ENTRY Link;
-        LIST_ENTRY Handlers;
-        InitializeListHead(&Handlers);
+        SPINEL_CMD_HANDLER_ENTRY* Handler = NULL;
 
         FILTER_ACQUIRE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
 
@@ -452,11 +451,12 @@ otLwfProcessSpinelCommand(
                 // Remove from the main list
                 RemoveEntryList(&pEntry->Link);
 
-                // Add to the list to be handled outside the lock
-                InsertTailList(&Handlers, &pEntry->Link);
+                Handler = pEntry;
 
                 // Remove the transaction ID from the 'in use' bit field
                 pFilter->tunTIDsInUse &= ~(1 << pEntry->TransactionId);
+
+                break;
             }
         }
 
@@ -464,18 +464,14 @@ otLwfProcessSpinelCommand(
 
         // TODO - Set event
 
-        // Process all the handlers we found, outside the lock
-        Link = Handlers.Flink;
-        while (Link != &Handlers)
-        {
-            SPINEL_CMD_HANDLER_ENTRY* pEntry = CONTAINING_RECORD(Link, SPINEL_CMD_HANDLER_ENTRY, Link);
-            Link = Link->Flink;
-        
+        // Process the handler we found, outside the lock
+        if (Handler)
+        {        
             // Call the handler function
-            pEntry->Handler(pFilter, pEntry->Context, command, key, value_data_ptr, value_data_len);
+            Handler->Handler(pFilter, Handler->Context, command, key, value_data_ptr, value_data_len);
 
             // Free the entry
-            FILTER_FREE_MEM(pEntry);
+            FILTER_FREE_MEM(Handler);
         }
     }
 }
@@ -493,28 +489,28 @@ otLwfReceiveTunnelPacket(
     UINT Command;
 
     // Unpack the header from the buffer
-	if (spinel_datatype_unpack(Buffer, BufferLength, "Ci", &Header, &Command) <= 0)
+    if (spinel_datatype_unpack(Buffer, BufferLength, "Ci", &Header, &Command) <= 0)
     {
         LogVerbose(DRIVER_DEFAULT, "Failed to unpack header and command");
-		return;
+        return;
     }
 
     // Validate the header
-	if ((Header & SPINEL_HEADER_FLAG) != SPINEL_HEADER_FLAG) 
+    if ((Header & SPINEL_HEADER_FLAG) != SPINEL_HEADER_FLAG) 
     {
         LogVerbose(DRIVER_DEFAULT, "Recieved unrecognized frame, header=0x%x", Header);
-		return;
-	}
+        return;
+    }
     
-	// We only support IID zero for now
-	if (SPINEL_HEADER_GET_IID(Header) != 0) 
+    // We only support IID zero for now
+    if (SPINEL_HEADER_GET_IID(Header) != 0) 
     {
         LogVerbose(DRIVER_DEFAULT, "Recieved unsupported IID, %u", SPINEL_HEADER_GET_IID(Header));
-		return;
-	}
+        return;
+    }
 
     // Process the received command
-	otLwfProcessSpinelCommand(pFilter, DispatchLevel, Command, Buffer, BufferLength);
+    otLwfProcessSpinelCommand(pFilter, DispatchLevel, Command, Buffer, BufferLength);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -687,6 +683,53 @@ otLwfAddCommandHandler(
     NdisReleaseSpinLock(&pFilter->tunCommandLock);
 }
 
+_IRQL_requires_max_(DISPATCH_LEVEL)
+void
+otLwfCancelCommandHandler(
+    _In_ PMS_FILTER pFilter,
+    _In_ BOOLEAN DispatchLevel,
+    _In_ spinel_tid_t tid
+    )
+{
+    PLIST_ENTRY Link;
+    SPINEL_CMD_HANDLER_ENTRY* Handler = NULL;
+
+    FILTER_ACQUIRE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
+    
+    // Search for matching handlers for this transaction ID
+    Link = pFilter->tunCommandHandlers.Flink;
+    while (Link != &pFilter->tunCommandHandlers)
+    {
+        SPINEL_CMD_HANDLER_ENTRY* pEntry = CONTAINING_RECORD(Link, SPINEL_CMD_HANDLER_ENTRY, Link);
+        Link = Link->Flink;
+
+        if (tid == pEntry->TransactionId)
+        {
+            // Remove from the main list
+            RemoveEntryList(&pEntry->Link);
+
+            // Save handler to cancel outside lock
+            Handler = pEntry;
+
+            // Remove the transaction ID from the 'in use' bit field
+            pFilter->tunTIDsInUse &= ~(1 << pEntry->TransactionId);
+
+            break;
+        }
+    }
+    
+    FILTER_RELEASE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
+
+    if (Handler)
+    {
+        // Call the handler function
+        Handler->Handler(pFilter, Handler->Context, 0, 0, NULL, 0);
+
+        // Free the entry
+        FILTER_FREE_MEM(Handler);
+    }
+}
+
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
 otLwfSendTunnelCommandV(
@@ -750,6 +793,9 @@ otLwfSendTunnelCommandV(
     // Save the true NetBuffer length in the protocol reserved
     NetBuffer->ProtocolReserved[0] = (PVOID)NetBufferLength;
     NetBuffer->DataLength = 0;
+    
+    // Save the transaction ID in the protocol reserved
+    NetBuffer->ProtocolReserved[1] = (PVOID)tid;
 
     // Pack the header, command and key
     PackedLength = 
@@ -928,8 +974,8 @@ otLwfIrpCommandHandler(
     }
     else if (Command == SPINEL_CMD_PROP_VALUE_IS && Key == SPINEL_PROP_LAST_STATUS)
     {
-		spinel_status_t spinel_status = SPINEL_STATUS_OK;
-		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
+        spinel_status_t spinel_status = SPINEL_STATUS_OK;
+        spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
         if (packed_len < 0 || (ULONG)packed_len > DataLength)
         {
             status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1053,8 +1099,8 @@ otLwfGetPropHandler(
     }
     else if (Key == SPINEL_PROP_LAST_STATUS)
     {
-		spinel_status_t spinel_status = SPINEL_STATUS_OK;
-		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
+        spinel_status_t spinel_status = SPINEL_STATUS_OK;
+        spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
         if (packed_len < 0 || (ULONG)packed_len > DataLength)
         {
             CmdContext->Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1171,8 +1217,8 @@ otLwfSetPropHandler(
     }
     else if (Key == SPINEL_PROP_LAST_STATUS)
     {
-		spinel_status_t spinel_status = SPINEL_STATUS_OK;
-		spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
+        spinel_status_t spinel_status = SPINEL_STATUS_OK;
+        spinel_ssize_t packed_len = spinel_datatype_unpack(Data, DataLength, "i", &spinel_status);
         if (packed_len < 0 || (ULONG)packed_len > DataLength)
         {
             CmdContext->Status = STATUS_INSUFFICIENT_RESOURCES;

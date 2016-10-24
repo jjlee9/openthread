@@ -75,6 +75,14 @@ otLwfUninitializeTunnelMode(
 // Spinel Packet Functions
 //
 
+_IRQL_requires_max_(DISPATCH_LEVEL)
+void
+otLwfCancelCommandHandler(
+    _In_ PMS_FILTER pFilter,
+    _In_ BOOLEAN DispatchLevel,
+    _In_ spinel_tid_t tid
+    );
+
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
 otLwfSendTunnelCommandWithHandlerV(

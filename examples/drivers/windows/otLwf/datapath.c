@@ -148,8 +148,6 @@ Arguments:
 --*/
 {
     PMS_FILTER         pFilter = (PMS_FILTER)FilterModuleContext;
-
-    UNREFERENCED_PARAMETER(SendCompleteFlags);
     
     LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p, NBL: %p", FilterModuleContext, NetBufferLists);
 
@@ -163,6 +161,17 @@ Arguments:
     {
         NT_ASSERT(NET_BUFFER_LIST_NEXT_NBL(NetBufferLists) == NULL);
         PNET_BUFFER NetBuffer = NET_BUFFER_LIST_FIRST_NB(NetBufferLists);
+
+        // Cancel command if we failed to send the NBL
+        if (!NT_SUCCESS(NetBufferLists->Status))
+        {
+            spinel_tid_t tid = (spinel_tid_t)(ULONG_PTR)NetBuffer->ProtocolReserved[1];
+            if (tid != 0)
+            {
+                otLwfCancelCommandHandler(pFilter, NDIS_TEST_SEND_COMPLETE_AT_DISPATCH_LEVEL(SendCompleteFlags), tid);
+            }
+        }
+
         NetBuffer->DataLength = (ULONG)(ULONG_PTR)NetBuffer->ProtocolReserved[0];
         NdisAdvanceNetBufferDataStart(NetBuffer, NetBuffer->DataLength, TRUE, NULL);
         NdisFreeNetBufferList(NetBufferLists);
