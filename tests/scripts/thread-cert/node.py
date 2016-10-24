@@ -507,11 +507,6 @@ class Node:
             self.send_command(cmd)
             self.pexpect.expect('Done')
 
-    def set_max_children(self, number):
-        cmd = 'childmax %d' % number
-        self.send_command(cmd)
-        self.pexpect.expect('Done')
-
     def get_weight(self):
         if self.Api:
             return int(self.Api.otNodeGetWeight(self.otNode))
