@@ -326,8 +326,6 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
 
         message.Read(message.GetOffset(), sizeof(extensionHeader), &extensionHeader);
 
-        otLogDebgIp6("processing extension header, %u", nextHeader);
-
         switch (nextHeader)
         {
         case kProtoHopOpts:
