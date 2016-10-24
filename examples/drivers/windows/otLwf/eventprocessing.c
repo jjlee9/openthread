@@ -307,23 +307,31 @@ otLwfEventProcessingIndicateAddressChange(
     _In_ PIN6_ADDR              pAddr
     )
 {
-    POTLWF_ADDR_EVENT Event = FILTER_ALLOC_MEM(pFilter->FilterHandle, sizeof(OTLWF_ADDR_EVENT));
-    if (Event == NULL)
+    if (pFilter->InternalStateInitialized == FALSE)
     {
-        LogWarning(DRIVER_DATA_PATH, "Failed to alloc new OTLWF_ADDR_EVENT");
         return;
     }
-    
-    Event->NotificationType = NotificationType;
-    Event->Address = *pAddr;
 
-    // Add the event to the queue
-    NdisAcquireSpinLock(&pFilter->EventsLock);
-    InsertTailList(&pFilter->AddressChangesHead, &Event->Link);
-    NdisReleaseSpinLock(&pFilter->EventsLock);
+    if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+    {
+        POTLWF_ADDR_EVENT Event = FILTER_ALLOC_MEM(pFilter->FilterHandle, sizeof(OTLWF_ADDR_EVENT));
+        if (Event == NULL)
+        {
+            LogWarning(DRIVER_DATA_PATH, "Failed to alloc new OTLWF_ADDR_EVENT");
+            return;
+        }
     
-    // Set the event to indicate we have a new address to process
-    KeSetEvent(&pFilter->EventWorkerThreadProcessAddressChanges, 0, FALSE);
+        Event->NotificationType = NotificationType;
+        Event->Address = *pAddr;
+
+        // Add the event to the queue
+        NdisAcquireSpinLock(&pFilter->EventsLock);
+        InsertTailList(&pFilter->AddressChangesHead, &Event->Link);
+        NdisReleaseSpinLock(&pFilter->EventsLock);
+    
+        // Set the event to indicate we have a new address to process
+        KeSetEvent(&pFilter->EventWorkerThreadProcessAddressChanges, 0, FALSE);
+    }
 }
 
 // Called to indicate that we have a NetBufferLists to process

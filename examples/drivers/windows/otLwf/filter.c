@@ -270,29 +270,6 @@ N.B.:  FILTER can use NdisRegisterDeviceEx to create a device, so the upper
         NdisAcquireSpinLock(&FilterListLock);
         InsertTailList(&FilterModuleList, &pFilter->FilterModuleLink);
         NdisReleaseSpinLock(&FilterListLock);
-        
-        // Initialize the processing logic
-        if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
-        {
-            Status = otLwfInitializeThreadMode(pFilter);
-        }
-        else if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_THREAD)
-        {
-            Status = otLwfInitializeTunnelMode(pFilter);
-        }
-        else
-        {
-            NT_ASSERT(FALSE);
-        }
-        
-        // Remove from the global list if the processing logic fails
-        if (Status != NDIS_STATUS_SUCCESS)
-        {
-            NdisAcquireSpinLock(&FilterListLock);
-            RemoveEntryList(&pFilter->FilterModuleLink);
-            NdisReleaseSpinLock(&FilterListLock);
-            break;
-        }
 
         LogVerbose(DRIVER_DEFAULT, "Created Filter: %p", pFilter);
 
@@ -479,6 +456,37 @@ Return Value:
         //
         NdisGeneralAttributes->LookaheadSize = 128;
     }
+    
+        
+    // Initialize the processing logic
+    if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+    {
+        NtStatus = otLwfInitializeThreadMode(pFilter);
+        if (!NT_SUCCESS(NtStatus))
+        {
+            LogError(DRIVER_DEFAULT, "otLwfInitializeThreadMode failed, %!STATUS!", NtStatus);
+            NdisStatus = NDIS_STATUS_FAILURE;
+            goto exit;
+        }
+        pFilter->InternalStateInitialized = TRUE;
+    }
+    else if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_THREAD)
+    {
+        NtStatus = otLwfInitializeTunnelMode(pFilter);
+        if (!NT_SUCCESS(NtStatus))
+        {
+            LogError(DRIVER_DEFAULT, "otLwfInitializeTunnelMode failed, %!STATUS!", NtStatus);
+            NdisStatus = NDIS_STATUS_FAILURE;
+            goto exit;
+        }
+        pFilter->InternalStateInitialized = TRUE;
+    }
+    else
+    {
+        NT_ASSERT(FALSE);
+        NdisStatus = NDIS_STATUS_FAILURE;
+        goto exit;
+    }
   
     key.Luid = pFilter->InterfaceLuid;
     NlInitializeInterfaceRw(&interfaceRw);
@@ -522,6 +530,19 @@ exit:
     if (NdisStatus != NDIS_STATUS_SUCCESS)
     {
         pFilter->State = FilterPaused;
+
+        if (pFilter->InternalStateInitialized)
+        {
+            pFilter->InternalStateInitialized = FALSE;
+            if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+            {
+                otLwfUninitializeThreadMode(pFilter);
+            }
+            else
+            {
+                otLwfUninitializeTunnelMode(pFilter);
+            }
+        }
     }
 
     LogFuncExitNDIS(DRIVER_DEFAULT, NdisStatus);

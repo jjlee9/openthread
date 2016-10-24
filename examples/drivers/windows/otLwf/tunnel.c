@@ -674,6 +674,8 @@ otLwfAddCommandHandler(
     // Get the next transaction ID. This call will block if there are
     // none currently available.
     pEntry->TransactionId = otLwfGetNextTunnelTransactionId(pFilter);
+
+    LogFuncEntryMsg(DRIVER_DEFAULT, "tid=%u", (ULONG)pEntry->TransactionId);
     
     NdisAcquireSpinLock(&pFilter->tunCommandLock);
     
@@ -681,10 +683,12 @@ otLwfAddCommandHandler(
     InsertTailList(&pFilter->tunCommandHandlers, &pEntry->Link);
     
     NdisReleaseSpinLock(&pFilter->tunCommandLock);
+
+    LogFuncExit(DRIVER_DEFAULT);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
-void
+BOOLEAN
 otLwfCancelCommandHandler(
     _In_ PMS_FILTER pFilter,
     _In_ BOOLEAN DispatchLevel,
@@ -693,6 +697,9 @@ otLwfCancelCommandHandler(
 {
     PLIST_ENTRY Link;
     SPINEL_CMD_HANDLER_ENTRY* Handler = NULL;
+    BOOLEAN Found = FALSE;
+
+    LogFuncEntryMsg(DRIVER_DEFAULT, "tid=%u", (ULONG)tid);
 
     FILTER_ACQUIRE_LOCK(&pFilter->tunCommandLock, DispatchLevel);
     
@@ -710,6 +717,7 @@ otLwfCancelCommandHandler(
 
             // Save handler to cancel outside lock
             Handler = pEntry;
+            Found = TRUE;
 
             // Remove the transaction ID from the 'in use' bit field
             pFilter->tunTIDsInUse &= ~(1 << pEntry->TransactionId);
@@ -728,6 +736,10 @@ otLwfCancelCommandHandler(
         // Free the entry
         FILTER_FREE_MEM(Handler);
     }
+
+    LogFuncExitMsg(DRIVER_DEFAULT, "Found=%u", Found);
+
+    return Found;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -748,6 +760,8 @@ otLwfSendTunnelCommandV(
     ULONG NetBufferLength = 0;
     PUCHAR DataBuffer = NULL;
     spinel_ssize_t PackedLength;
+
+    LogFuncEntryMsg(DRIVER_DEFAULT, "Cmd=%u Key=%u tid=%u", (ULONG)Command, (ULONG)Key, (ULONG)tid);
 
     NetBufferList =
         NdisAllocateNetBufferAndNetBufferList(
@@ -853,6 +867,8 @@ exit:
         }
         NdisFreeNetBufferList(NetBufferList);
     }
+
+    LogFuncExitNT(DRIVER_DEFAULT, status);
 
     return status;
 }
@@ -1087,6 +1103,8 @@ otLwfGetPropHandler(
 {
     SPINEL_GET_PROP_CONTEXT* CmdContext = (SPINEL_GET_PROP_CONTEXT*)Context;
 
+    LogFuncEntryMsg(DRIVER_DEFAULT, "Key=%u", (ULONG)Key);
+
     UNREFERENCED_PARAMETER(pFilter);
     
     if (Data == NULL)
@@ -1129,6 +1147,8 @@ otLwfGetPropHandler(
 
     // Set the completion event
     KeSetEvent(&CmdContext->CompletionEvent, 0, FALSE);
+
+    LogFuncExit(DRIVER_DEFAULT);
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -1140,6 +1160,7 @@ otLwfGetTunProp(
     ...
     )
 {
+    NTSTATUS status;
     LARGE_INTEGER WaitTimeout;
 
     // Create the context structure
@@ -1147,11 +1168,13 @@ otLwfGetTunProp(
     KeInitializeEvent(&Context.CompletionEvent, SynchronizationEvent, FALSE);
     Context.Key = Key;
     Context.Format = pack_format;
-    Context.Status = STATUS_TIMEOUT;
+    Context.Status = STATUS_SUCCESS;
     va_start(Context.Args, pack_format);
 
+    LogFuncEntryMsg(DRIVER_DEFAULT, "Key=%u", (ULONG)Key);
+
     // Send the request transaction
-    Context.Status = 
+    status = 
         otLwfSendTunnelCommandWithHandlerV(
             pFilter, 
             otLwfGetPropHandler, 
@@ -1161,7 +1184,7 @@ otLwfGetTunProp(
             0, 
             NULL,
             NULL);
-    if (NT_SUCCESS(Context.Status))
+    if (NT_SUCCESS(status))
     {
         // Set a 1 second wait timeout
         WaitTimeout.QuadPart = -1000 * 10000;
@@ -1176,11 +1199,27 @@ otLwfGetTunProp(
                 &WaitTimeout)
             ))
         {
-            // TODO - Cancel transaction
+            /* TODO - Get TID to use for cancel
+            if (!otLwfCancelCommandHandler(pFilter, FALSE, tid))
+            {
+                KeWaitForSingleObject(
+                    &Context.CompletionEvent,
+                    Executive,
+                    KernelMode,
+                    FALSE,
+                    NULL);
+            }*/
+            Context.Status = STATUS_CANCELLED;
         }
+    }
+    else
+    {
+        Context.Status = status;
     }
     
     va_end(Context.Args);
+
+    LogFuncExitNT(DRIVER_DEFAULT, Context.Status);
 
     return Context.Status;
 }
@@ -1204,6 +1243,8 @@ otLwfSetPropHandler(
     )
 {
     SPINEL_SET_PROP_CONTEXT* CmdContext = (SPINEL_SET_PROP_CONTEXT*)Context;
+
+    LogFuncEntryMsg(DRIVER_DEFAULT, "Key=%u", (ULONG)Key);
 
     UNREFERENCED_PARAMETER(pFilter);
     
@@ -1239,6 +1280,8 @@ otLwfSetPropHandler(
 
     // Set the completion event
     KeSetEvent(&CmdContext->CompletionEvent, 0, FALSE);
+
+    LogFuncExit(DRIVER_DEFAULT);
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -1250,19 +1293,22 @@ otLwfSetTunProp(
     ...
     )
 {
+    NTSTATUS status;
     LARGE_INTEGER WaitTimeout;
 
     // Create the context structure
     SPINEL_SET_PROP_CONTEXT Context;
     KeInitializeEvent(&Context.CompletionEvent, SynchronizationEvent, FALSE);
     Context.Key = Key;
-    Context.Status = STATUS_TIMEOUT;
+    Context.Status = STATUS_SUCCESS;
+
+    LogFuncEntryMsg(DRIVER_DEFAULT, "Key=%u", (ULONG)Key);
 
     va_list args;
     va_start(args, pack_format);
 
     // Send the request transaction
-    Context.Status = 
+    status = 
         otLwfSendTunnelCommandWithHandlerV(
             pFilter, 
             otLwfGetPropHandler, 
@@ -1272,7 +1318,7 @@ otLwfSetTunProp(
             8, 
             pack_format,
             args);
-    if (NT_SUCCESS(Context.Status))
+    if (NT_SUCCESS(status))
     {
         // Set a 1 second wait timeout
         WaitTimeout.QuadPart = -1000 * 10000;
@@ -1287,11 +1333,27 @@ otLwfSetTunProp(
                 &WaitTimeout)
             ))
         {
-            // TODO - Cancel transaction
+            /* TODO - Get TID to use for cancel
+            if (!otLwfCancelCommandHandler(pFilter, FALSE, tid))
+            {
+                KeWaitForSingleObject(
+                    &Context.CompletionEvent,
+                    Executive,
+                    KernelMode,
+                    FALSE,
+                    NULL);
+            }*/
+            Context.Status = STATUS_CANCELLED;
         }
+    }
+    else
+    {
+        Context.Status = status;
     }
     
     va_end(args);
+
+    LogFuncExitNT(DRIVER_DEFAULT, Context.Status);
 
     return Context.Status;
 }

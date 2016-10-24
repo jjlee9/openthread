@@ -149,7 +149,7 @@ Arguments:
 {
     PMS_FILTER         pFilter = (PMS_FILTER)FilterModuleContext;
     
-    LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p, NBL: %p", FilterModuleContext, NetBufferLists);
+    LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p, NBL: %p %!STATUS!", FilterModuleContext, NetBufferLists, NetBufferLists->Status);
 
     if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
     {

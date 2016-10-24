@@ -76,7 +76,7 @@ otLwfUninitializeTunnelMode(
 //
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
-void
+BOOLEAN
 otLwfCancelCommandHandler(
     _In_ PMS_FILTER pFilter,
     _In_ BOOLEAN DispatchLevel,
