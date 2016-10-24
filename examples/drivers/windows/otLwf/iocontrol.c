@@ -111,7 +111,7 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_PARENT_INFO",                 REF_IOCTL_FUNC_WITH_TUN(otParentInfo) },
     { "IOCTL_OTLWF_OT_SINGLETON",                   REF_IOCTL_FUNC(otSingleton) },
     { "IOCTL_OTLWF_OT_MAC_COUNTERS",                REF_IOCTL_FUNC(otMacCounters) },
-    { "IOCTL_OTLWF_OT_MAX_CHILDREN",                REF_IOCTL_FUNC(otMaxChildren) },
+    { "IOCTL_OTLWF_OT_MAX_CHILDREN",                REF_IOCTL_FUNC_WITH_TUN(otMaxChildren) },
     { "IOCTL_OTLWF_OT_COMMISIONER_START",           REF_IOCTL_FUNC(otCommissionerStart) },
     { "IOCTL_OTLWF_OT_COMMISIONER_STOP",            REF_IOCTL_FUNC(otCommissionerStop) },
     { "IOCTL_OTLWF_OT_JOINER_START",                REF_IOCTL_FUNC(otJoinerStart) },
@@ -5096,6 +5096,71 @@ otLwfIoCtl_otMaxChildren(
         *OutBufferLength = 0;
     }
 
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otMaxChildren(
+    _In_ PMS_FILTER         pFilter,
+    _In_ PIRP               pIrp,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _In_    ULONG           OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+    if (InBufferLength >= sizeof(uint8_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                NULL,
+                SPINEL_CMD_PROP_VALUE_SET,
+                SPINEL_PROP_THREAD_CHILD_COUNT_MAX,
+                sizeof(uint8_t),
+                SPINEL_DATATYPE_UINT8_S,
+                *(uint8_t*)InBuffer);
+    }
+    else if (OutBufferLength >= sizeof(uint8_t))
+    {
+        status = 
+            otLwfSendTunnelCommandForIrp(
+                pFilter,
+                pIrp,
+                otLwfTunIoCtl_otMaxChildren_Handler,
+                SPINEL_CMD_PROP_VALUE_GET,
+                SPINEL_PROP_THREAD_CHILD_COUNT_MAX,
+                0,
+                NULL);
+    }
+
+    return status;
+}
+
+_IRQL_requires_max_(DISPATCH_LEVEL)
+NTSTATUS
+otLwfTunIoCtl_otMaxChildren_Handler(
+    _In_ spinel_prop_key_t Key,
+    _In_reads_bytes_(DataLength) const uint8_t* Data,
+    _In_ spinel_size_t DataLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID OutBuffer,
+    _Inout_ PULONG OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    if (Key == SPINEL_PROP_THREAD_CHILD_COUNT_MAX)
+    {
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT8_S, (uint8_t*)OutBuffer))
+        {
+            *OutBufferLength = sizeof(uint8_t);
+            status = STATUS_SUCCESS;
+        }
+    }
     return status;
 }
 

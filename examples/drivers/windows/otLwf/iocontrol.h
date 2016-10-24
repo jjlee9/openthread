@@ -129,7 +129,7 @@ NTSTATUS
     OTLWF_TUN_IOCTL_FUNC otLwfTunIoCtl_##X; \
     SPINEL_IRP_CMD_HANDLER otLwfTunIoCtl_##X##_Handler
 
-#define REF_IOCTL_FUNC(X) otLwfIoCtl_##X
+#define REF_IOCTL_FUNC(X) otLwfIoCtl_##X , NULL
 
 #define REF_IOCTL_FUNC_WITH_TUN(X) otLwfIoCtl_##X , otLwfTunIoCtl_##X
 
@@ -197,7 +197,7 @@ DECL_IOCTL_FUNC_WITH_TUN(otPlatformReset);
 DECL_IOCTL_FUNC_WITH_TUN2(otParentInfo);
 DECL_IOCTL_FUNC(otSingleton);
 DECL_IOCTL_FUNC(otMacCounters);
-DECL_IOCTL_FUNC(otMaxChildren);
+DECL_IOCTL_FUNC_WITH_TUN2(otMaxChildren);
 DECL_IOCTL_FUNC(otCommissionerStart);
 DECL_IOCTL_FUNC(otCommissionerStop);
 DECL_IOCTL_FUNC(otJoinerStart);
