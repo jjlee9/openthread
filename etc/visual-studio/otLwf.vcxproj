@@ -61,9 +61,8 @@
         %(PreProcessorDefinitions);
         NDIS_WDM=1;
         NDIS630=1;
-        MBEDTLS_CONFIG_FILE="mbedtls-config.h";
         OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";
-        OPENTHREAD_PORJECT_CORE_CONFIG_FILE="openthread-core-windows-config.h";
+        OPENTHREAD_PROJECT_CORE_CONFIG_FILE="openthread-core-windows-config.h";
         OPENTHREAD_MULTIPLE_INSTANCE;
       </PreProcessorDefinitions>
       <AdditionalIncludeDirectories>
@@ -127,6 +126,7 @@
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\nsihelper.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\oid.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\radio.h" />
+    <ClCompile Include="..\..\examples\drivers\windows\otLwf\settings.c" />
     <ResourceCompile Include="..\..\examples\drivers\windows\otLwf\filter.rc" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\precomp.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\filter.h" />

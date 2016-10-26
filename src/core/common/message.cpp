@@ -56,6 +56,12 @@ MessagePool::MessagePool(void)
 
     mBuffers[kNumBuffers - 1].SetNextBuffer(NULL);
     mNumFreeBuffers = kNumBuffers;
+
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+    // Pass the list of free buffers and a pointer to the count of free buffers
+    // to the platform for management.
+    otPlatMessagePoolInit(static_cast<BufferHeader *>(mFreeBuffers), &mNumFreeBuffers, sizeof(Buffer));
+#endif
 }
 
 Message *MessagePool::New(uint8_t aType, uint16_t aReserved)
@@ -91,6 +97,16 @@ Buffer *MessagePool::NewBuffer(void)
 {
     Buffer *buffer = NULL;
 
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+    buffer = static_cast<Buffer *>(otPlatMessagePoolNew());
+
+    if (buffer == NULL)
+    {
+        otLogInfoMac("No available message buffer\n");
+    }
+
+#else // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+
     if (mFreeBuffers == NULL)
     {
         otLogInfoMac("No available message buffer");
@@ -101,6 +117,7 @@ Buffer *MessagePool::NewBuffer(void)
     mFreeBuffers = mFreeBuffers->GetNextBuffer();
     buffer->SetNextBuffer(NULL);
     mNumFreeBuffers--;
+#endif // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
 
 exit:
     return buffer;
@@ -113,9 +130,13 @@ ThreadError MessagePool::FreeBuffers(Buffer *aBuffer)
     while (aBuffer != NULL)
     {
         tmpBuffer = aBuffer->GetNextBuffer();
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+        otPlatMessagePoolFree(static_cast<struct BufferHeader *>(aBuffer));
+#else // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
         aBuffer->SetNextBuffer(mFreeBuffers);
         mFreeBuffers = aBuffer;
         mNumFreeBuffers++;
+#endif // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
         aBuffer = tmpBuffer;
     }
 
@@ -294,10 +315,32 @@ ThreadError Message::Prepend(const void *aBuf, uint16_t aLength)
     mInfo.mLength += aLength;
     SetOffset(GetOffset() + aLength);
 
-    Write(0, aLength, aBuf);
+    if (aBuf != NULL)
+    {
+        Write(0, aLength, aBuf);
+    }
 
 exit:
     return error;
+}
+
+ThreadError Message::RemoveHeader(uint16_t aLength)
+{
+    assert(aLength <= mInfo.mLength);
+
+    mInfo.mReserved += aLength;
+    mInfo.mLength -= aLength;
+
+    if (mInfo.mOffset > aLength)
+    {
+        mInfo.mOffset -= aLength;
+    }
+    else
+    {
+        mInfo.mOffset = 0;
+    }
+
+    return kThreadError_None;
 }
 
 uint16_t Message::Read(uint16_t aOffset, uint16_t aLength, void *aBuf) const

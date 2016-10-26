@@ -70,11 +70,11 @@ class Node:
         cmd += ' %d' % nodeid
         print ("%s" % cmd)
 
-        self.pexpect = pexpect.spawn(cmd, timeout=2)
+        self.pexpect = pexpect.spawn(cmd, timeout=4)
         self.Api = None
 
         # Add delay to ensure that the process is ready to receive commands.
-        time.sleep(0.1)
+        time.sleep(0.2)
 
 
     def __init_ncp_sim(self, nodeid):
@@ -95,7 +95,7 @@ class Node:
         self.pexpect = pexpect.spawn(cmd, timeout=4)
         self.Api = None
 
-        time.sleep(0.1)
+        time.sleep(0.2)
         self.pexpect.expect('spinel-cli >')
         self.debug(int(os.getenv('DEBUG', '0')))
  
