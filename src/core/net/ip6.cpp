@@ -532,7 +532,7 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
 
 exit:
 
-    otLogFuncExitMsgErr(error);
+    otLogFuncExitErr(error);
     return error;
 }
 
@@ -619,7 +619,7 @@ ThreadError Ip6::HandleDatagram(Message &message, Netif *netif, int8_t interface
     uint8_t nextHeader;
     uint8_t hopLimit;
 
-    otLogFuncEntry();
+    otLogFuncEntryMsg("FromLocal=%u", (fromLocalHost ? 1 : 0));
 
 #if 0
     uint8_t buf[1024];

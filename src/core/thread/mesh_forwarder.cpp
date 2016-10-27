@@ -331,6 +331,8 @@ ThreadError MeshForwarder::SendMessage(Message &aMessage)
     Child *children;
     Lowpan::MeshHeader meshHeader;
 
+    otLogFuncEntry();
+
     switch (aMessage.GetType())
     {
     case Message::kTypeIp6:
@@ -405,6 +407,8 @@ ThreadError MeshForwarder::SendMessage(Message &aMessage)
     mScheduleTransmissionTask.Post();
 
 exit:
+
+    otLogFuncExitErr(error);
     return error;
 }
 
@@ -1350,6 +1354,8 @@ void MeshForwarder::HandleReceivedFrame(Mac::Frame &aFrame, ThreadError aError)
     Child *child = NULL;
     ThreadError error = kThreadError_None;
 
+    otLogFuncEntry();
+
 #if 0
     dump("received frame", aFrame.GetHeader(), aFrame.GetLength());
 #endif
@@ -1447,6 +1453,8 @@ exit:
     {
         otLogDebgMacErr(error, "Dropping received frame");
     }
+    
+    otLogFuncExitErr(error);
 }
 
 void MeshForwarder::HandleMesh(uint8_t *aFrame, uint8_t aFrameLength, const ThreadMessageInfo &aMessageInfo)
@@ -1456,6 +1464,8 @@ void MeshForwarder::HandleMesh(uint8_t *aFrame, uint8_t aFrameLength, const Thre
     Mac::Address meshDest;
     Mac::Address meshSource;
     Lowpan::MeshHeader *meshHeader = reinterpret_cast<Lowpan::MeshHeader *>(aFrame);
+
+    otLogFuncEntry();
 
     // Security Check: only process Mesh Header frames that had security enabled.
     VerifyOrExit(aMessageInfo.mLinkSecurity && meshHeader->IsValid(), error = kThreadError_Security);
@@ -1510,6 +1520,8 @@ exit:
             message->Free();
         }
     }
+    
+    otLogFuncExitErr(error);
 }
 
 ThreadError MeshForwarder::CheckReachability(uint8_t *aFrame, uint8_t aFrameLength,
@@ -1550,6 +1562,8 @@ void MeshForwarder::HandleFragment(uint8_t *aFrame, uint8_t aFrameLength,
     uint16_t datagramTag = fragmentHeader->GetDatagramTag();
     Message *message = NULL;
     int headerLength;
+
+    otLogFuncEntry();
 
     if (fragmentHeader->GetDatagramOffset() == 0)
     {
@@ -1628,6 +1642,8 @@ exit:
             message->Free();
         }
     }
+
+    otLogFuncExitErr(error);
 }
 
 void MeshForwarder::HandleReassemblyTimer(void *aContext)
@@ -1670,6 +1686,8 @@ void MeshForwarder::HandleLowpanHC(uint8_t *aFrame, uint8_t aFrameLength,
     Message *message;
     int headerLength;
 
+    otLogFuncEntry();
+
     VerifyOrExit((message = mNetif.GetIp6().mMessagePool.New(Message::kTypeIp6, 0)) != NULL,
                  error = kThreadError_NoBufs);
     message->SetLinkSecurityEnabled(aMessageInfo.mLinkSecurity);
@@ -1702,6 +1720,8 @@ exit:
             message->Free();
         }
     }
+
+    otLogFuncExitErr(error);
 }
 
 ThreadError MeshForwarder::HandleDatagram(Message &aMessage, const ThreadMessageInfo &aMessageInfo)
