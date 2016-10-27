@@ -132,6 +132,8 @@ ThreadError Ip6::AddMplOption(Message &message, Header &header, IpProto nextHead
     OptionMpl mplOption;
     OptionPadN padOption;
 
+    otLogFuncEntry();
+
     hbhHeader.SetNextHeader(nextHeader);
     hbhHeader.SetLength(0);
     mMpl.InitOption(mplOption, header.GetSource());
@@ -148,12 +150,15 @@ ThreadError Ip6::AddMplOption(Message &message, Header &header, IpProto nextHead
     header.SetPayloadLength(sizeof(hbhHeader) + sizeof(mplOption) + payloadLength);
     header.SetNextHeader(kProtoHopOpts);
 exit:
+    otLogFuncExitErr(error);
     return error;
 }
 
 ThreadError Ip6::InsertMplOption(Message &aMessage, Header &aIp6Header)
 {
     ThreadError error = kThreadError_None;
+
+    otLogFuncEntry();
 
     VerifyOrExit(aIp6Header.GetDestination().IsRealmLocalMulticast(),);
 
@@ -164,6 +169,8 @@ ThreadError Ip6::InsertMplOption(Message &aMessage, Header &aIp6Header)
         HopByHopHeader hbh;
         uint8_t hbhLength = 0;
         OptionMpl mplOption;
+
+        otLogDebgIp6("Inserting MPL option");
 
         // read existing hop-by-hop option header
         aMessage.Read(0, sizeof(hbh), &hbh);
@@ -201,6 +208,8 @@ ThreadError Ip6::InsertMplOption(Message &aMessage, Header &aIp6Header)
     SuccessOrExit(error = aMessage.Prepend(&aIp6Header, sizeof(aIp6Header)));
 
 exit:
+
+    otLogFuncExitErr(error);
     return error;
 }
 
@@ -523,7 +532,7 @@ ThreadError Ip6::HandleExtensionHeaders(Message &message, Header &header, uint8_
 
 exit:
 
-    otLogFuncExitMsg("forward=%d, %!otError!", (forward ? 1 : 0), error);
+    otLogFuncExitMsgErr(error);
     return error;
 }
 
