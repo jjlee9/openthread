@@ -879,6 +879,7 @@ otLwfSendTunnelCommandWithHandlerV(
     _In_ PMS_FILTER pFilter,
     _In_opt_ SPINEL_CMD_HANDLER *Handler,
     _In_opt_ PVOID HandlerContext,
+    _Out_opt_ spinel_tid_t *pTid,
     _In_ UINT Command,
     _In_ spinel_prop_key_t Key,
     _In_ ULONG MaxDataLength,
@@ -888,6 +889,8 @@ otLwfSendTunnelCommandWithHandlerV(
 {
     NTSTATUS status = STATUS_SUCCESS;
     SPINEL_CMD_HANDLER_ENTRY *pEntry = NULL;
+
+    if (pTid) *pTid = 0;
 
     // Create the handler entry and add it to the list
     if (Handler)
@@ -904,6 +907,8 @@ otLwfSendTunnelCommandWithHandlerV(
         pEntry->Context = HandlerContext;
 
         otLwfAddCommandHandler(pFilter, pEntry);
+
+        if (pTid) *pTid = pEntry->TransactionId;
     }
     
     status = otLwfSendTunnelCommandV(pFilter, Command, Key, pEntry ? pEntry->TransactionId : 0, MaxDataLength, pack_format, args);
@@ -937,6 +942,7 @@ otLwfSendTunnelCommandWithHandler(
     _In_ PMS_FILTER pFilter,
     _In_opt_ SPINEL_CMD_HANDLER *Handler,
     _In_opt_ PVOID HandlerContext,
+    _Out_opt_ spinel_tid_t *pTid,
     _In_ UINT Command,
     _In_ spinel_prop_key_t Key,
     _In_ ULONG MaxDataLength,
@@ -947,7 +953,7 @@ otLwfSendTunnelCommandWithHandler(
     va_list args;
     va_start(args, pack_format);
     NTSTATUS status = 
-        otLwfSendTunnelCommandWithHandlerV(pFilter, Handler, HandlerContext, Command, Key, MaxDataLength, pack_format, args);
+        otLwfSendTunnelCommandWithHandlerV(pFilter, Handler, HandlerContext, pTid, Command, Key, MaxDataLength, pack_format, args);
     va_end(args);
     return status;
 }
@@ -956,8 +962,10 @@ SPINEL_CMD_HANDLER otLwfIrpCommandHandler;
 
 typedef struct _SPINEL_IRP_CMD_CONTEXT
 {
+    PMS_FILTER              pFilter;
     PIRP                    Irp;
     SPINEL_IRP_CMD_HANDLER *Handler;
+    spinel_tid_t            tid;
 } SPINEL_IRP_CMD_CONTEXT;
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -982,6 +990,9 @@ otLwfIrpCommandHandler(
     NTSTATUS status;
 
     UNREFERENCED_PARAMETER(pFilter);
+
+    // Clear the cancel routine
+    IoSetCancelRoutine(CmdContext->Irp, NULL);
     
     if (Data == NULL)
     {
@@ -1028,6 +1039,35 @@ otLwfIrpCommandHandler(
     FILTER_FREE_MEM(Context);
 }
 
+_Function_class_(DRIVER_CANCEL)
+_Requires_lock_held_(_Global_cancel_spin_lock_)
+_Releases_lock_(_Global_cancel_spin_lock_)
+_IRQL_requires_min_(DISPATCH_LEVEL)
+_IRQL_requires_(DISPATCH_LEVEL)
+VOID
+otLwfTunCancelIrp(
+    _Inout_ struct _DEVICE_OBJECT *DeviceObject,
+    _Inout_ _IRQL_uses_cancel_ struct _IRP *Irp
+    )
+{
+    PIO_STACK_LOCATION IrpStack = IoGetCurrentIrpStackLocation(Irp);
+    SPINEL_IRP_CMD_CONTEXT* CmdContext = (SPINEL_IRP_CMD_CONTEXT*)IrpStack->Context;
+
+    UNREFERENCED_PARAMETER(DeviceObject);
+
+    LogFuncEntryMsg(DRIVER_IOCTL, "Irp=%p", Irp);
+
+    IoReleaseCancelSpinLock(Irp->CancelIrql);
+
+    // Try to cancel pending command
+    otLwfCancelCommandHandler(
+        CmdContext->pFilter, 
+        (Irp->CancelIrql == DISPATCH_LEVEL) ? TRUE : FALSE, 
+        CmdContext->tid);
+
+    LogFuncExit(DRIVER_IOCTL);
+}
+
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
 otLwfSendTunnelCommandForIrp(
@@ -1043,6 +1083,7 @@ otLwfSendTunnelCommandForIrp(
 {
     NTSTATUS status = STATUS_SUCCESS;
     SPINEL_IRP_CMD_CONTEXT *pContext = NULL;
+    PIO_STACK_LOCATION IrpStack = IoGetCurrentIrpStackLocation(Irp);
 
     // Create the context structure
     pContext = FILTER_ALLOC_MEM(pFilter->FilterHandle, sizeof(SPINEL_IRP_CMD_CONTEXT));
@@ -1053,8 +1094,15 @@ otLwfSendTunnelCommandForIrp(
         goto exit;
     }
 
+    pContext->pFilter = pFilter;
     pContext->Irp = Irp;
     pContext->Handler = Handler;
+
+    NT_ASSERT(IrpStack->Context == NULL);
+    IrpStack->Context = pContext;
+
+    // Set the cancel routine
+    IoSetCancelRoutine(Irp, otLwfTunCancelIrp);
     
     va_list args;
     va_start(args, pack_format);
@@ -1063,6 +1111,7 @@ otLwfSendTunnelCommandForIrp(
             pFilter, 
             otLwfIrpCommandHandler, 
             pContext, 
+            &pContext->tid,
             Command, 
             Key, 
             MaxDataLength, 
@@ -1073,6 +1122,9 @@ otLwfSendTunnelCommandForIrp(
     // Remove the handler entry from the list
     if (!NT_SUCCESS(status))
     {
+        // Clear the cancel routine
+        IoSetCancelRoutine(Irp, NULL);
+
         FILTER_FREE_MEM(pContext);
     }
 
@@ -1162,6 +1214,7 @@ otLwfGetTunProp(
 {
     NTSTATUS status;
     LARGE_INTEGER WaitTimeout;
+    spinel_tid_t tid;
 
     // Create the context structure
     SPINEL_GET_PROP_CONTEXT Context;
@@ -1178,7 +1231,8 @@ otLwfGetTunProp(
         otLwfSendTunnelCommandWithHandlerV(
             pFilter, 
             otLwfGetPropHandler, 
-            &Context, 
+            &Context,
+            &tid,
             SPINEL_CMD_PROP_VALUE_GET, 
             Key, 
             0, 
@@ -1199,7 +1253,6 @@ otLwfGetTunProp(
                 &WaitTimeout)
             ))
         {
-            /* TODO - Get TID to use for cancel
             if (!otLwfCancelCommandHandler(pFilter, FALSE, tid))
             {
                 KeWaitForSingleObject(
@@ -1208,8 +1261,7 @@ otLwfGetTunProp(
                     KernelMode,
                     FALSE,
                     NULL);
-            }*/
-            Context.Status = STATUS_CANCELLED;
+            }
         }
     }
     else
@@ -1295,6 +1347,7 @@ otLwfSetTunProp(
 {
     NTSTATUS status;
     LARGE_INTEGER WaitTimeout;
+    spinel_tid_t tid;
 
     // Create the context structure
     SPINEL_SET_PROP_CONTEXT Context;
@@ -1313,6 +1366,7 @@ otLwfSetTunProp(
             pFilter, 
             otLwfGetPropHandler, 
             &Context, 
+            &tid,
             SPINEL_CMD_PROP_VALUE_SET, 
             Key, 
             8, 
@@ -1333,7 +1387,6 @@ otLwfSetTunProp(
                 &WaitTimeout)
             ))
         {
-            /* TODO - Get TID to use for cancel
             if (!otLwfCancelCommandHandler(pFilter, FALSE, tid))
             {
                 KeWaitForSingleObject(
@@ -1342,8 +1395,7 @@ otLwfSetTunProp(
                     KernelMode,
                     FALSE,
                     NULL);
-            }*/
-            Context.Status = STATUS_CANCELLED;
+            }
         }
     }
     else

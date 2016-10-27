@@ -440,6 +440,9 @@ otLwfTunIoCtl(
     if (NT_SUCCESS(status))
     {
         status = STATUS_PENDING;
+
+        // Mark the Irp as pending
+        IoMarkIrpPending(Irp);
     }
 
     return status;
