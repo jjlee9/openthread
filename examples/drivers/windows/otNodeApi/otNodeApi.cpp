@@ -1651,6 +1651,7 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
     DWORD Flags;
     DWORD cbReceived;
     int cbDestinationAddress = sizeof(DestinationAddress);
+    DWORD hopLimit = 64;
 
     SOCKET Socket = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (Socket == INVALID_SOCKET)
@@ -1664,6 +1665,14 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
     if (result == SOCKET_ERROR)
     {
         printf("bind failed, 0x%x\r\n", WSAGetLastError());
+        goto exit;
+    }
+    
+    // Set the multicast hop limit to 64
+    result = setsockopt(Socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (char *)&hopLimit, sizeof(hopLimit));
+    if (result == SOCKET_ERROR)
+    {
+        printf("setsockopt (IPV6_MULTICAST_HOPS) failed, 0x%x\r\n", WSAGetLastError());
         goto exit;
     }
 
