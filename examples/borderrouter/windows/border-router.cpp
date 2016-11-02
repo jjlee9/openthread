@@ -35,6 +35,13 @@
 #include "client.hpp"
 #include "fake-leader.hpp"
 
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
+#include <openthread.h>
+
 #define MBED_MEMORY_BUF_SIZE  (2048 * sizeof(void*))
 
 extern "C" void otSignalTaskletPending(otInstance *)
@@ -213,6 +220,9 @@ static unsigned char sMemoryBuf[Thread::Crypto::MbedTls::kMemorySize];
 int main(int argc, char* argv[])
 {
     mbedtls_memory_buffer_alloc_init(sMemoryBuf, sizeof(sMemoryBuf));
+
+    otApiInit();
+
     if (argc < 2)
     {
         BorderRouter router;
