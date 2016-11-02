@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\examples\borderrouter\windows\border-router.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\border-router-socket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\br_coap_header.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\br_coap_server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\br_dtls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\fake-leader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\examples\borderrouter\windows\border-router.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\border-router-socket.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\br_coap_header.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\br_coap_server.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\br_dtls.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\client.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\fake-leader.hpp">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\resource.h">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\stdafx.h">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\examples\borderrouter\windows\targetver.h">
+      <Filter>Header FIles</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header FIles">
+      <UniqueIdentifier>{1749aad8-20c0-4288-9868-2f857cda5ee6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{acf0fb48-ca71-4bab-8835-55733b374ffc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{e2accc2e-4591-4f6d-81ad-1a88639cb858}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\examples\borderrouter\windows\border-router.rc" />
+  </ItemGroup>
+</Project>
