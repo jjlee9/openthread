@@ -70,6 +70,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\examples\borderrouter\windows\border-router.rc" />
+    <ResourceCompile Include="..\..\examples\borderrouter\windows\border-router.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
