@@ -110,7 +110,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\dll\otApi.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread-windows.lib;ws2_32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\dll\otApi.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;ws2_32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -166,7 +166,6 @@
     <ClCompile Include="..\..\examples\borderrouter\windows\br_coap_header.cpp" />
     <ClCompile Include="..\..\examples\borderrouter\windows\br_coap_server.cpp" />
     <ClCompile Include="..\..\examples\borderrouter\windows\br_dtls.cpp" />
-    <ClCompile Include="..\..\examples\borderrouter\windows\fake-leader.cpp" />
     <ClCompile Include="..\..\examples\borderrouter\windows\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -175,14 +174,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="libopenthread.vcxproj">
-      <Project>{dd5018be-54c6-4fd4-9f8d-08d52fc0cd40}</Project>
-    </ProjectReference>
     <ProjectReference Include="mbedtls.vcxproj">
       <Project>{4111c8bb-d354-4348-ad3c-eb6832e84831}</Project>
-    </ProjectReference>
-    <ProjectReference Include="libopenthread-windows.vcxproj">
-      <Project>{30723c38-ba3b-44c9-8d64-c5861a26934f}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

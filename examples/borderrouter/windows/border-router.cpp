@@ -217,6 +217,26 @@ void getPSKc(const char* passPhrase, const char* networkName, const char* const 
     printBuffer((char*)derivedKeyOut, 16);
 }
 
+extern "C" ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
+{
+    // Just use the system-preferred random number generator algorithm
+    NTSTATUS status =
+        BCryptGenRandom(
+            NULL,
+            aOutput,
+            (ULONG)aInputLength,
+            BCRYPT_USE_SYSTEM_PREFERRED_RNG
+        );
+    if (status != 0)
+    {
+        return kThreadError_Failed;
+    }
+
+    *aOutputLength = aInputLength;
+
+    return kThreadError_None;
+}
+
 static unsigned char sMemoryBuf[Thread::Crypto::MbedTls::kMemorySize];
 
 int main(int argc, char* argv[])
@@ -230,11 +250,11 @@ int main(int argc, char* argv[])
         BorderRouter router;
         router.Start();
     }
-    else
-    {
-        FakeLeader leader;
-        leader.Start();
-    }
+    //else
+    //{
+    //    FakeLeader leader;
+    //    leader.Start();
+    //}
     //Client client;
     //client.Start();
 }
@@ -269,8 +289,7 @@ HRESULT BorderRouter::Start()
     GUID threadDeviceGuid = deviceList->aDevices[0];
     otInstance* deviceInstance = otInstanceInit(mApiInstance, &threadDeviceGuid);
 
-    otIp6Address aLeaderRloc;
-    if (ThreadError::kThreadError_None != otGetLeaderRloc(deviceInstance, &aLeaderRloc))
+    if (ThreadError::kThreadError_None != otGetLeaderRloc(deviceInstance, &mLeaderRloc))
     {
         // TODO: translate ???
         return E_FAIL;
@@ -417,12 +436,10 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
         return;
     }
 
-    sockaddr_in mThreadLeaderAddress;
-    mThreadLeaderAddress.sin_family = AF_INET;
-    // if part of this code becomes permanent, check return value
-    inet_pton(AF_INET, THREAD_LEADER_ADDR, &mThreadLeaderAddress.sin_addr);
-    mThreadLeaderAddress.sin_port = htons(THREAD_MGMT_PORT);
-    // TODO: query thread leader address instead of hardcoding something
+    sockaddr_in6 threadLeaderAddress;
+    memcpy_s(&threadLeaderAddress.sin6_addr, sizeof(threadLeaderAddress.sin6_addr), &mLeaderRloc, sizeof(IN6_ADDR));
+    threadLeaderAddress.sin6_family = AF_INET6;
+    threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
 
     OffMesh::Coap::Header header;
     header.Init();
@@ -445,6 +462,6 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     memcpy_s(messageBuffer.get(), requiredSize, header.GetBytes(), header.GetLength());
     memcpy_s(messageBuffer.get() + header.GetLength(), aLength, aBuf, aLength);
 
-    mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &mThreadLeaderAddress);
+    mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
     mThreadLeaderSocket.Read();
 }

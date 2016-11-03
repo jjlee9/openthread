@@ -94,4 +94,5 @@ private:
     OffMesh::Coap::Resource mCoapHandler;
 
     otApiInstance* mApiInstance;
+    otIp6Address mLeaderRloc;
 };
