@@ -69,7 +69,12 @@ HRESULT BRSocket::Bind(unsigned short port)
     recvAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     recvAddr.sin_port = htons(port);
 
-    if (SOCKET_ERROR == bind(mSocket, (SOCKADDR*)&recvAddr, sizeof(recvAddr)))
+    //sockaddr_in6 recvAddr = {};
+    //recvAddr.sin6_family = AF_INET6;
+    //recvAddr.sin6_addr = in6addr_any;
+    //recvAddr.sin6_port = htons(port);
+
+    if (SOCKET_ERROR == bind(mSocket, (sockaddr*)&recvAddr, sizeof(recvAddr)))
     {
         return HRESULT_FROM_WIN32(WSAGetLastError());
     }
@@ -160,9 +165,19 @@ HRESULT BRSocket::Reply(const uint8_t* aBuf, uint16_t aLength)
     }
 }
 
+HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo)
+{
+    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(peerToSendTo));
+}
+
 HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* peerToSendTo)
 {
-    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, reinterpret_cast<SOCKADDR*>(peerToSendTo), sizeof(*peerToSendTo));
+    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(peerToSendTo));
+}
+
+HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo)
+{
+    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, peerToSendTo, sizeof(*peerToSendTo));
     if (result == SOCKET_ERROR)
     {
         DWORD wsaError = WSAGetLastError();

@@ -51,6 +51,12 @@
 
 #define DEFAULT_MESHCOP_PORT 49191
 
+// Known as :MM in the Thread Spec 1.1 section 10.13, the border router should send to this port.
+//
+// Thread Spec 1.1 also says:
+// This specification defines no mechanisms to change the port number :MM to another, non-default, value.
+#define THREAD_MGMT_PORT 61631
+
 void getPSKc(const char* passPhrase, const char* networkName, const char* const xPanId, uint8_t* derivedKeyOut);
 
 class BorderRouter
@@ -58,6 +64,7 @@ class BorderRouter
 public:
 
     BorderRouter();
+    ~BorderRouter();
 
     HRESULT Start();
     void Stop();
@@ -85,4 +92,6 @@ private:
 
     OffMesh::Coap::Server mCoap;
     OffMesh::Coap::Resource mCoapHandler;
+
+    otApiInstance* mApiInstance;
 };

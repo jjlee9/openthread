@@ -35,7 +35,6 @@
 #include <windows.h>
 #include <ws2tcpip.h>
 
-#define THREAD_LEADER_PORT 19780
 #define THREAD_LEADER_ADDR "127.0.0.1"
 
 class FakeLeader

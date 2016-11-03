@@ -46,12 +46,15 @@ public:
     HRESULT Bind(unsigned short port);
     HRESULT Read();
     HRESULT Reply(const uint8_t* aBuf, uint16_t aLength);
+    HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* peerToSendTo);
     void GetLastPeer(SOCKADDR* mLastPeer);
 
 private:
     SOCKET mSocket;
     SOCKADDR mPeerAddr;
+
+    HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo);
 
     BrSocketReadCallback mClientReceiveCallback;
     void* mClientContext;

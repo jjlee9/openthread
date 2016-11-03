@@ -28,6 +28,7 @@
 
 #include "stdafx.h"
 #include "fake-leader.hpp"
+#include "border-router.hpp"
 #include <thread/thread_uris.hpp>
 #include <thread/meshcop_tlvs.hpp>
 #include <memory>
@@ -56,7 +57,7 @@ HRESULT FakeLeader::Start()
         return hr;
     }
 
-    hr = mBorderRouterSocket.Bind(THREAD_LEADER_PORT);
+    hr = mBorderRouterSocket.Bind(THREAD_MGMT_PORT);
     if (FAILED(hr))
     {
         return hr;

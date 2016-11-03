@@ -40,6 +40,8 @@
 #else
 #include <openthread-config.h>
 #endif
+
+#include <openthread-core-config.h>
 #include <openthread.h>
 
 #define MBED_MEMORY_BUF_SIZE  (2048 * sizeof(void*))
@@ -221,7 +223,7 @@ int main(int argc, char* argv[])
 {
     mbedtls_memory_buffer_alloc_init(sMemoryBuf, sizeof(sMemoryBuf));
 
-    otApiInit();
+
 
     if (argc < 2)
     {
@@ -238,9 +240,15 @@ int main(int argc, char* argv[])
 }
 
 BorderRouter::BorderRouter() :
-    mCoapHandler(HandleCoapMessage, this)
+    mCoapHandler(HandleCoapMessage, this),
+    mApiInstance(otApiInit())
 {
     mCoap.AddResource(mCoapHandler);
+}
+
+BorderRouter::~BorderRouter()
+{
+    otApiFinalize(mApiInstance);
 }
 
 HRESULT BorderRouter::Start()
@@ -250,6 +258,22 @@ HRESULT BorderRouter::Start()
     if (FAILED(hr))
     {
         return hr;
+    }
+
+    otDeviceList* deviceList = otEnumerateDevices(mApiInstance);
+    if (deviceList->aDevicesLength < 1)
+    {
+        return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+    }
+
+    GUID threadDeviceGuid = deviceList->aDevices[0];
+    otInstance* deviceInstance = otInstanceInit(mApiInstance, &threadDeviceGuid);
+
+    otIp6Address aLeaderRloc;
+    if (ThreadError::kThreadError_None != otGetLeaderRloc(deviceInstance, &aLeaderRloc))
+    {
+        // TODO: translate ???
+        return E_FAIL;
     }
 
     hr = mCommissionerSocket.Initialize(HandleCommissionerSocketReceive, this);
@@ -397,7 +421,7 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     mThreadLeaderAddress.sin_family = AF_INET;
     // if part of this code becomes permanent, check return value
     inet_pton(AF_INET, THREAD_LEADER_ADDR, &mThreadLeaderAddress.sin_addr);
-    mThreadLeaderAddress.sin_port = htons(THREAD_LEADER_PORT);
+    mThreadLeaderAddress.sin_port = htons(THREAD_MGMT_PORT);
     // TODO: query thread leader address instead of hardcoding something
 
     OffMesh::Coap::Header header;
