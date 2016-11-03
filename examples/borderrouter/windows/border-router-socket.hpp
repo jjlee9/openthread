@@ -48,11 +48,11 @@ public:
     HRESULT Reply(const uint8_t* aBuf, uint16_t aLength);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* peerToSendTo);
-    void GetLastPeer(SOCKADDR* mLastPeer);
+    void GetLastPeer(sockaddr_storage* mLastPeer);
 
 private:
     SOCKET mSocket;
-    SOCKADDR mPeerAddr;
+    sockaddr_storage mPeerAddr;
 
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo);
 

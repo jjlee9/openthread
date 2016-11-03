@@ -346,7 +346,7 @@ void BorderRouter::HandleCommissionerSocketReceive(uint8_t *aBuf, DWORD aLength)
         // The DTLS server requires that we set some client ID, or the handshake will fail. The documentation
         // states that it is usually an ip/port pair (something that identifies the peer on the transport).
         // Set it here.
-        SOCKADDR currentPeer;
+        sockaddr_storage currentPeer;
         mCommissionerSocket.GetLastPeer(&currentPeer);
         mDtls.SetClientId(reinterpret_cast<uint8_t*>(&currentPeer), sizeof(currentPeer));
     }

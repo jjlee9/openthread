@@ -101,7 +101,7 @@ HRESULT BRSocket::Read()
     overlapped.hEvent = overlappedEvent;
 
     bool pending = false;
-    if (SOCKET_ERROR == WSARecvFrom(mSocket, &wsaRecvBuffer, 1, &cbReceived, &dwFlags, &mPeerAddr, &cbSourceAddr, &overlapped, nullptr))
+    if (SOCKET_ERROR == WSARecvFrom(mSocket, &wsaRecvBuffer, 1, &cbReceived, &dwFlags, reinterpret_cast<sockaddr*>(&mPeerAddr), &cbSourceAddr, &overlapped, nullptr))
     {
         DWORD dwError = WSAGetLastError();
         if (WSA_IO_PENDING == dwError)
@@ -151,7 +151,7 @@ HRESULT BRSocket::Read()
 
 HRESULT BRSocket::Reply(const uint8_t* aBuf, uint16_t aLength)
 {
-    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, &mPeerAddr, sizeof(mPeerAddr));
+    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, reinterpret_cast<sockaddr*>(&mPeerAddr), sizeof(mPeerAddr));
     if (result == SOCKET_ERROR)
     {
         DWORD wsaError = WSAGetLastError();
@@ -191,7 +191,7 @@ HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerTo
     }
 }
 
-void BRSocket::GetLastPeer(SOCKADDR* lastPeer)
+void BRSocket::GetLastPeer(sockaddr_storage* lastPeer)
 {
     *lastPeer = mPeerAddr;
 }
