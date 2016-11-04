@@ -22,6 +22,9 @@
     <ClCompile Include="..\..\examples\borderrouter\windows\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\examples\borderrouter\windows\fake-leader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\examples\borderrouter\windows\border-router.hpp">

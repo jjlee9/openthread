@@ -86,18 +86,14 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
     coapOption = header.GetCurrentOption();
 
     auto bytes = header.GetBytes();
-    printf("Header:\n");
     printBuffer((char*)bytes, header.GetLength());
 
     while (coapOption != NULL)
     {
-        printf("in the while loop!\n");
         switch (coapOption->mNumber)
         {
         case OffMesh::Coap::Header::Option::kOptionUriPath:
-            printf("We found a URI!\n");
             VerifyOrExit(coapOption->mLength < sizeof(uriPath) - static_cast<size_t>(curUriPath - uriPath), ;);
-            printf("Value of URI option:\n");
             printBuffer((char*)coapOption->mValue, coapOption->mLength);
             memcpy(curUriPath, coapOption->mValue, coapOption->mLength);
             curUriPath[coapOption->mLength] = '/';
@@ -105,7 +101,6 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
             break;
 
         case OffMesh::Coap::Header::Option::kOptionContentFormat:
-            printf("We found a content format\n");
             break;
 
         default:
@@ -114,9 +109,7 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
             //ExitNow();
         }
 
-        printf("Calling GetNextOption\n");
         coapOption = header.GetNextOption();
-        printf("Done calling GetNextOption\n");
     }
 
     curUriPath[-1] = '\0';

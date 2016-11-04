@@ -237,31 +237,53 @@ extern "C" ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOu
     return kThreadError_None;
 }
 
+inline uint16_t Swap16(uint16_t v)
+{
+    return
+        (((v & 0x00ffU) << 8) & 0xff00) |
+        (((v & 0xff00U) >> 8) & 0x00ff);
+}
+
+bool GetRlocAddr(_In_ otInstance* aInstance, _Out_ PIN6_ADDR addr)
+{
+    auto meshLocalPrefix = otGetMeshLocalPrefix(aInstance);
+    if (!meshLocalPrefix) return false;
+    memcpy_s(addr, sizeof(IN6_ADDR), meshLocalPrefix, 8);
+    addr->u.Word[4] = Swap16(0x0000);
+    addr->u.Word[5] = Swap16(0x00ff);
+    addr->u.Word[6] = Swap16(0xfe00);
+    addr->u.Word[7] = Swap16(otGetRloc16(aInstance));
+    return true;
+}
+
 static unsigned char sMemoryBuf[Thread::Crypto::MbedTls::kMemorySize];
 
 int main(int argc, char* argv[])
 {
     mbedtls_memory_buffer_alloc_init(sMemoryBuf, sizeof(sMemoryBuf));
 
-
-
     if (argc < 2)
     {
         BorderRouter router;
         router.Start();
     }
+    else
+    {
+        FakeLeader leader;
+        leader.Start();
+    }
     //else
     //{
-    //    FakeLeader leader;
-    //    leader.Start();
+    //    Client client;
+    //    client.Start();
     //}
-    //Client client;
-    //client.Start();
 }
 
 BorderRouter::BorderRouter() :
     mCoapHandler(HandleCoapMessage, this),
-    mApiInstance(otApiInit())
+    mApiInstance(otApiInit()),
+    mThreadLeaderSocket(AF_INET6),
+    mCommissionerSocket(AF_INET)
 {
     mCoap.AddResource(mCoapHandler);
 }
@@ -301,13 +323,31 @@ HRESULT BorderRouter::Start()
         return hr;
     }
 
+    IN6_ADDR sin6Addr;
+    if (!GetRlocAddr(deviceInstance, &sin6Addr))
+    {
+        printf("getrlocaddr failed\n");
+        return E_FAIL;
+    }
+
     hr = mThreadLeaderSocket.Initialize(HandleThreadSocketReceive, this);
     if (FAILED(hr))
     {
         return hr;
     }
 
-    hr = mCommissionerSocket.Bind(DEFAULT_MESHCOP_PORT);
+    CHAR szIpAddress[46] = { 0 };
+    RtlIpv6AddressToStringA(&sin6Addr, szIpAddress);
+    printf("Attempting to bind to IPv6 adress %s\n", szIpAddress);
+
+    hr = mThreadLeaderSocket.Bind(0, &sin6Addr);
+    if (FAILED(hr))
+    {
+        printf("bind failed 0x%x", hr);
+        return hr;
+    }
+
+    hr = mCommissionerSocket.Bind(DEFAULT_MESHCOP_PORT, nullptr);
     if (FAILED(hr))
     {
         return hr;
@@ -361,12 +401,15 @@ void BorderRouter::HandleThreadSocketReceive(void *aContext, uint8_t *aBuf, DWOR
 
 void BorderRouter::HandleThreadSocketReceive(uint8_t* aBuf, DWORD aLength)
 {
+    printf("BorderRouter::HandleThreadSocketReceive called\n");
     // just got something from the thread socket. it will be a reply to something
     // we sent to the leader. replies don't have coap URIs so if the message format
     // is the same, we can just forward it directly as is
     //
     // currently, all responses are the same, so we just forward over DTLS to
     // the commissioner
+    // TODO: REMOVE HACK
+    aLength = min(aLength, 20);
     mDtls.Send(aBuf, static_cast<uint16_t>(aLength));
 }
 
@@ -436,8 +479,9 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
         return;
     }
 
-    sockaddr_in6 threadLeaderAddress;
+    sockaddr_in6 threadLeaderAddress = { 0 };
     memcpy_s(&threadLeaderAddress.sin6_addr, sizeof(threadLeaderAddress.sin6_addr), &mLeaderRloc, sizeof(IN6_ADDR));
+    //inet_pton(AF_INET6, "0:0:0:0:0:0:0:1", &threadLeaderAddress.sin6_addr);
     threadLeaderAddress.sin6_family = AF_INET6;
     threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
 
@@ -461,6 +505,10 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
 
     memcpy_s(messageBuffer.get(), requiredSize, header.GetBytes(), header.GetLength());
     memcpy_s(messageBuffer.get() + header.GetLength(), aLength, aBuf, aLength);
+
+    CHAR szIpAddress[46] = { 0 };
+    RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
+    printf("Attempting to send to leader at IPv6 adress %s\n", szIpAddress);
 
     mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
     mThreadLeaderSocket.Read();

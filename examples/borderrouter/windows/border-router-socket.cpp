@@ -30,8 +30,9 @@
 #include <mbedtls/platform.h>
 #include "border-router-socket.hpp"
 
-BRSocket::BRSocket() :
-    mSocket(INVALID_SOCKET)
+BRSocket::BRSocket(ADDRESS_FAMILY addressFamily) :
+    mSocket(INVALID_SOCKET),
+    mAddressFamily(addressFamily)
 {
 }
 
@@ -45,7 +46,7 @@ HRESULT BRSocket::Initialize(BrSocketReadCallback readCallback, void* clientCont
     mClientReceiveCallback = readCallback;
     mClientContext = clientContext;
 
-    mSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
+    mSocket = WSASocket(mAddressFamily, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
     if (mSocket == INVALID_SOCKET)
     {
         return HRESULT_FROM_WIN32(WSAGetLastError());
@@ -62,22 +63,33 @@ void BRSocket::Uninitialize()
     }
 }
 
-HRESULT BRSocket::Bind(unsigned short port)
+HRESULT BRSocket::Bind(unsigned short port, PIN6_ADDR sin6Addr)
 {
-    SOCKADDR_IN recvAddr = {};
-    recvAddr.sin_family = AF_INET;
-    recvAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    recvAddr.sin_port = htons(port);
-
-    //sockaddr_in6 recvAddr = {};
-    //recvAddr.sin6_family = AF_INET6;
-    //recvAddr.sin6_addr = in6addr_any;
-    //recvAddr.sin6_port = htons(port);
-
-    if (SOCKET_ERROR == bind(mSocket, (sockaddr*)&recvAddr, sizeof(recvAddr)))
+    if (mAddressFamily == AF_INET)
     {
-        return HRESULT_FROM_WIN32(WSAGetLastError());
+        sockaddr_in recvAddr = {};
+        recvAddr.sin_family = AF_INET;
+        recvAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        recvAddr.sin_port = htons(port);
+
+        if (SOCKET_ERROR == bind(mSocket, (sockaddr*)&recvAddr, sizeof(recvAddr)))
+        {
+            return HRESULT_FROM_WIN32(WSAGetLastError());
+        }
     }
+    else
+    {
+        sockaddr_in6 recvAddr = {};
+        recvAddr.sin6_family = AF_INET6;
+        recvAddr.sin6_addr = sin6Addr != nullptr ? *sin6Addr : in6addr_any;
+        recvAddr.sin6_port = htons(port);
+
+        if (SOCKET_ERROR == bind(mSocket, (sockaddr*)&recvAddr, sizeof(recvAddr)))
+        {
+            return HRESULT_FROM_WIN32(WSAGetLastError());
+        }
+    }
+
     return S_OK;
 }
 
@@ -167,17 +179,18 @@ HRESULT BRSocket::Reply(const uint8_t* aBuf, uint16_t aLength)
 
 HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo)
 {
-    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(peerToSendTo));
+    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(peerToSendTo), sizeof(*peerToSendTo));
 }
 
 HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* peerToSendTo)
 {
-    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(peerToSendTo));
+    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(peerToSendTo), sizeof(*peerToSendTo));
 }
 
-HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo)
+HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo, size_t cbSizeOfPeerToSendTo)
 {
-    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, peerToSendTo, sizeof(*peerToSendTo));
+    printf("trying to send %d bytes\n", aLength);
+    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, peerToSendTo, (int)cbSizeOfPeerToSendTo);
     if (result == SOCKET_ERROR)
     {
         DWORD wsaError = WSAGetLastError();

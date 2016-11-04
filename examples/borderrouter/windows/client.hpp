@@ -37,6 +37,8 @@ class Client
 {
 public:
 
+    Client();
+
     HRESULT Start();
     void Stop();
 

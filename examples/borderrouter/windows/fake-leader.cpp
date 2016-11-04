@@ -37,7 +37,7 @@ using namespace Thread::MeshCoP;
 
 FakeLeader::FakeLeader() :
     mCoapHandler(HandleCoapMessage, this),
-    mNetwork(nullptr, Tlv::kActiveTimestamp)
+    mBorderRouterSocket(AF_INET6)
 {
     mCoap.AddResource(mCoapHandler);
 }
@@ -57,7 +57,7 @@ HRESULT FakeLeader::Start()
         return hr;
     }
 
-    hr = mBorderRouterSocket.Bind(THREAD_MGMT_PORT);
+    hr = mBorderRouterSocket.Bind(THREAD_MGMT_PORT, nullptr);
     if (FAILED(hr))
     {
         return hr;
@@ -96,20 +96,6 @@ void FakeLeader::HandleCoapMessage(void* aContext, OffMesh::Coap::Header& aHeade
     else if (strcmp(aUriPath, OPENTHREAD_URI_LEADER_KEEP_ALIVE) == 0)
     {
         obj->HandleLeaderKeepAlive(aHeader, aMessage, aLength);
-    }
-    else if (strcmp(aUriPath, OPENTHREAD_URI_ACTIVE_GET) == 0 ||
-             strcmp(aUriPath, OPENTHREAD_URI_PENDING_GET) == 0)
-    {
-        // our fake leader doesn't do pending datasets. just treat it like
-        // an active set
-        obj->HandleActiveGet(aHeader, aMessage, aLength);
-    }
-    else if (strcmp(aUriPath, OPENTHREAD_URI_ACTIVE_SET) == 0 ||
-             strcmp(aUriPath, OPENTHREAD_URI_PENDING_SET) == 0)
-    {
-        // our fake leader doesn't do pending datasets. just treat it like
-        // an active set
-        obj->HandleActiveSet(aHeader, aMessage, aLength);
     }
     else if (strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0)
     {
@@ -237,138 +223,6 @@ void FakeLeader::HandleCommissionerSet(OffMesh::Coap::Header& aRequestHeader, ui
     memcpy_s(messageBuffer.get() + offset, requiredSize - offset, &state, sizeof(state));
     offset += sizeof(state);
     memcpy_s(messageBuffer.get() + offset, requiredSize - offset, &sessionId, sizeof(sessionId));
-
-    mBorderRouterSocket.Reply(messageBuffer.get(), requiredSize);
-}
-
-void FakeLeader::HandleActiveGet(OffMesh::Coap::Header& aRequestHeader, uint8_t* aBuf, uint16_t aLength)
-{
-    printf("FakeLeader::HandleActiveGet entered\n");
-
-    OffMesh::Coap::Header responseHeader;
-    responseHeader.Init();
-    responseHeader.SetVersion(1);
-    responseHeader.SetType(OffMesh::Coap::Header::kTypeAcknowledgment);
-    responseHeader.SetCode(OffMesh::Coap::Header::kCodeChanged);
-    responseHeader.SetMessageId(aRequestHeader.GetMessageId());
-    responseHeader.SetToken(aRequestHeader.GetToken(), aRequestHeader.GetTokenLength());
-    responseHeader.Finalize();
-
-    // if the payload includes a Get TLV, then we send just those parameters. Otherwise we must send
-    // the entire active operation dataset
-
-    uint16_t sizeOfDataSetPayload = 0;
-    bool needToSendWholeDataSet = false;
-    uint8_t requestedTlvs[Dataset::kMaxSize];
-
-    if (aLength == 0)
-    {
-        // have to send whole dataset
-        sizeOfDataSetPayload = mNetwork.GetSize();
-        needToSendWholeDataSet = true;
-    }
-    else
-    {
-        // assume this is a well formatted Get TLV. A get TLV is a list of 8 bit type identifiers
-        Tlv tlv;
-        memcpy_s(&tlv, sizeof(tlv), aBuf, sizeof(tlv));
-        uint8_t length = tlv.GetLength();
-
-        memcpy_s(requestedTlvs, sizeof(requestedTlvs), aBuf + sizeof(tlv), length);
-        sizeOfDataSetPayload = length;
-    }
-
-    uint16_t requiredSize = responseHeader.GetLength() + sizeOfDataSetPayload;
-    auto messageBuffer = std::unique_ptr<uint8_t[]>(new (std::nothrow) uint8_t[requiredSize]);
-    if (messageBuffer == nullptr)
-    {
-        // failed to alloc, return
-        return;
-    }
-
-    memcpy_s(messageBuffer.get(), requiredSize, responseHeader.GetBytes(), responseHeader.GetLength());
-    uint16_t offset = responseHeader.GetLength();
-    if (needToSendWholeDataSet)
-    {
-        memcpy_s(messageBuffer.get() + offset, requiredSize - offset, mNetwork.GetBytes(), sizeOfDataSetPayload);
-    }
-    else
-    {
-        Tlv* tlv;
-        for (uint8_t index = 0; index < sizeOfDataSetPayload; index++)
-        {
-            tlv = mNetwork.Get(static_cast<Tlv::Type>(requestedTlvs[index]));
-            if (tlv != nullptr)
-            {
-                memcpy_s(messageBuffer.get() + offset, requiredSize - offset, tlv, sizeof(Tlv) + tlv->GetLength());
-                offset += sizeof(Tlv) + tlv->GetLength();
-            }
-        }
-    }
-    
-
-    mBorderRouterSocket.Reply(messageBuffer.get(), requiredSize);
-}
-
-void FakeLeader::HandleActiveSet(OffMesh::Coap::Header& aRequestHeader, uint8_t* aBuf, uint16_t aLength)
-{
-    printf("FakeLeader::HandleActiveSet entered\n");
-
-    // The first TLV might be a commissioner session ID TLV, or an active timestamp TLV.
-    // This fake leader isn't going to validate either of them, but we do need to figure out
-    // where those 1/2 TLVs end so we can get to the active operational dataset TLVs that follow
-    // A real leader would do something with the timestamp but we'll ignore that
-    bool haveFoundActiveTimestampTlv = false;
-    uint16_t offsetOfReceivedBuffer = 0;
-    while (!haveFoundActiveTimestampTlv)
-    {
-        Tlv tlv;
-        memcpy_s(&tlv, sizeof(tlv), aBuf + offsetOfReceivedBuffer, sizeof(tlv));
-        
-        if (tlv.GetType() == Tlv::kActiveTimestamp)
-        {
-            haveFoundActiveTimestampTlv = true;
-        }
-
-        offsetOfReceivedBuffer += sizeof(tlv) + tlv.GetLength();
-    }
-
-    // now set the rest of the TLVs
-    while (offsetOfReceivedBuffer < aLength)
-    {
-        Tlv tlv;
-        memcpy_s(&tlv, sizeof(tlv), aBuf + offsetOfReceivedBuffer, sizeof(tlv));
-        mNetwork.Set(tlv);
-        offsetOfReceivedBuffer += sizeof(tlv) + tlv.GetLength();
-    }
-
-    // tell the client we accepted all TLV by sending a state TLV with "Accept"
-
-    StateTlv state;
-
-    OffMesh::Coap::Header responseHeader;
-    responseHeader.Init();
-    responseHeader.SetVersion(1);
-    responseHeader.SetType(OffMesh::Coap::Header::kTypeAcknowledgment);
-    responseHeader.SetCode(OffMesh::Coap::Header::kCodeChanged);
-    responseHeader.SetMessageId(aRequestHeader.GetMessageId());
-    responseHeader.SetToken(aRequestHeader.GetToken(), aRequestHeader.GetTokenLength());
-    responseHeader.Finalize();
-
-    state.Init();
-    state.SetState(StateTlv::kAccept);
-
-    uint16_t requiredSize = responseHeader.GetLength() + sizeof(state);
-    auto messageBuffer = std::unique_ptr<uint8_t[]>(new (std::nothrow) uint8_t[requiredSize]);
-    if (messageBuffer == nullptr)
-    {
-        // failed to alloc, return
-        return;
-    }
-
-    memcpy_s(messageBuffer.get(), requiredSize, responseHeader.GetBytes(), responseHeader.GetLength());
-    uint16_t offset = responseHeader.GetLength();
-    memcpy_s(messageBuffer.get() + offset, requiredSize - offset, &state, sizeof(state));
 
     mBorderRouterSocket.Reply(messageBuffer.get(), requiredSize);
 }

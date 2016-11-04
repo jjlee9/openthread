@@ -36,14 +36,14 @@ class BRSocket
 {
 public:
 
-    BRSocket();
+    BRSocket(ADDRESS_FAMILY addressFamily);
     ~BRSocket();
 
     HRESULT Initialize(BrSocketReadCallback readCallback, void* clientContext);
     // safe to be called multiple times. called from destructor. if more fine grained control
     // of timing is desired, can be called manually
     void Uninitialize();
-    HRESULT Bind(unsigned short port);
+    HRESULT Bind(unsigned short port, PIN6_ADDR sin6Addr);
     HRESULT Read();
     HRESULT Reply(const uint8_t* aBuf, uint16_t aLength);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo);
@@ -53,8 +53,9 @@ public:
 private:
     SOCKET mSocket;
     sockaddr_storage mPeerAddr;
+    ADDRESS_FAMILY mAddressFamily;
 
-    HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo);
+    HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo, size_t cbSizeOfPeerToSendTo);
 
     BrSocketReadCallback mClientReceiveCallback;
     void* mClientContext;

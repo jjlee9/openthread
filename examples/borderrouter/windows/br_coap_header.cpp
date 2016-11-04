@@ -158,7 +158,6 @@ ThreadError Header::FromBytes(uint8_t *aMessage, uint16_t aLength)
             mOption.mValue = mHeader + mHeaderLength;
             mNextOptionOffset = mHeaderLength + optionLength;
             firstOption = false;
-            printf("FromBytes, mNumber is %u, mLength is %u\n", (unsigned int)optionDelta, (unsigned int)optionLength);
         }
 
         VerifyOrExit(optionLength <= length, error = kThreadError_Parse);
@@ -169,7 +168,6 @@ ThreadError Header::FromBytes(uint8_t *aMessage, uint16_t aLength)
     }
 
 exit:
-    printf("Header::FromBytes exiting with %d\n", error);
     return error;
 }
 
@@ -276,7 +274,6 @@ const Header::Option *Header::GetNextOption(void)
     optionLength = mHeader[mNextOptionOffset] & 0xf;
     mNextOptionOffset += sizeof(uint8_t);
 
-    printf("This option is bytes:\n");
     printBuffer((char*)(mHeader + mNextOptionOffset), optionLength);
 
     if (optionDelta < kOption1ByteExtension)
@@ -324,8 +321,6 @@ const Header::Option *Header::GetNextOption(void)
     mOption.mValue = mHeader + mNextOptionOffset;
     mNextOptionOffset += optionLength;
     rval = &mOption;
-
-    printf("GetNextOption, mNumber is %u, mLength is %u\n", (unsigned int)mOption.mNumber, (unsigned int)optionLength);
 
 exit:
     return rval;

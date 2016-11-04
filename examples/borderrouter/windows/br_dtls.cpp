@@ -221,7 +221,6 @@ int Dtls::HandleMbedtlsReceive(void *aContext, unsigned char *aBuf, size_t aLeng
 
 int Dtls::HandleMbedtlsReceive(unsigned char *aBuf, size_t aLength)
 {
-    printf("Dtls::HandleMbedtlsReceive\r\n");
     int rval;
 
     otLogInfoMeshCoP("Dtls::HandleMbedtlsReceive\r\n");

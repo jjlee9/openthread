@@ -36,6 +36,12 @@
 
 using namespace Thread::MeshCoP;
 
+Client::Client() :
+    mBorderRouterSocket(AF_INET)
+{
+
+}
+
 HRESULT Client::Start()
 {
     WSADATA wsa;
