@@ -41,27 +41,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef OTDLL
-#include <assert.h>
-#endif
-
 #include <openthread.h>
-#include <commissioning/commissioner.h>
-#include <commissioning/joiner.h>
-
-#ifndef OTDLL
 #include <openthread-instance.h>
 #include <openthread-diag.h>
-
-#include <common/encoding.hpp>
-#include <common/new.hpp>
-#include <net/ip6.hpp>
-#include <platform/uart.h>
-#endif
+#include <commissioning/commissioner.h>
+#include <commissioning/joiner.h>
+#include <dhcp6/dhcp6_server.h>
+#include <dhcp6/dhcp6_client.h>
 
 #include "cli.hpp"
 #include "cli_dataset.hpp"
 #include "cli_uart.hpp"
+#include <common/encoding.hpp>
+#include <common/new.hpp>
+#include <net/ip6.hpp>
+#include <platform/uart.h>
 
 using Thread::Encoding::BigEndian::HostSwap16;
 using Thread::Encoding::BigEndian::HostSwap32;
@@ -74,6 +68,7 @@ const struct Command Interpreter::sCommands[] =
 {
     { "help", &Interpreter::ProcessHelp },
     { "blacklist", &Interpreter::ProcessBlacklist },
+    { "bufferinfo", &Interpreter::ProcessBufferInfo },
     { "channel", &Interpreter::ProcessChannel },
     { "child", &Interpreter::ProcessChild },
     { "childmax", &Interpreter::ProcessChildMax },
@@ -95,13 +90,11 @@ const struct Command Interpreter::sCommands[] =
 #endif
     { "extaddr", &Interpreter::ProcessExtAddress },
     { "extpanid", &Interpreter::ProcessExtPanId },
+    { "factoryreset", &Interpreter::ProcessFactoryReset },
     { "hashmacaddr", &Interpreter::ProcessHashMacAddress },
     { "ifconfig", &Interpreter::ProcessIfconfig },
-#ifdef OTDLL
-    { "instance", &Interpreter::ProcessInstance },
-    { "instancelist", &Interpreter::ProcessInstanceList },
-#endif
     { "ipaddr", &Interpreter::ProcessIpAddr },
+    { "ipmaddr", &Interpreter::ProcessIpMulticastAddr },
 #if OPENTHREAD_ENABLE_JOINER
     { "joiner", &Interpreter::ProcessJoiner },
 #endif
@@ -119,13 +112,9 @@ const struct Command Interpreter::sCommands[] =
     { "networkname", &Interpreter::ProcessNetworkName },
     { "panid", &Interpreter::ProcessPanId },
     { "parent", &Interpreter::ProcessParent },
-#ifndef OTDLL
     { "ping", &Interpreter::ProcessPing },
-#endif
     { "pollperiod", &Interpreter::ProcessPollPeriod },
-#ifndef OTDLL
     { "promiscuous", &Interpreter::ProcessPromiscuous },
-#endif
     { "prefix", &Interpreter::ProcessPrefix },
     { "releaserouterid", &Interpreter::ProcessReleaseRouterId },
     { "reset", &Interpreter::ProcessReset },
@@ -144,60 +133,22 @@ const struct Command Interpreter::sCommands[] =
     { "whitelist", &Interpreter::ProcessWhitelist },
 };
 
-#ifdef OTDLL
-uint32_t otPlatRandomGet(void)
-{
-    return (uint32_t)rand();
-}
-#endif
-
-#ifdef OTDLL
-Interpreter::Interpreter():
-#else
-Interpreter::Interpreter(otInstance * aInstance):
-#endif
-#ifndef OTDLL
+Interpreter::Interpreter(otInstance *aInstance):
+    sServer(NULL),
     sLength(8),
     sCount(1),
     sInterval(1000),
     sPingTimer(aInstance->mIp6.mTimerScheduler, &Interpreter::s_HandlePingTimer, this),
-#endif
-#ifdef OTDLL
-    mInstance(NULL),
-    mApiInstance(otApiInit()),
-    mInstanceIndex(0)
-#else
     mInstance(aInstance)
-#endif
 {
-#ifdef OTDLL
-    assert(mApiInstance);
-
-    if (mApiInstance)
-    {
-        otDeviceList *aDeviceList = otEnumerateDevices(mApiInstance);
-        assert(aDeviceList);
-
-        mInstancesLength = aDeviceList->aDevicesLength > MAX_CLI_OT_INSTANCES ? MAX_CLI_OT_INSTANCES :
-                           (uint8_t)aDeviceList->aDevicesLength;
-
-        for (uint8_t i = 0; i < mInstancesLength; i++)
-        {
-            mInstances[i].aInterpreter = this;
-            mInstances[i].aInstance = otInstanceInit(mApiInstance, &aDeviceList->aDevices[i]);
-            assert(mInstances[i].aInstance);
-            otSetStateChangedCallback(mInstances[i].aInstance, &Interpreter::s_HandleNetifStateChanged, &mInstances[i]);
-        }
-
-        otFreeMemory(aDeviceList);
-
-        if (mInstancesLength > 0) { mInstance = mInstances[0].aInstance; }
-    }
-
-#else
+    memset(mSlaacAddresses, 0, sizeof(mSlaacAddresses));
     mInstance->mIp6.mIcmp.SetEchoReplyHandler(&s_HandleEchoResponse, this);
     otSetStateChangedCallback(mInstance, &Interpreter::s_HandleNetifStateChanged, this);
-#endif
+    otSetReceiveDiagnosticGetCallback(mInstance, &Interpreter::s_HandleDiagnosticGetResponse, this);
+
+#if OPENTHREAD_ENABLE_DHCP6_CLIENT
+    memset(mDhcpAddresses, 0, sizeof(mDhcpAddresses));
+#endif  // OPENTHREAD_ENABLE_DHCP6_CLIENT
 }
 
 int Interpreter::Hex2Bin(const char *aHex, uint8_t *aBin, uint16_t aBinLength)
@@ -359,6 +310,27 @@ void Interpreter::ProcessBlacklist(int argc, char *argv[])
 
 exit:
     AppendResult(error);
+}
+
+void Interpreter::ProcessBufferInfo(int argc, char *argv[])
+{
+    otBufferInfo bufferInfo;
+    (void)argc;
+    (void)argv;
+
+    otGetMessageBufferInfo(mInstance, &bufferInfo);
+
+    sServer->OutputFormat("total: %d\r\n", bufferInfo.mTotalBuffers);
+    sServer->OutputFormat("free: %d\r\n", bufferInfo.mFreeBuffers);
+    sServer->OutputFormat("6lo send: %d %d\r\n", bufferInfo.m6loSendMessages, bufferInfo.m6loSendBuffers);
+    sServer->OutputFormat("6lo reas: %d %d\r\n", bufferInfo.m6loReassemblyMessages, bufferInfo.m6loReassemblyBuffers);
+    sServer->OutputFormat("ip6: %d %d\r\n", bufferInfo.mIp6Messages, bufferInfo.mIp6Buffers);
+    sServer->OutputFormat("mpl: %d %d\r\n", bufferInfo.mMplMessages, bufferInfo.mMplBuffers);
+    sServer->OutputFormat("mle: %d %d\r\n", bufferInfo.mMleMessages, bufferInfo.mMleBuffers);
+    sServer->OutputFormat("arp: %d %d\r\n", bufferInfo.mArpMessages, bufferInfo.mArpBuffers);
+    sServer->OutputFormat("coap: %d %d\r\n", bufferInfo.mCoapClientMessages, bufferInfo.mCoapClientBuffers);
+
+    AppendResult(kThreadError_None);
 }
 
 void Interpreter::ProcessChannel(int argc, char *argv[])
@@ -553,6 +525,8 @@ void Interpreter::ProcessCounters(int argc, char *argv[])
         {
             const otMacCounters *counters = otGetMacCounters(mInstance);
             sServer->OutputFormat("TxTotal: %d\r\n", counters->mTxTotal);
+            sServer->OutputFormat("    TxUnicast: %d\r\n", counters->mTxUnicast);
+            sServer->OutputFormat("    TxBroadcast: %d\r\n", counters->mTxBroadcast);
             sServer->OutputFormat("    TxAckRequested: %d\r\n", counters->mTxAckRequested);
             sServer->OutputFormat("    TxAcked: %d\r\n", counters->mTxAcked);
             sServer->OutputFormat("    TxNoAckRequested: %d\r\n", counters->mTxNoAckRequested);
@@ -564,6 +538,8 @@ void Interpreter::ProcessCounters(int argc, char *argv[])
             sServer->OutputFormat("    TxRetry: %d\r\n", counters->mTxRetry);
             sServer->OutputFormat("    TxErrCca: %d\r\n", counters->mTxErrCca);
             sServer->OutputFormat("RxTotal: %d\r\n", counters->mRxTotal);
+            sServer->OutputFormat("    RxUnicast: %d\r\n", counters->mRxUnicast);
+            sServer->OutputFormat("    RxBroadcast: %d\r\n", counters->mRxBroadcast);
             sServer->OutputFormat("    RxData: %d\r\n", counters->mRxData);
             sServer->OutputFormat("    RxDataPoll: %d\r\n", counters->mRxDataPoll);
             sServer->OutputFormat("    RxBeacon: %d\r\n", counters->mRxBeacon);
@@ -571,15 +547,13 @@ void Interpreter::ProcessCounters(int argc, char *argv[])
             sServer->OutputFormat("    RxOther: %d\r\n", counters->mRxOther);
             sServer->OutputFormat("    RxWhitelistFiltered: %d\r\n", counters->mRxWhitelistFiltered);
             sServer->OutputFormat("    RxDestAddrFiltered: %d\r\n", counters->mRxDestAddrFiltered);
+            sServer->OutputFormat("    RxDuplicated: %d\r\n", counters->mRxDuplicated);
             sServer->OutputFormat("    RxErrNoFrame: %d\r\n", counters->mRxErrNoFrame);
             sServer->OutputFormat("    RxErrNoUnknownNeighbor: %d\r\n", counters->mRxErrUnknownNeighbor);
             sServer->OutputFormat("    RxErrInvalidSrcAddr: %d\r\n", counters->mRxErrInvalidSrcAddr);
             sServer->OutputFormat("    RxErrSec: %d\r\n", counters->mRxErrSec);
             sServer->OutputFormat("    RxErrFcs: %d\r\n", counters->mRxErrFcs);
             sServer->OutputFormat("    RxErrOther: %d\r\n", counters->mRxErrOther);
-#ifdef OTDLL
-            otFreeMemory(counters);
-#endif
         }
     }
 }
@@ -667,12 +641,8 @@ void Interpreter::ProcessExtAddress(int argc, char *argv[])
 
     if (argc == 0)
     {
-        const uint8_t *aExtAddress = otGetExtendedAddress(mInstance);
-        OutputBytes(aExtAddress, OT_EXT_ADDRESS_SIZE);
+        OutputBytes(otGetExtendedAddress(mInstance), OT_EXT_ADDRESS_SIZE);
         sServer->OutputFormat("\r\n");
-#ifdef OTDLL
-        otFreeMemory(aExtAddress);
-#endif
     }
     else
     {
@@ -702,12 +672,8 @@ void Interpreter::ProcessExtPanId(int argc, char *argv[])
 
     if (argc == 0)
     {
-        const uint8_t *aExtPanId = otGetExtendedPanId(mInstance);
-        OutputBytes(aExtPanId, OT_EXT_PAN_ID_SIZE);
+        OutputBytes(otGetExtendedPanId(mInstance), OT_EXT_PAN_ID_SIZE);
         sServer->OutputFormat("\r\n");
-#ifdef OTDLL
-        otFreeMemory(aExtPanId);
-#endif
     }
     else
     {
@@ -720,6 +686,13 @@ void Interpreter::ProcessExtPanId(int argc, char *argv[])
 
 exit:
     AppendResult(error);
+}
+
+void Interpreter::ProcessFactoryReset(int argc, char *argv[])
+{
+    otFactoryReset(mInstance);
+    (void)argc;
+    (void)argv;
 }
 
 void Interpreter::ProcessHashMacAddress(int argc, char *argv[])
@@ -775,8 +748,8 @@ ThreadError Interpreter::ProcessIpAddrAdd(int argc, char *argv[])
 
     SuccessOrExit(error = otIp6AddressFromString(argv[0], &aAddress.mAddress));
     aAddress.mPrefixLength = 64;
-    aAddress.mPreferredLifetime = 0xffffffff;
-    aAddress.mValidLifetime = 0xffffffff;
+    aAddress.mPreferred = true;
+    aAddress.mValid = true;
     error = otAddUnicastAddress(mInstance, &aAddress);
 
 exit:
@@ -803,9 +776,7 @@ void Interpreter::ProcessIpAddr(int argc, char *argv[])
 
     if (argc == 0)
     {
-        const otNetifAddress *aUnicastAddrs = otGetUnicastAddresses(mInstance);
-
-        for (const otNetifAddress *addr = aUnicastAddrs; addr; addr = addr->mNext)
+        for (const otNetifAddress *addr = otGetUnicastAddresses(mInstance); addr; addr = addr->mNext)
         {
             sServer->OutputFormat("%x:%x:%x:%x:%x:%x:%x:%x\r\n",
                                   HostSwap16(addr->mAddress.mFields.m16[0]),
@@ -817,10 +788,6 @@ void Interpreter::ProcessIpAddr(int argc, char *argv[])
                                   HostSwap16(addr->mAddress.mFields.m16[6]),
                                   HostSwap16(addr->mAddress.mFields.m16[7]));
         }
-
-#ifdef OTDLL
-        otFreeMemory(aUnicastAddrs);
-#endif
     }
     else
     {
@@ -831,6 +798,108 @@ void Interpreter::ProcessIpAddr(int argc, char *argv[])
         else if (strcmp(argv[0], "del") == 0)
         {
             SuccessOrExit(error = ProcessIpAddrDel(argc - 1, argv + 1));
+        }
+    }
+
+exit:
+    AppendResult(error);
+}
+
+ThreadError Interpreter::ProcessIpMulticastAddrAdd(int argc, char *argv[])
+{
+    ThreadError error;
+    struct otIp6Address address;
+
+    VerifyOrExit(argc > 0, error = kThreadError_Parse);
+
+    SuccessOrExit(error = otIp6AddressFromString(argv[0], &address));
+    error = otSubscribeMulticastAddress(mInstance, &address);
+
+exit:
+    return error;
+}
+
+ThreadError Interpreter::ProcessIpMulticastAddrDel(int argc, char *argv[])
+{
+    ThreadError error;
+    struct otIp6Address address;
+
+    VerifyOrExit(argc > 0, error = kThreadError_Parse);
+
+    SuccessOrExit(error = otIp6AddressFromString(argv[0], &address));
+    error = otUnsubscribeMulticastAddress(mInstance, &address);
+
+exit:
+    return error;
+}
+
+ThreadError Interpreter::ProcessMulticastPromiscuous(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        if (otIsMulticastPromiscuousModeEnabled(mInstance))
+        {
+            sServer->OutputFormat("Enabled\r\n");
+        }
+        else
+        {
+            sServer->OutputFormat("Disabled\r\n");
+        }
+    }
+    else
+    {
+        if (strcmp(argv[0], "enable") == 0)
+        {
+            otEnableMulticastPromiscuousMode(mInstance);
+        }
+        else if (strcmp(argv[0], "disable") == 0)
+        {
+            otDisableMulticastPromiscuousMode(mInstance);
+        }
+        else
+        {
+            ExitNow(error = kThreadError_Parse);
+        }
+    }
+
+exit:
+    return error;
+}
+
+void Interpreter::ProcessIpMulticastAddr(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        for (const otNetifMulticastAddress *addr = otGetMulticastAddresses(mInstance); addr; addr = addr->mNext)
+        {
+            sServer->OutputFormat("%x:%x:%x:%x:%x:%x:%x:%x\r\n",
+                                  HostSwap16(addr->mAddress.mFields.m16[0]),
+                                  HostSwap16(addr->mAddress.mFields.m16[1]),
+                                  HostSwap16(addr->mAddress.mFields.m16[2]),
+                                  HostSwap16(addr->mAddress.mFields.m16[3]),
+                                  HostSwap16(addr->mAddress.mFields.m16[4]),
+                                  HostSwap16(addr->mAddress.mFields.m16[5]),
+                                  HostSwap16(addr->mAddress.mFields.m16[6]),
+                                  HostSwap16(addr->mAddress.mFields.m16[7]));
+        }
+    }
+    else
+    {
+        if (strcmp(argv[0], "add") == 0)
+        {
+            SuccessOrExit(error = ProcessIpMulticastAddrAdd(argc - 1, argv + 1));
+        }
+        else if (strcmp(argv[0], "del") == 0)
+        {
+            SuccessOrExit(error = ProcessIpMulticastAddrDel(argc - 1, argv + 1));
+        }
+        else if (strcmp(argv[0], "promiscuous") == 0)
+        {
+            SuccessOrExit(error = ProcessMulticastPromiscuous(argc - 1, argv + 1));
         }
     }
 
@@ -971,9 +1040,6 @@ void Interpreter::ProcessMasterKey(int argc, char *argv[])
         }
 
         sServer->OutputFormat("\r\n");
-#ifdef OTDLL
-        otFreeMemory(key);
-#endif
     }
     else
     {
@@ -1091,11 +1157,7 @@ void Interpreter::ProcessNetworkName(int argc, char *argv[])
 
     if (argc == 0)
     {
-        const char *aNetworkName = otGetNetworkName(mInstance);
-        sServer->OutputFormat("%.*s\r\n", OT_NETWORK_NAME_MAX_SIZE, aNetworkName);
-#ifdef OTDLL
-        otFreeMemory(aNetworkName);
-#endif
+        sServer->OutputFormat("%.*s\r\n", OT_NETWORK_NAME_MAX_SIZE, otGetNetworkName(mInstance));
     }
     else
     {
@@ -1148,7 +1210,6 @@ exit:
     AppendResult(error);
 }
 
-#ifndef OTDLL
 void Interpreter::s_HandleEchoResponse(void *aContext, Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     static_cast<Interpreter *>(aContext)->HandleEchoResponse(aMessage, aMessageInfo);
@@ -1263,7 +1324,6 @@ exit:
         sPingTimer.Start(sInterval);
     }
 }
-#endif
 
 void Interpreter::ProcessPollPeriod(int argc, char *argv[])
 {
@@ -1284,7 +1344,6 @@ exit:
     AppendResult(error);
 }
 
-#ifndef OTDLL
 void Interpreter::ProcessPromiscuous(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -1388,7 +1447,6 @@ void Interpreter::HandleLinkPcapReceive(const RadioPacket *aFrame)
 
     sServer->OutputFormat("\r\n");
 }
-#endif
 
 ThreadError Interpreter::ProcessPrefixAdd(int argc, char *argv[])
 {
@@ -1941,9 +1999,9 @@ void Interpreter::ProcessScan(int argc, char *argv[])
         scanChannels = 1 << value;
     }
 
+    SuccessOrExit(error = otActiveScan(mInstance, scanChannels, 0, &Interpreter::s_HandleActiveScanResult, this));
     sServer->OutputFormat("| J | Network Name     | Extended PAN     | PAN  | MAC Address      | Ch | dBm | LQI |\r\n");
     sServer->OutputFormat("+---+------------------+------------------+------+------------------+----+-----+-----+\r\n");
-    SuccessOrExit(error = otActiveScan(mInstance, scanChannels, 0, &Interpreter::s_HandleActiveScanResult, this));
 
     return;
 
@@ -1951,7 +2009,7 @@ exit:
     AppendResult(error);
 }
 
-void OTCALL Interpreter::s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext)
+void Interpreter::s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandleActiveScanResult(aResult);
 }
@@ -2085,12 +2143,8 @@ exit:
 
 void Interpreter::ProcessVersion(int argc, char *argv[])
 {
-    const char *aVersion = otGetVersionString();
-    sServer->OutputFormat("%s\r\n", aVersion);
+    sServer->OutputFormat("%s\r\n", otGetVersionString());
     AppendResult(kThreadError_None);
-#ifdef OTDLL
-    otFreeMemory(aVersion);
-#endif
     (void)argc;
     (void)argv;
 }
@@ -2333,14 +2387,17 @@ void Interpreter::ProcessCommissioner(int argc, char *argv[])
 
         SuccessOrExit(error = otSendMgmtCommissionerSet(mInstance, &dataset, tlvs, static_cast<uint8_t>(length)));
     }
+    else if (strcmp(argv[0], "sessionid") == 0)
+    {
+        sServer->OutputFormat("%d\r\n", otCommissionerGetSessionId(mInstance));
+    }
 
 exit:
     AppendResult(error);
 }
 
-void OTCALL Interpreter::s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList,
-                                              uint8_t aEnergyListLength,
-                                              void *aContext)
+void Interpreter::s_HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEnergyList, uint8_t aEnergyListLength,
+                                       void *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandleEnergyReport(aChannelMask, aEnergyList, aEnergyListLength);
 }
@@ -2357,7 +2414,7 @@ void Interpreter::HandleEnergyReport(uint32_t aChannelMask, const uint8_t *aEner
     sServer->OutputFormat("\r\n");
 }
 
-void OTCALL Interpreter::s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
+void Interpreter::s_HandlePanIdConflict(uint16_t aPanId, uint32_t aChannelMask, void *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandlePanIdConflict(aPanId, aChannelMask);
 }
@@ -2382,7 +2439,7 @@ void Interpreter::ProcessJoiner(int argc, char *argv[])
         const char *provisioningUrl;
         VerifyOrExit(argc > 1, error = kThreadError_Parse);
         provisioningUrl = (argc > 2) ? argv[2] : NULL;
-        otJoinerStart(mInstance, argv[1], provisioningUrl);
+        otJoinerStart(mInstance, argv[1], provisioningUrl, &Interpreter::s_HandleJoinerCallback, this);
     }
     else if (strcmp(argv[0], "stop") == 0)
     {
@@ -2394,6 +2451,25 @@ exit:
 }
 
 #endif // OPENTHREAD_ENABLE_JOINER
+
+void Interpreter::s_HandleJoinerCallback(ThreadError aError, void *aContext)
+{
+    static_cast<Interpreter *>(aContext)->HandleJoinerCallback(aError);
+}
+
+void Interpreter::HandleJoinerCallback(ThreadError aError)
+{
+    switch (aError)
+    {
+    case kThreadError_None:
+        sServer->OutputFormat("Join success\r\n");
+        break;
+
+    default:
+        sServer->OutputFormat("Join failed [%s]\r\n", otThreadErrorToString(aError));
+        break;
+    }
+}
 
 void Interpreter::ProcessJoinerPort(int argc, char *argv[])
 {
@@ -2502,56 +2578,6 @@ void Interpreter::ProcessDiag(int argc, char *argv[])
 }
 #endif
 
-#if OTDLL
-#define GUID_FORMAT "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}"
-#define GUID_ARG(guid) guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]
-
-void Interpreter::ProcessInstanceList(int argc, char *argv[])
-{
-    sServer->OutputFormat("%d instances found:\r\n", mInstancesLength);
-
-    for (uint8_t i = 0; i < mInstancesLength; i++)
-    {
-        GUID aDeviceGuid = otGetDeviceGuid(mInstances[i].aInstance);
-        uint32_t aCompartment = otGetCompartmentId(mInstances[i].aInstance);
-        sServer->OutputFormat("[%d] " GUID_FORMAT " (Compartment %u)\r\n",
-                              i, GUID_ARG(aDeviceGuid), aCompartment);
-    }
-}
-
-void Interpreter::ProcessInstance(int argc, char *argv[])
-{
-    ThreadError error = kThreadError_None;
-    long value;
-
-    if (argc == 0)
-    {
-        if (mInstance == NULL)
-        {
-            sServer->OutputFormat("No Instance Set\r\n");
-        }
-        else
-        {
-            GUID aDeviceGuid = otGetDeviceGuid(mInstance);
-            uint32_t aCompartment = otGetCompartmentId(mInstance);
-            sServer->OutputFormat("[%d] " GUID_FORMAT " (Compartment %u)\r\n",
-                                  mInstanceIndex, GUID_ARG(aDeviceGuid), aCompartment);
-        }
-    }
-    else
-    {
-        SuccessOrExit(error = ParseLong(argv[0], value));
-        VerifyOrExit(value >= 0 && value < mInstancesLength, error = kThreadError_InvalidArgs);
-
-        mInstanceIndex = (uint8_t)value;
-        mInstance = mInstances[mInstanceIndex].aInstance;
-    }
-
-exit:
-    AppendResult(error);
-}
-#endif
-
 void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength, Server &aServer)
 {
     char *argv[kMaxArgs];
@@ -2600,28 +2626,25 @@ exit:
     return;
 }
 
-void OTCALL Interpreter::s_HandleNetifStateChanged(uint32_t aFlags, void *aContext)
+void Interpreter::s_HandleNetifStateChanged(uint32_t aFlags, void *aContext)
 {
-#ifdef OTDLL
-    otCliContext *aCliContext = static_cast<otCliContext *>(aContext);
-    aCliContext->aInterpreter->HandleNetifStateChanged(aCliContext->aInstance, aFlags);
-#else
     static_cast<Interpreter *>(aContext)->HandleNetifStateChanged(aFlags);
-#endif
 }
 
-#ifdef OTDLL
-void Interpreter::HandleNetifStateChanged(otInstance *aInstance, uint32_t aFlags)
-#else
 void Interpreter::HandleNetifStateChanged(uint32_t aFlags)
-#endif
 {
     VerifyOrExit((aFlags & OT_THREAD_NETDATA_UPDATED) != 0, ;);
 
-#ifndef OTDLL
-    otSlaacUpdate(mInstance, mAutoAddresses, sizeof(mAutoAddresses) / sizeof(mAutoAddresses[0]), otCreateRandomIid,
+    otSlaacUpdate(mInstance, mSlaacAddresses, sizeof(mSlaacAddresses) / sizeof(mSlaacAddresses[0]), otCreateRandomIid,
                   NULL);
-#endif
+#if OPENTHREAD_ENABLE_DHCP6_SERVER
+    otDhcp6ServerUpdate(mInstance);
+#endif  // OPENTHREAD_ENABLE_DHCP6_SERVER
+
+#if OPENTHREAD_ENABLE_DHCP6_CLIENT
+    otDhcp6ClientUpdate(mInstance, mDhcpAddresses, sizeof(mDhcpAddresses) / sizeof(mDhcpAddresses[0]), NULL);
+#endif  // OPENTHREAD_ENABLE_DHCP6_CLIENT
+
 exit:
     return;
 }
@@ -2630,33 +2653,69 @@ void Interpreter::ProcessNetworkDiagnostic(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
     struct otIp6Address address;
-    uint8_t index = 2;
-    uint8_t tlvTypes[OT_NUM_NETDIAG_TLV_TYPES];
-    uint8_t count = 0;
+    uint8_t payload[2 + OT_NETWORK_DIAGNOSTIC_TYPELIST_MAX_ENTRIES];  // TypeList Type(1B), len(1B), type list
+    uint8_t payloadIndex = 0;
+    uint8_t paramIndex = 0;
 
     VerifyOrExit(argc > 1 + 1, error = kThreadError_Parse);
 
     SuccessOrExit(error = otIp6AddressFromString(argv[1], &address));
 
-    while (index < argc && count < sizeof(tlvTypes))
+    payloadIndex = 2;
+    paramIndex = 2;
+
+    while (paramIndex < argc && payloadIndex < sizeof(payload))
     {
         long value;
-        SuccessOrExit(error = ParseLong(argv[index], value));
-        tlvTypes[count++] = static_cast<uint8_t>(value);
-        index++;
+        SuccessOrExit(error = ParseLong(argv[paramIndex++], value));
+        payload[payloadIndex++] = static_cast<uint8_t>(value);
     }
+
+    payload[0] = OT_NETWORK_DIAGNOSTIC_TYPELIST_TYPE;  // TypeList TLV Type
+    payload[1] = payloadIndex - 2;  // length
 
     if (strcmp(argv[0], "get") == 0)
     {
-        otSendDiagnosticGet(mInstance, &address, tlvTypes, count);
+        otSendDiagnosticGet(mInstance, &address, payload, payloadIndex);
+        return;
     }
     else if (strcmp(argv[0], "reset") == 0)
     {
-        otSendDiagnosticReset(mInstance, &address, tlvTypes, count);
+        otSendDiagnosticReset(mInstance, &address, payload, payloadIndex);
     }
 
 exit:
     AppendResult(error);
+}
+
+void Interpreter::s_HandleDiagnosticGetResponse(otMessage aMessage, const otMessageInfo *aMessageInfo,
+                                                void *aContext)
+{
+    static_cast<Interpreter *>(aContext)->HandleDiagnosticGetResponse(*static_cast<Message *>(aMessage),
+                                                                      *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
+}
+
+void Interpreter::HandleDiagnosticGetResponse(Message &aMessage, const Ip6::MessageInfo &)
+{
+    uint8_t buf[16];
+    uint16_t bytesToPrint;
+    uint16_t bytesPrinted = 0;
+    uint16_t length = aMessage.GetLength() - aMessage.GetOffset();
+
+    sServer->OutputFormat("DIAG_GET.rsp: ");
+
+    while (length > 0)
+    {
+        bytesToPrint = (length < sizeof(buf)) ? length : sizeof(buf);
+        aMessage.Read(aMessage.GetOffset() + bytesPrinted, bytesToPrint, buf);
+
+        OutputBytes(buf, static_cast<uint8_t>(bytesToPrint));
+
+        length       -= bytesToPrint;
+        bytesPrinted += bytesToPrint;
+    }
+
+    sServer->OutputFormat("\r\n");
 }
 
 }  // namespace Cli

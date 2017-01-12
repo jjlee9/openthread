@@ -618,6 +618,7 @@ typedef struct otCommissionConfig
     // GUID - InterfaceGuid
     // uint8_t - aLength
     // uint8_t[aLength] - aTlvTypes
+    // otIp6Address - aAddress (optional)
     
 #define IOCTL_OTLWF_OT_SEND_ACTIVE_SET \
     OTLWF_CTL_CODE(186, METHOD_BUFFERED, FILE_WRITE_DATA)
@@ -631,6 +632,7 @@ typedef struct otCommissionConfig
     // GUID - InterfaceGuid
     // uint8_t - aLength
     // uint8_t[aLength] - aTlvTypes
+    // otIp6Address - aAddress (optional)
     
 #define IOCTL_OTLWF_OT_SEND_PENDING_SET \
     OTLWF_CTL_CODE(188, METHOD_BUFFERED, FILE_WRITE_DATA)
@@ -656,9 +658,13 @@ typedef struct otCommissionConfig
     OTLWF_CTL_CODE(191, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
     // GUID - InterfaceGuid
     // uint32_t - aKeySwitchGuardTime
+    
+#define IOCTL_OTLWF_OT_FACTORY_RESET \
+    OTLWF_CTL_CODE(192, METHOD_BUFFERED, FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 191
+#define MAX_OTLWF_IOCTL_FUNC_CODE 192
 
 #endif //__OTLWFIOCTL_H__

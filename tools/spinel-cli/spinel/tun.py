@@ -27,14 +27,18 @@
 #
 """ Utility class for creating TUN network interfaces on Linux and OSX. """
 
+from __future__ import print_function
+
 import os
 import sys
-import fcntl
 import struct
 import logging
 import threading
 import traceback
 import subprocess
+
+if sys.platform == "linux" or sys.platform == "linux2":
+    import fcntl
 
 from select import select
 
@@ -61,6 +65,8 @@ class TunInterface(object):
             self.__init_linux()
         elif platform == "darwin":
             self.__init_osx()
+        else:
+            raise RuntimeError("Platform \"{}\" is not supported.".format(platform))
 
         self.ifconfig("up")
         #self.ifconfig("inet6 add fd00::1/64")
@@ -103,7 +109,7 @@ class TunInterface(object):
     def ping6(self, args):
         """ Ping an address. """
         cmd = 'ping6 ' + args
-        print cmd
+        print(cmd)
         self.command(cmd)
 
     def addr_add(self, addr):
@@ -137,7 +143,7 @@ class TunInterface(object):
                                       util.hexify_str(packet))
                     self.write(packet)
             except:
-                print traceback.format_exc()
+                traceback.print_exc()
                 break
 
         logging.info("TUN: exiting")

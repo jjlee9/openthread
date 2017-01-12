@@ -126,6 +126,16 @@
 #endif  // OPENTHREAD_CONFIG_MAX_EXT_IP_ADDRS
 
 /**
+ * @def OPENTHREAD_CONFIG_MAX_EXT_MULTICAST_IP_ADDRS
+ *
+ * The maximum number of supported IPv6 multicast addresses allows to be externally added.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MAX_EXT_MULTICAST_IP_ADDRS
+#define OPENTHREAD_CONFIG_MAX_EXT_MULTICAST_IP_ADDRS            2
+#endif  // OPENTHREAD_CONFIG_MAX_EXT_MULTICAST_IP_ADDRS
+
+/**
  * @def OPENTHREAD_CONFIG_6LOWPAN_REASSEMBLY_TIMEOUT
  *
  * The 6LoWPAN fragment reassembly timeout in seconds.
@@ -142,7 +152,7 @@
  *
  */
 #ifndef OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRIES
-#define OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRIES                 32
+#define OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRIES                  32
 #endif  // OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRIES
 
 /**
@@ -152,7 +162,7 @@
  *
  */
 #ifndef OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRY_LIFETIME
-#define OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRY_LIFETIME          5
+#define OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRY_LIFETIME           5
 #endif  // OPENTHREAD_CONFIG_MPL_SEED_SET_ENTRY_LIFETIME
 
 /**
@@ -259,6 +269,35 @@
 #define OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT           0
 #endif  // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
 
+/**
+ * @def OPENTHREAD_CONFIG_MAC_BLACKLIST_SIZE
+ *
+ * The number if MAC blacklist entries.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MAC_BLACKLIST_SIZE
+#define OPENTHREAD_CONFIG_MAC_BLACKLIST_SIZE                    32
+#endif  // OPENTHREAD_CONFIG_MAC_BLACKLIST_SIZE
+
+/**
+ * @def OPENTHREAD_CONFIG_MAC_WHITELIST_SIZE
+ *
+ * The number if MAC whitelist entries.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MAC_WHITELIST_SIZE
+#define OPENTHREAD_CONFIG_MAC_WHITELIST_SIZE                    32
+#endif  // OPENTHREAD_CONFIG_MAC_WHITELIST_SIZE
+
+/**
+ * @def OPENTHREAD_CONFIG_STORE_FRAME_COUNTER_AHEAD
+ *
+ *  The value ahead of the current frame counter for persistent storage
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_STORE_FRAME_COUNTER_AHEAD
+#define OPENTHREAD_CONFIG_STORE_FRAME_COUNTER_AHEAD             1000
+#endif  // OPENTHREAD_CONFIG_STORE_FRAME_COUNTER_AHEAD
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_LEVEL
@@ -276,7 +315,9 @@
  * Define to enable OpenThread API logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_API
+#ifndef OPENTHREAD_CONFIG_LOG_API
+#define OPENTHREAD_CONFIG_LOG_API                               1
+#endif  // OPENTHREAD_CONFIG_LOG_API
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_MLE
@@ -284,7 +325,9 @@
  * Define to enable MLE logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_MLE
+#ifndef OPENTHREAD_CONFIG_LOG_MLE
+#define OPENTHREAD_CONFIG_LOG_MLE                               1
+#endif  // OPENTHREAD_CONFIG_LOG_MLE
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_ARP
@@ -292,7 +335,9 @@
  * Define to enable EID-to-RLOC map logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_ARP
+#ifndef OPENTHREAD_CONFIG_LOG_ARP
+#define OPENTHREAD_CONFIG_LOG_ARP                               1
+#endif  // OPENTHREAD_CONFIG_LOG_ARP
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_NETDATA
@@ -300,7 +345,9 @@
  * Define to enable Network Data logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_NETDATA
+#ifndef OPENTHREAD_CONFIG_LOG_NETDATA
+#define OPENTHREAD_CONFIG_LOG_NETDATA                           1
+#endif  // OPENTHREAD_CONFIG_LOG_NETDATA
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_ICMP
@@ -308,7 +355,9 @@
  * Define to enable ICMPv6 logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_ICMP
+#ifndef OPENTHREAD_CONFIG_LOG_ICMP
+#define OPENTHREAD_CONFIG_LOG_ICMP                              1
+#endif  // OPENTHREAD_CONFIG_LOG_ICMP
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_IP6
@@ -316,7 +365,9 @@
  * Define to enable IPv6 logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_IP6
+#ifndef OPENTHREAD_CONFIG_LOG_IP6
+#define OPENTHREAD_CONFIG_LOG_IP6                               1
+#endif  // OPENTHREAD_CONFIG_LOG_IP6
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_MAC
@@ -324,7 +375,9 @@
  * Define to enable IEEE 802.15.4 MAC logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_MAC
+#ifndef OPENTHREAD_CONFIG_LOG_MAC
+#define OPENTHREAD_CONFIG_LOG_MAC                               1
+#endif  // OPENTHREAD_CONFIG_LOG_MAC
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_MEM
@@ -332,7 +385,19 @@
  * Define to enable memory logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_MEM
+#ifndef OPENTHREAD_CONFIG_LOG_MEM
+#define OPENTHREAD_CONFIG_LOG_MEM                               1
+#endif  // OPENTHREAD_CONFIG_LOG_MEM
+
+/**
+ * @def OPENTHREAD_CONFIG_LOG_PKT_DUMP
+ *
+ * Define to enable log content of packets.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_LOG_PKT_DUMP
+#define OPENTHREAD_CONFIG_LOG_PKT_DUMP                          1
+#endif  // OPENTHREAD_CONFIG_LOG_PKT_DUMP
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_NETDIAG
@@ -340,36 +405,108 @@
  * Define to enable network diagnostic logging.
  *
  */
-#define OPENTHREAD_CONFIG_LOG_NETDIAG
+#ifndef OPENTHREAD_CONFIG_LOG_NETDIAG
+#define OPENTHREAD_CONFIG_LOG_NETDIAG                           1
+#endif  // OPENTHREAD_CONFIG_LOG_NETDIAG
 
 /**
- * @def OPENTHREAD_CONFIG_SETTINGS_BASE_ADDRESS
- *
- * The base address of settings.
- *
- */
-#ifndef OPENTHREAD_CONFIG_SETTINGS_BASE_ADDRESS
-#define OPENTHREAD_CONFIG_SETTINGS_BASE_ADDRESS                 0x39000
-#endif  // OPENTHREAD_CONFIG_SETTINGS_BASE_ADDRESS
+* @def OPENTHREAD_CONFIG_LOG_PLATFORM
+*
+* Define to enable platform region logging.
+*
+*/
+#ifndef OPENTHREAD_CONFIG_LOG_PLATFORM
+#define OPENTHREAD_CONFIG_LOG_PLATFORM                          0
+#endif  // OPENTHREAD_CONFIG_LOG_PLATFORM
 
 /**
- * @def OPENTHREAD_CONFIG_SETTINGS_PAGE_SIZE
+ * @def OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
  *
- * The page size of settings.
+ * Define to prepend the log level to all log messages
  *
  */
-#ifndef OPENTHREAD_CONFIG_SETTINGS_PAGE_SIZE
-#define OPENTHREAD_CONFIG_SETTINGS_PAGE_SIZE                    0x800
-#endif  // OPENTHREAD_CONFIG_SETTINGS_PAGE_SIZE
+#ifndef OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
+#define OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL                     1
+#endif  // OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
 
 /**
- * @def OPENTHREAD_CONFIG_SETTINGS_PAGE_NUM
+* @def OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+*
+* Define to prepend the log region to all log messages
+*
+*/
+#ifndef OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+#define OPENTHREAD_CONFIG_LOG_PREPEND_REGION                    1
+#endif  // OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+
+/**
+ * @def OPENTHREAD_CONFIG_LOG_SUFFIX
  *
- * The page number of settings.
+ * Define suffix to append at the end of logs.
  *
  */
-#ifndef OPENTHREAD_CONFIG_SETTINGS_PAGE_NUM
-#define OPENTHREAD_CONFIG_SETTINGS_PAGE_NUM                     2
-#endif  // OPENTHREAD_CONFIG_SETTINGS_PAGE_NUM
+#ifndef OPENTHREAD_CONFIG_LOG_SUFFIX
+#define OPENTHREAD_CONFIG_LOG_SUFFIX                           ""
+#endif  // OPENTHREAD_CONFIG_LOG_SUFFIX
+
+/**
+ * @def OPENTHREAD_CONFIG_NUM_DHCP_PREFIXES
+ *
+ * The number of dhcp prefixes.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NUM_DHCP_PREFIXES
+#define OPENTHREAD_CONFIG_NUM_DHCP_PREFIXES                     4
+#endif  // OPENTHREAD_CONFIG_NUM_DHCP_PREFIXES
+
+/**
+ * @def OPENTHREAD_CONFIG_NUM_SLAAC_ADDRESSES
+ *
+ * The number of autoconfigured SLAAC addresses.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NUM_SLAAC_ADDRESSES
+#define OPENTHREAD_CONFIG_NUM_SLAAC_ADDRESSES                   4
+#endif  // OPENTHREAD_CONFIG_NUM_SLAAC_ADDRESSES
+
+/**
+ * @def OPENTHREAD_CONFIG_NCP_TX_BUFFER_SIZE
+ *
+ *  The size of NCP message buffer in bytes
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NCP_TX_BUFFER_SIZE
+#define OPENTHREAD_CONFIG_NCP_TX_BUFFER_SIZE                    512
+#endif  // OPENTHREAD_CONFIG_NCP_TX_BUFFER_SIZE
+
+/**
+ * @def OPENTHREAD_CONFIG_NCP_UART_TX_CHUNK_SIZE
+ *
+ *  The size of NCP UART TX chunk in bytes
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NCP_UART_TX_CHUNK_SIZE
+#define OPENTHREAD_CONFIG_NCP_UART_TX_CHUNK_SIZE                128
+#endif  // OPENTHREAD_CONFIG_NCP_UART_TX_CHUNK_SIZE
+
+/**
+ * @def OPENTHREAD_CONFIG_NCP_UART_RX_BUFFER_SIZE
+ *
+ *  The size of NCP UART RX buffer in bytes
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NCP_UART_RX_BUFFER_SIZE
+#define OPENTHREAD_CONFIG_NCP_UART_RX_BUFFER_SIZE               1500
+#endif  // OPENTHREAD_CONFIG_NCP_UART_RX_BUFFER_SIZE
+
+/**
+ * @def OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE
+ *
+ *  The size of NCP SPI (RX/TX) buffer in bytes
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE
+#define OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE                   1500
+#endif  // OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE
 
 #endif  // OPENTHREAD_CORE_DEFAULT_CONFIG_H_

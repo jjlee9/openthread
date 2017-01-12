@@ -136,7 +136,8 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_SEND_PENDING_SET",            REF_IOCTL_FUNC(otSendPendingSet) },
     { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET",  REF_IOCTL_FUNC(otSendMgmtCommissionerGet) },
     { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET",  REF_IOCTL_FUNC(otSendMgmtCommissionerSet) },
-    { "IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME",        REF_IOCTL_FUNC_WITH_TUN(otKeySwitchGuardtime) }
+    { "IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME",        REF_IOCTL_FUNC_WITH_TUN(otKeySwitchGuardtime) },
+    { "IOCTL_OTLWF_OT_FACTORY_RESET",               REF_IOCTL_FUNC(otFactoryReset) }
 };
 
 static_assert(ARRAYSIZE(IoCtls) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE) + 1,
@@ -161,7 +162,7 @@ try_spinel_datatype_unpack(
 {
     va_list args;
     va_start(args, pack_format);
-	spinel_ssize_t packed_len = spinel_datatype_vunpack(data_in, data_len, pack_format, args);
+    spinel_ssize_t packed_len = spinel_datatype_vunpack(data_in, data_len, pack_format, args);
     va_end(args);
 
     return !(packed_len < 0 || (spinel_size_t)packed_len > data_len);
@@ -469,7 +470,7 @@ otLwfIoCtl_otInterface(
         {
             // Make sure our addresses are in sync
             (void)otLwfInitializeAddresses(pFilter);
-            otLwfAddressesUpdated(pFilter);
+            otLwfRadioAddressesUpdated(pFilter);
 
             status = ThreadErrorToNtstatus(otInterfaceUp(pFilter->otCtx));
         }
@@ -514,7 +515,9 @@ otLwfTunIoCtl_otInterface(
         {
             // Make sure our addresses are in sync
             (void)otLwfInitializeAddresses(pFilter);
-            otLwfAddressesUpdated(pFilter);
+            
+            // Sync the current addresses
+            KeSetEvent(&pFilter->TunWorkerThreadAddressChangedEvent, IO_NO_INCREMENT, FALSE);
         }
 
         status = 
@@ -1243,8 +1246,10 @@ otLwfTunIoCtl_otExtendedAddress_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_HWADDR)
     {
-        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_EUI64_S, (otExtAddress*)OutBuffer))
+        spinel_eui64_t *data = NULL;
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_EUI64_S, &data) && data != NULL)
         {
+            memcpy(OutBuffer, data, sizeof(otExtAddress));
             *OutBufferLength = sizeof(otExtAddress);
             status = STATUS_SUCCESS;
         }
@@ -1343,10 +1348,12 @@ otLwfTunIoCtl_otExtendedPanId_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_NET_XPANID)
     {
+        uint8_t *data = NULL;
         spinel_size_t aExtPanIdLen; 
-        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_DATA_S, (otExtendedPanId*)OutBuffer, &aExtPanIdLen) && 
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_DATA_S, &data, &aExtPanIdLen) && data != NULL && 
             aExtPanIdLen == sizeof(otExtendedPanId))
         {
+            memcpy(OutBuffer, data, sizeof(otExtendedPanId));
             *OutBufferLength = sizeof(otExtendedPanId);
             status = STATUS_SUCCESS;
         }
@@ -1502,8 +1509,10 @@ otLwfTunIoCtl_otLeaderRloc_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_THREAD_LEADER_ADDR)
     {
-        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_IPv6ADDR_S, (otIp6Address*)OutBuffer))
+        spinel_ipv6addr_t *data = NULL;
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_IPv6ADDR_S, &data) && data != NULL)
         {
+            memcpy(OutBuffer, data, sizeof(spinel_ipv6addr_t));
             *OutBufferLength = sizeof(otIp6Address);
             status = STATUS_SUCCESS;
         }
@@ -1730,10 +1739,12 @@ otLwfTunIoCtl_otMasterKey_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_NET_MASTER_KEY)
     {
+        uint8_t *data = NULL;
         spinel_size_t aKeyLength; 
-        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_DATA_S, (otMasterKey*)OutBuffer, &aKeyLength) && 
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_DATA_S, &data, &aKeyLength) && data != NULL && 
             aKeyLength <= sizeof(otMasterKey))
         {
+            memcpy(OutBuffer, data, aKeyLength);
             *(uint8_t*)((PUCHAR)OutBuffer + sizeof(otMasterKey)) = (uint8_t)aKeyLength;
             *OutBufferLength = sizeof(otMasterKey) + sizeof(uint8_t);
             status = STATUS_SUCCESS;
@@ -1818,8 +1829,10 @@ otLwfTunIoCtl_otMeshLocalEid_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_IPV6_ML_ADDR)
     {
-        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_IPv6ADDR_S, (otIp6Address*)OutBuffer))
+        spinel_ipv6addr_t *data = NULL;
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_IPv6ADDR_S, &data) && data != NULL)
         {
+            memcpy(OutBuffer, data, sizeof(spinel_ipv6addr_t));
             *OutBufferLength = sizeof(otIp6Address);
             status = STATUS_SUCCESS;
         }
@@ -2022,8 +2035,10 @@ otLwfTunIoCtl_otNetworkName_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_NET_NETWORK_NAME)
     {
-        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UTF8_S, (otNetworkName*)OutBuffer))
+        const char *data = NULL;
+        if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UTF8_S, &data) && data != NULL)
         {
+            strcpy_s(OutBuffer, sizeof(otNetworkName), data);
             *OutBufferLength = sizeof(otNetworkName);
             status = STATUS_SUCCESS;
         }
@@ -4890,6 +4905,30 @@ otLwfIoCtl_otPlatformReset(
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
+otLwfIoCtl_otFactoryReset(
+    _In_ PMS_FILTER         pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR          InBuffer,
+    _In_    ULONG           InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID           OutBuffer,
+    _Inout_ PULONG          OutBufferLength
+    )
+{
+    NTSTATUS status = STATUS_SUCCESS;
+
+    UNREFERENCED_PARAMETER(InBuffer);
+    UNREFERENCED_PARAMETER(InBufferLength);
+    UNREFERENCED_PARAMETER(OutBuffer);
+    *OutBufferLength = 0;
+    
+    otFactoryReset(pFilter->otCtx);
+
+    return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
 otLwfTunIoCtl_otPlatformReset(
     _In_ PMS_FILTER         pFilter,
     _In_ PIRP               pIrp,
@@ -5231,8 +5270,14 @@ otLwfIoCtl_otJoinerStart(
     if (InBufferLength >= sizeof(otCommissionConfig))
     {
         otCommissionConfig *aConfig = (otCommissionConfig*)InBuffer;
-        status = ThreadErrorToNtstatus(otJoinerStart(
-            pFilter->otCtx, (const char*)aConfig->PSKd, (const char*)aConfig->ProvisioningUrl));
+        status = ThreadErrorToNtstatus(
+            otJoinerStart(
+                pFilter->otCtx,
+                (const char*)aConfig->PSKd,
+                (const char*)aConfig->ProvisioningUrl,
+                NULL,  // TODO: handle the joiner completion callback
+                NULL)
+            );
     }
 
     return status;
@@ -5713,11 +5758,16 @@ otLwfIoCtl_otSendActiveGet(
 
         if (InBufferLength >= sizeof(uint8_t) + aLength)
         {
+            otIp6Address *aAddress = NULL;
+            if (InBufferLength >= sizeof(uint8_t) + aLength + sizeof(otIp6Address))
+                aAddress = (otIp6Address*)(InBuffer + sizeof(uint8_t) + aLength);
+
             status = ThreadErrorToNtstatus(
                 otSendActiveGet(
                     pFilter->otCtx,
                     aTlvTypes,
-                    aLength)
+                    aLength,
+                    aAddress)
                 );
         }
     }
@@ -5787,11 +5837,16 @@ otLwfIoCtl_otSendPendingGet(
 
         if (InBufferLength >= sizeof(uint8_t) + aLength)
         {
+            otIp6Address *aAddress = NULL;
+            if (InBufferLength >= sizeof(uint8_t) + aLength + sizeof(otIp6Address))
+                aAddress = (otIp6Address*)(InBuffer + sizeof(uint8_t) + aLength);
+
             status = ThreadErrorToNtstatus(
                 otSendPendingGet(
                     pFilter->otCtx,
                     aTlvTypes,
-                    aLength)
+                    aLength,
+                    aAddress)
                 );
         }
     }

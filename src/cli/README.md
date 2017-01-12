@@ -21,9 +21,11 @@ OpenThread test scripts use the CLI to execute test cases.
 * [eui64](#eui64)
 * [extaddr](#extaddr)
 * [extpanid](#extpanid)
+* [factoryreset](#factoryreset)
 * [hashmacaddr](#hashmacaddr)
 * [ifconfig](#ifconfig)
 * [ipaddr](#ipaddr)
+* [ipmaddr](#ipmaddr)
 * [joiner](#joiner)
 * [keysequence](#keysequence)
 * [leaderpartitionid](#leaderpartitionid)
@@ -305,6 +307,16 @@ Done
 Conflict: dead, 00000800
 ```
 
+### commissioner sessionid
+
+Get current commissioner session id.
+
+```bash
+> commissioner sessionid
+0
+Done
+```
+
 ### contextreusedelay
 
 Get the CONTEXT_ID_REUSE_DELAY value.
@@ -341,9 +353,11 @@ Get the counter value.
 ```bash
 >counter mac
 TxTotal: 10
-    TxAckRequested: 4
-    TxAcked: 4
-    TxNoAckRequested: 6
+    TxUnicast: 3
+    TxBroadcast: 7
+    TxAckRequested: 3
+    TxAcked: 3
+    TxNoAckRequested: 7
     TxData: 10
     TxDataPoll: 0
     TxBeacon: 0
@@ -351,14 +365,17 @@ TxTotal: 10
     TxOther: 0
     TxRetry: 0
     TxErrCca: 0
-RxTotal: 11
-    RxData: 11
+RxTotal: 2
+    RxUnicast: 1
+    RxBroadcast: 1
+    RxData: 2
     RxDataPoll: 0
     RxBeacon: 0
     RxBeaconRequest: 0
     RxOther: 0
     RxWhitelistFiltered: 0
     RxDestAddrFiltered: 0
+    RxDuplicated: 0
     RxErrNoFrame: 0
     RxErrNoUnknownNeighbor: 0
     RxErrInvalidSrcAddr: 0
@@ -529,12 +546,12 @@ Set mesh local prefix.
 Done
 ```
 
-### dataset mgmtgetcommand active \[TLVs list\] \[binary\]
+### dataset mgmtgetcommand active \[address \<destination\>\] \[TLVs list\] \[binary\]
 
 Send MGMT_ACTIVE_GET.
 
 ```bash
-> dataset mgmtgetcommand active activetimestamp 123 binary 0001
+> dataset mgmtgetcommand active address fdde:ad00:beef:0:558:f56b:d688:799 activetimestamp 123 binary 0001
 Done
 ```
 
@@ -547,12 +564,12 @@ Send MGMT_ACTIVE_SET.
 Done
 ```
 
-### dataset mgmtgetcommand pending \[TLVs list\] \[binary\]
+### dataset mgmtgetcommand pending \[address \<destination\>\] \[TLVs list\] \[binary\]
 
 Send MGMT_PENDING_GET.
 
 ```bash
-> dataset mgmtgetcommand pending activetimestamp binary 0001
+> dataset mgmtgetcommand pending address fdde:ad00:beef:0:558:f56b:d688:799 activetimestamp binary 0001
 Done
 ```
 
@@ -711,6 +728,13 @@ Set the Thread Extended PAN ID value.
 Done
 ```
 
+### factoryreset
+Delete all stored settings, and signal a platform reset.
+
+```bash
+> factoryreset
+```
+
 ### hashmacaddr
 
 Get the HashMac address.
@@ -756,7 +780,6 @@ List all IPv6 addresses assigned to the Thread interface.
 ```bash
 > ipaddr
 fdde:ad00:beef:0:0:ff:fe00:0
-fe80:0:0:0:0:ff:fe00:0
 fdde:ad00:beef:0:558:f56b:d688:799
 fe80:0:0:0:f3d9:2a82:c8d8:fe43
 Done
@@ -777,6 +800,64 @@ Delete an IPv6 address from the Thread interface.
 
 ```bash
 > ipaddr del 2001::dead:beef:cafe
+Done
+```
+
+### ipmaddr
+
+List all IPv6 multicast addresses subscribed to the Thread interface.
+
+```bash
+> ipmaddr
+ff05:0:0:0:0:0:0:1
+ff33:40:fdde:ad00:beef:0:0:1
+ff32:40:fdde:ad00:beef:0:0:1
+Done
+```
+
+### ipmaddr add \<ipaddr\>
+
+Subscribe the Thread interface to the IPv6 multicast address.
+
+```bash
+> ipmaddr add ff05::1
+Done
+```
+
+### ipmaddr del \<ipaddr\>
+
+Unsubscribe the Thread interface to the IPv6 multicast address.
+
+```bash
+> ipmaddr del ff05::1
+Done
+```
+
+### ipmaddr promiscuous
+
+Get multicast promiscuous mode.
+
+```bash
+> ipmaddr promiscuous
+Disabled
+Done
+```
+
+### ipmaddr promiscuous enable
+
+Enable multicast promiscuous mode.
+
+```bash
+> ipmaddr promiscuous enable
+Done
+```
+
+### ipmaddr promiscuous disable
+
+Disable multicast promiscuous mode.
+
+```bash
+> ipmaddr promiscuous disable
 Done
 ```
 

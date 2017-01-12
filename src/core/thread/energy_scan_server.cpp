@@ -37,8 +37,8 @@
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
 #include <common/logging.hpp>
+#include <meshcop/tlvs.hpp>
 #include <platform/random.h>
-#include <thread/meshcop_tlvs.hpp>
 #include <thread/energy_scan_server.hpp>
 #include <thread/thread_netif.hpp>
 #include <thread/thread_uris.hpp>
@@ -46,7 +46,13 @@
 namespace Thread {
 
 EnergyScanServer::EnergyScanServer(ThreadNetif &aThreadNetif) :
+    mChannelMask(0),
+    mChannelMaskCurrent(0),
+    mPeriod(0),
+    mScanDuration(0),
+    mCount(0),
     mActive(false),
+    mScanResultsLength(0),
     mTimer(aThreadNetif.GetIp6().mTimerScheduler, &EnergyScanServer::HandleTimer, this),
     mEnergyScan(OPENTHREAD_URI_ENERGY_SCAN, &EnergyScanServer::HandleRequest, this),
     mCoapServer(aThreadNetif.GetCoapServer()),
@@ -59,10 +65,12 @@ EnergyScanServer::EnergyScanServer(ThreadNetif &aThreadNetif) :
     mCoapServer.AddResource(mEnergyScan);
 }
 
-void EnergyScanServer::HandleRequest(void *aContext, Coap::Header &aHeader, Message &aMessage,
-                                     const Ip6::MessageInfo &aMessageInfo)
+void EnergyScanServer::HandleRequest(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+                                     const otMessageInfo *aMessageInfo)
 {
-    static_cast<EnergyScanServer *>(aContext)->HandleRequest(aHeader, aMessage, aMessageInfo);
+    static_cast<EnergyScanServer *>(aContext)->HandleRequest(
+        *static_cast<Coap::Header *>(aHeader), *static_cast<Message *>(aMessage),
+        *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
 void EnergyScanServer::HandleRequest(Coap::Header &aHeader, Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -70,13 +78,7 @@ void EnergyScanServer::HandleRequest(Coap::Header &aHeader, Message &aMessage, c
     MeshCoP::CountTlv count;
     MeshCoP::PeriodTlv period;
     MeshCoP::ScanDurationTlv scanDuration;
-    union
-    {
-        MeshCoP::ChannelMaskEntry channelMaskEntry;
-        uint8_t channelMaskBuf[sizeof(MeshCoP::ChannelMaskEntry) + sizeof(uint32_t)];
-    };
-    uint16_t offset;
-    uint16_t length;
+    MeshCoP::ChannelMask0Tlv channelMask;
 
     VerifyOrExit(aHeader.GetCode() == kCoapRequestPost, ;);
 
@@ -89,17 +91,10 @@ void EnergyScanServer::HandleRequest(Coap::Header &aHeader, Message &aMessage, c
     SuccessOrExit(MeshCoP::Tlv::GetTlv(aMessage, MeshCoP::Tlv::kScanDuration, sizeof(scanDuration), scanDuration));
     VerifyOrExit(scanDuration.IsValid(), ;);
 
-    SuccessOrExit(MeshCoP::Tlv::GetValueOffset(aMessage, MeshCoP::Tlv::kChannelMask, offset, length));
-    aMessage.Read(offset, sizeof(channelMaskBuf), channelMaskBuf);
-    VerifyOrExit(channelMaskEntry.GetChannelPage() == 0 &&
-                 channelMaskEntry.GetMaskLength() == sizeof(uint32_t), ;);
+    SuccessOrExit(MeshCoP::Tlv::GetTlv(aMessage, MeshCoP::Tlv::kChannelMask, sizeof(channelMask), channelMask));
+    VerifyOrExit(channelMask.IsValid(),);
 
-    mChannelMask =
-        (static_cast<uint32_t>(channelMaskBuf[sizeof(MeshCoP::ChannelMaskEntry) + 0]) << 0) |
-        (static_cast<uint32_t>(channelMaskBuf[sizeof(MeshCoP::ChannelMaskEntry) + 1]) << 8) |
-        (static_cast<uint32_t>(channelMaskBuf[sizeof(MeshCoP::ChannelMaskEntry) + 2]) << 16) |
-        (static_cast<uint32_t>(channelMaskBuf[sizeof(MeshCoP::ChannelMaskEntry) + 3]) << 24);
-
+    mChannelMask = channelMask.GetMask();
     mChannelMaskCurrent = mChannelMask;
     mCount = count.GetCount();
     mPeriod = period.GetPeriod();
@@ -120,7 +115,7 @@ ThreadError EnergyScanServer::SendResponse(const Coap::Header &aRequestHeader, c
     ThreadError error = kThreadError_None;
     Message *message = NULL;
     Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo;
+    Ip6::MessageInfo responseInfo(aRequestInfo);
 
     VerifyOrExit(aRequestHeader.GetType() == kCoapTypeConfirmable, ;);
 
@@ -130,7 +125,6 @@ ThreadError EnergyScanServer::SendResponse(const Coap::Header &aRequestHeader, c
 
     SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
 
-    memcpy(&responseInfo, &aRequestInfo, sizeof(responseInfo));
     memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
     SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
 
@@ -212,15 +206,7 @@ ThreadError EnergyScanServer::SendReport(void)
 {
     ThreadError error = kThreadError_None;
     Coap::Header header;
-
-    OT_TOOL_PACKED_BEGIN
-    struct
-    {
-        MeshCoP::ChannelMaskTlv tlv;
-        MeshCoP::ChannelMaskEntry entry;
-        uint32_t mask;
-    } OT_TOOL_PACKED_END channelMask;
-
+    MeshCoP::ChannelMask0Tlv channelMask;
     MeshCoP::EnergyListTlv energyList;
     Ip6::MessageInfo messageInfo;
     Message *message;
@@ -232,11 +218,8 @@ ThreadError EnergyScanServer::SendReport(void)
 
     VerifyOrExit((message = mCoapClient.NewMessage(header)) != NULL, error = kThreadError_NoBufs);
 
-    channelMask.tlv.Init();
-    channelMask.tlv.SetLength(sizeof(channelMask) - sizeof(channelMask.tlv));
-    channelMask.entry.SetChannelPage(0);
-    channelMask.entry.SetMaskLength(sizeof(channelMask.mask));
-    channelMask.mask = HostSwap32(mChannelMask);
+    channelMask.Init();
+    channelMask.SetMask(mChannelMask);
     SuccessOrExit(error = message->Append(&channelMask, sizeof(channelMask)));
 
     energyList.Init();
@@ -244,9 +227,8 @@ ThreadError EnergyScanServer::SendReport(void)
     SuccessOrExit(error = message->Append(&energyList, sizeof(energyList)));
     SuccessOrExit(error = message->Append(mScanResults, mScanResultsLength));
 
-    memset(&messageInfo, 0, sizeof(messageInfo));
-    messageInfo.GetPeerAddr() = mCommissioner;
-    messageInfo.mPeerPort = kCoapUdpPort;
+    messageInfo.SetPeerAddr(mCommissioner);
+    messageInfo.SetPeerPort(kCoapUdpPort);
     SuccessOrExit(error = mCoapClient.SendMessage(*message, messageInfo));
 
     otLogInfoMeshCoP("sent scan results");
@@ -270,11 +252,9 @@ void EnergyScanServer::HandleNetifStateChanged(uint32_t aFlags, void *aContext)
 
 void EnergyScanServer::HandleNetifStateChanged(uint32_t aFlags)
 {
-    uint8_t length;
-
     if ((aFlags & OT_THREAD_NETDATA_UPDATED) != 0 &&
         !mActive &&
-        mNetif.GetNetworkDataLeader().GetCommissioningData(length) == NULL)
+        mNetif.GetNetworkDataLeader().GetCommissioningData() == NULL)
     {
         mActive = false;
         mTimer.Stop();

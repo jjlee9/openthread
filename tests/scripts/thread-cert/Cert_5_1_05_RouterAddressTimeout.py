@@ -30,15 +30,21 @@
 import time
 import unittest
 
+import config
+import mle
+import network_layer
 import node
 
 LEADER = 1
 ROUTER1 = 2
+SNIFFER = 3
+
 
 class Cert_5_1_05_RouterAddressTimeout(unittest.TestCase):
+
     def setUp(self):
         self.nodes = {}
-        for i in range(1,3):
+        for i in range(1, 3):
             self.nodes[i] = node.Node(i)
 
         self.nodes[LEADER].set_panid(0xface)
@@ -52,7 +58,13 @@ class Cert_5_1_05_RouterAddressTimeout(unittest.TestCase):
         self.nodes[ROUTER1].enable_whitelist()
         self.nodes[ROUTER1].set_router_selection_jitter(1)
 
+        self.sniffer = config.create_default_thread_sniffer(SNIFFER)
+        self.sniffer.start()
+
     def tearDown(self):
+        self.sniffer.stop()
+        del self.sniffer
+
         for node in list(self.nodes.values()):
             node.stop()
         del self.nodes
@@ -83,6 +95,57 @@ class Cert_5_1_05_RouterAddressTimeout(unittest.TestCase):
         time.sleep(5)
         self.assertEqual(self.nodes[ROUTER1].get_state(), 'router')
         self.assertEqual(self.nodes[ROUTER1].get_addr16(), rloc16)
+
+        leader_messages = self.sniffer.get_messages_sent_by(LEADER)
+        router1_messages = self.sniffer.get_messages_sent_by(ROUTER1)
+
+        # 2 - All
+        leader_messages.next_mle_message(mle.CommandType.ADVERTISEMENT)
+
+        router1_messages.next_mle_message(mle.CommandType.PARENT_REQUEST)
+        leader_messages.next_mle_message(mle.CommandType.PARENT_RESPONSE)
+
+        router1_messages.next_mle_message(mle.CommandType.CHILD_ID_REQUEST)
+        leader_messages.next_mle_message(mle.CommandType.CHILD_ID_RESPONSE)
+
+        # 3 - Router1
+        router1_messages.next_mle_message(mle.CommandType.LINK_REQUEST)
+        router1_messages.next_mle_message(mle.CommandType.PARENT_REQUEST)
+        router1_messages.next_mle_message(mle.CommandType.CHILD_ID_REQUEST)
+
+        msg = router1_messages.next_coap_message("0.02")
+        msg.assertCoapMessageRequestUriPath("/a/as")
+
+        # 4 - Leader
+        leader_messages.next_mle_message(mle.CommandType.PARENT_RESPONSE)
+        leader_messages.next_mle_message(mle.CommandType.CHILD_ID_RESPONSE)
+
+        msg = leader_messages.next_coap_message("2.04")
+        msg.assertCoapMessageContainsTlv(network_layer.Status)
+        msg.assertCoapMessageContainsOptionalTlv(network_layer.RouterMask)
+
+        status_tlv = msg.get_coap_message_tlv(network_layer.Status)
+        self.assertEqual(network_layer.StatusValues.SUCCESS, status_tlv.status)
+
+        # 6 - Router1
+        router1_messages.next_mle_message(mle.CommandType.LINK_REQUEST)
+        router1_messages.next_mle_message(mle.CommandType.PARENT_REQUEST)
+        router1_messages.next_mle_message(mle.CommandType.CHILD_ID_REQUEST)
+
+        msg = router1_messages.next_coap_message("0.02")
+        msg.assertCoapMessageRequestUriPath("/a/as")
+
+        # 7 - Leader
+        leader_messages.next_mle_message(mle.CommandType.PARENT_RESPONSE)
+        leader_messages.next_mle_message(mle.CommandType.CHILD_ID_RESPONSE)
+
+        msg = leader_messages.next_coap_message("2.04")
+        msg.assertCoapMessageContainsTlv(network_layer.Status)
+        msg.assertCoapMessageContainsOptionalTlv(network_layer.RouterMask)
+
+        status_tlv = msg.get_coap_message_tlv(network_layer.Status)
+        self.assertEqual(network_layer.StatusValues.SUCCESS, status_tlv.status)
+
 
 if __name__ == '__main__':
     unittest.main()

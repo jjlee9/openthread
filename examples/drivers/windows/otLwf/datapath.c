@@ -392,9 +392,46 @@ N.B.: It is important to check the ReceiveFlags in NDIS_TEST_RECEIVE_CANNOT_PEND
             CurrNbl = NET_BUFFER_LIST_NEXT_NBL(CurrNbl);
         }
     }
+    else if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_THREAD)
+    {
+        PNET_BUFFER_LIST CurrNbl = NetBufferLists;
+        while (CurrNbl)
+        {
+            PNET_BUFFER CurrNb = NET_BUFFER_LIST_FIRST_NB(CurrNbl);
+            while (CurrNb)
+            {
+                PUCHAR Buffer = (PUCHAR)NdisGetDataBuffer(CurrNb, CurrNb->DataLength, NULL, 1, 0);
+                if (Buffer == NULL)
+                {
+                    Buffer = (PUCHAR)FILTER_ALLOC_MEM(pFilter->FilterHandle, CurrNb->DataLength);
+                    if (Buffer != NULL)
+                    {
+                        PUCHAR _Buffer = (PUCHAR)NdisGetDataBuffer(CurrNb, CurrNb->DataLength, Buffer, 1, 0);
+                        NT_ASSERT(_Buffer == Buffer);
+                        UNREFERENCED_PARAMETER(_Buffer);
+                        otLwfReceiveTunnelPacket(pFilter, DispatchLevel, Buffer, CurrNb->DataLength);
+                        FILTER_FREE_MEM(Buffer);
+                    }
+                }
+                else
+                {
+                    otLwfReceiveTunnelPacket(pFilter, DispatchLevel, Buffer, CurrNb->DataLength);
+                }
+                CurrNb = NET_BUFFER_NEXT_NB(CurrNb);
+            }
+
+            NET_BUFFER_LIST_STATUS(CurrNbl) = NDIS_STATUS_SUCCESS;
+            CurrNbl = NET_BUFFER_LIST_NEXT_NBL(CurrNbl);
+        }
+            
+        NdisFReturnNetBufferLists(
+            pFilter->FilterHandle,
+            NetBufferLists,
+            DispatchLevel ? NDIS_RETURN_FLAGS_DISPATCH_LEVEL : 0
+            );
+    }
     // Try to grab a ref on the data path first, to make sure we are allowed
-    else if ((pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO && pFilter->otPhyState == kStateDisabled) || 
-        !ExAcquireRundownProtection(&pFilter->DataPathRundown))
+    else if (pFilter->otPhyState == kStateDisabled || !ExAcquireRundownProtection(&pFilter->DataPathRundown))
     {
         LogVerbose(DRIVER_DATA_PATH, "Failing ReceiveNetBufferLists because data path isn't active.");
 

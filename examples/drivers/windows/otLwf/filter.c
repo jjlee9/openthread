@@ -350,17 +350,20 @@ NOTE: Called at PASSIVE_LEVEL and the filter is in paused state
     CancelMibChangeNotify2(pFilter->AddressChangeHandle);
     pFilter->AddressChangeHandle = NULL;
 
-    if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+    if (pFilter->InternalStateInitialized)
     {
-        otLwfUninitializeThreadMode(pFilter);
-    }
-    else if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_THREAD)
-    {
-        otLwfUninitializeTunnelMode(pFilter);
-    }
-    else
-    {
-        NT_ASSERT(FALSE);
+        if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_RADIO)
+        {
+            otLwfUninitializeThreadMode(pFilter);
+        }
+        else if (pFilter->MiniportCapabilities.MiniportMode == OT_MP_MODE_THREAD)
+        {
+            otLwfUninitializeTunnelMode(pFilter);
+        }
+        else
+        {
+            NT_ASSERT(FALSE);
+        }
     }
 
     // Remove this Filter from the global list

@@ -34,11 +34,11 @@
 #define GUID_FORMAT "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}"
 #define GUID_ARG(guid) guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]
 
-typedef DWORD (*fp_otvmpOpenHandle)(HANDLE* phandle);
-typedef VOID  (*fp_otvmpCloseHandle)(HANDLE handle);
-typedef DWORD (*fp_otvmpAddVirtualBus)(HANDLE handle, ULONG* pBusNumber, ULONG* pIfIndex);
-typedef DWORD (*fp_otvmpRemoveVirtualBus)(HANDLE handle, ULONG BusNumber);
-typedef DWORD (*fp_otvmpSetAdapterTopologyGuid)(HANDLE handle, DWORD BusNumber, const GUID* pTopologyGuid);
+typedef DWORD (*fp_otvmpOpenHandle)(_Out_ HANDLE* phandle);
+typedef VOID  (*fp_otvmpCloseHandle)(_In_ HANDLE handle);
+typedef DWORD (*fp_otvmpAddVirtualBus)(_In_ HANDLE handle, _Inout_ ULONG* pBusNumber, _Out_ ULONG* pIfIndex);
+typedef DWORD (*fp_otvmpRemoveVirtualBus)(_In_ HANDLE handle, ULONG BusNumber);
+typedef DWORD (*fp_otvmpSetAdapterTopologyGuid)(_In_ HANDLE handle, DWORD BusNumber, _In_ const GUID* pTopologyGuid);
 
 fp_otvmpOpenHandle              otvmpOpenHandle = nullptr;
 fp_otvmpCloseHandle             otvmpCloseHandle = nullptr;
@@ -56,6 +56,7 @@ volatile LONG gNumberOfInterfaces = 0;
 
 otApiInstance *gApiInstance = nullptr;
 
+_Success_(return == kThreadError_None)
 ThreadError otNodeParsePrefix(const char *aStrPrefix, _Out_ otIp6Prefix *aPrefix)
 {
     char *prefixLengthStr;
@@ -118,6 +119,12 @@ otApiInstance* GetApiInstance()
         otvmpAddVirtualBus          = (fp_otvmpAddVirtualBus)GetProcAddress(gVmpModule, "otvmpAddVirtualBus");
         otvmpRemoveVirtualBus       = (fp_otvmpRemoveVirtualBus)GetProcAddress(gVmpModule, "otvmpRemoveVirtualBus");
         otvmpSetAdapterTopologyGuid = (fp_otvmpSetAdapterTopologyGuid)GetProcAddress(gVmpModule, "otvmpSetAdapterTopologyGuid");
+
+        assert(otvmpOpenHandle);
+        assert(otvmpCloseHandle);
+        assert(otvmpAddVirtualBus);
+        assert(otvmpRemoveVirtualBus);
+        assert(otvmpSetAdapterTopologyGuid);
 
         if (otvmpOpenHandle == nullptr) printf("otvmpOpenHandle is null!\r\n");
         if (otvmpCloseHandle == nullptr) printf("otvmpCloseHandle is null!\r\n");
@@ -296,6 +303,7 @@ PingHandlerRecvCallback(
     )
 {
     otPingHandler *aPingHandler = (otPingHandler*)Context;
+    if (aPingHandler == NULL) return;
     
     // Get the result of the IO operation
     DWORD cbTransferred = 0;
@@ -435,9 +443,15 @@ void AddPingHandler(otNode *aNode, const otIp6Address *aAddress)
     DWORD Flag = FALSE;
     IPV6_MREQ MCReg;
     MCReg.ipv6mr_interface = otGetDeviceIfIndex(aNode->mInstance);
+
+    if (aPingHandler->mOverlapped.hEvent == nullptr ||
+        aPingHandler->mThreadpoolWait == nullptr)
+    {
+        goto exit;
+    }
     
     // Create the socket
-    aPingHandler->mSocket = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    aPingHandler->mSocket = WSASocketW(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (aPingHandler->mSocket == INVALID_SOCKET)
     {
         printf("WSASocket failed, 0x%x\r\n", WSAGetLastError());
@@ -553,11 +567,17 @@ exit:
     // Clean up ping handler if necessary
     if (aPingHandler)
     {
-        if (aPingHandler->mSocket != INVALID_SOCKET) 
-            closesocket(aPingHandler->mSocket);
-        WaitForThreadpoolWaitCallbacks(aPingHandler->mThreadpoolWait, TRUE);
-        CloseThreadpoolWait(aPingHandler->mThreadpoolWait);
-        CloseHandle(aPingHandler->mOverlapped.hEvent);
+        if (aPingHandler->mThreadpoolWait != nullptr)
+        {
+            if (aPingHandler->mSocket != INVALID_SOCKET) 
+                closesocket(aPingHandler->mSocket);
+            WaitForThreadpoolWaitCallbacks(aPingHandler->mThreadpoolWait, TRUE);
+            CloseThreadpoolWait(aPingHandler->mThreadpoolWait);
+        }
+        if (aPingHandler->mOverlapped.hEvent)
+        {
+            CloseHandle(aPingHandler->mOverlapped.hEvent);
+        }
         delete aPingHandler;
     }
 }
@@ -929,7 +949,8 @@ OTNODEAPI int32_t OTCALL otNodeJoinerStart(otNode* aNode, const char *aPSKd, con
     otLogFuncEntryMsg("[%d] %s %s", aNode->mId, aPSKd, aProvisioningUrl);
     printf("%d: joiner start %s %s\r\n", aNode->mId, aPSKd, aProvisioningUrl);
 
-    auto error = otJoinerStart(aNode->mInstance, aPSKd, aProvisioningUrl);
+    // TODO: handle the joiner completion callback
+    auto error = otJoinerStart(aNode->mInstance, aPSKd, aProvisioningUrl, NULL, NULL);
     
     otLogFuncExit();
     return error;
@@ -1029,10 +1050,13 @@ OTNODEAPI const char* OTCALL otNodeGetHashMacAddress(otNode* aNode)
     otExtAddress aHashMacAddress = {};
     otGetHashMacAddress(aNode->mInstance, &aHashMacAddress);
     char* str = (char*)malloc(18);
-    aNode->mMemoryToFree.push_back(str);
-    for (int i = 0; i < 8; i++)
-        sprintf_s(str + i * 2, 18 - (2 * i), "%02x", aHashMacAddress.m8[i]);
-    printf("%d: hashmacaddr\r\n%s\r\n", aNode->mId, str);
+    if (str != nullptr)
+    {
+        aNode->mMemoryToFree.push_back(str);
+        for (int i = 0; i < 8; i++)
+            sprintf_s(str + i * 2, 18 - (2 * i), "%02x", aHashMacAddress.m8[i]);
+        printf("%d: hashmacaddr\r\n%s\r\n", aNode->mId, str);
+    }
     otLogFuncExit();
     return str;
 }
@@ -1042,11 +1066,14 @@ OTNODEAPI const char* OTCALL otNodeGetAddr64(otNode* aNode)
     otLogFuncEntryMsg("[%d]", aNode->mId);
     auto extAddr = otGetExtendedAddress(aNode->mInstance);
     char* str = (char*)malloc(18);
-    aNode->mMemoryToFree.push_back(str);
-    for (int i = 0; i < 8; i++)
-        sprintf_s(str + i * 2, 18 - (2 * i), "%02x", extAddr[i]);
+    if (str != nullptr)
+    {
+        aNode->mMemoryToFree.push_back(str);
+        for (int i = 0; i < 8; i++)
+            sprintf_s(str + i * 2, 18 - (2 * i), "%02x", extAddr[i]);
+        printf("%d: extaddr\r\n%s\r\n", aNode->mId, str);
+    }
     otFreeMemory(extAddr);
-    printf("%d: extaddr\r\n%s\r\n", aNode->mId, str);
     otLogFuncExit();
     return str;
 }
@@ -1094,11 +1121,14 @@ OTNODEAPI const char* OTCALL otNodeGetMasterkey(otNode* aNode)
     auto aMasterKey = otGetMasterKey(aNode->mInstance, &aKeyLength);
     uint8_t strLength = 2*aKeyLength + 1;
     char* str = (char*)malloc(strLength);
-    aNode->mMemoryToFree.push_back(str);
-    for (int i = 0; i < aKeyLength; i++)
-        sprintf_s(str + i * 2, strLength - (2 * i), "%02x", aMasterKey[i]);
+    if (str != nullptr)
+    {
+        aNode->mMemoryToFree.push_back(str);
+        for (int i = 0; i < aKeyLength; i++)
+            sprintf_s(str + i * 2, strLength - (2 * i), "%02x", aMasterKey[i]);
+        printf("%d: masterkey\r\n%s\r\n", aNode->mId, str);
+    }
     otFreeMemory(aMasterKey);
-    printf("%d: masterkey\r\n%s\r\n", aNode->mId, str);
     otLogFuncExit();
     return str;
 }
@@ -1308,8 +1338,8 @@ OTNODEAPI int32_t OTCALL otNodeAddIpAddr(otNode* aNode, const char *aAddr)
     if (error != kThreadError_None) return error;
 
     aAddress.mPrefixLength = 64;
-    aAddress.mPreferredLifetime = 0xffffffff;
-    aAddress.mValidLifetime = 0xffffffff;
+    aAddress.mPreferred = true;
+    aAddress.mValid = true;
     auto result = otAddUnicastAddress(aNode->mInstance, &aAddress);
     otLogFuncExit();
     return result;
@@ -1331,35 +1361,38 @@ OTNODEAPI const char* OTCALL otNodeGetAddrs(otNode* aNode)
     if (addrs == nullptr) return nullptr;
 
     char* str = (char*)malloc(512);
-    aNode->mMemoryToFree.push_back(str);
-    RtlZeroMemory(str, 512);
-
-    char* cur = str;
-    
-    for (const otNetifAddress *addr = addrs; addr; addr = addr->mNext)
+    if (str != nullptr)
     {
-        if (cur != str)
+        aNode->mMemoryToFree.push_back(str);
+        RtlZeroMemory(str, 512);
+
+        char* cur = str;
+    
+        for (const otNetifAddress *addr = addrs; addr; addr = addr->mNext)
         {
-            *cur = '\n';
-            cur++;
+            if (cur != str)
+            {
+                *cur = '\n';
+                cur++;
+            }
+
+            auto last = cur;
+
+            cur += 
+                sprintf_s(
+                    cur, 512 - (cur - str),
+                    "%x:%x:%x:%x:%x:%x:%x:%x",
+                    Swap16(addr->mAddress.mFields.m16[0]),
+                    Swap16(addr->mAddress.mFields.m16[1]),
+                    Swap16(addr->mAddress.mFields.m16[2]),
+                    Swap16(addr->mAddress.mFields.m16[3]),
+                    Swap16(addr->mAddress.mFields.m16[4]),
+                    Swap16(addr->mAddress.mFields.m16[5]),
+                    Swap16(addr->mAddress.mFields.m16[6]),
+                    Swap16(addr->mAddress.mFields.m16[7]));
+
+            printf("%s\r\n", last);
         }
-
-        auto last = cur;
-
-        cur += 
-            sprintf_s(
-                cur, 512 - (cur - str),
-                "%x:%x:%x:%x:%x:%x:%x:%x",
-                Swap16(addr->mAddress.mFields.m16[0]),
-                Swap16(addr->mAddress.mFields.m16[1]),
-                Swap16(addr->mAddress.mFields.m16[2]),
-                Swap16(addr->mAddress.mFields.m16[3]),
-                Swap16(addr->mAddress.mFields.m16[4]),
-                Swap16(addr->mAddress.mFields.m16[5]),
-                Swap16(addr->mAddress.mFields.m16[6]),
-                Swap16(addr->mAddress.mFields.m16[7]));
-
-        printf("%s\r\n", last);
     }
 
     otFreeMemory(addrs);
@@ -1653,7 +1686,7 @@ OTNODEAPI uint32_t OTCALL otNodePing(otNode* aNode, const char *aAddr, uint16_t 
     int cbDestinationAddress = sizeof(DestinationAddress);
     DWORD hopLimit = 64;
 
-    SOCKET Socket = WSASocket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    SOCKET Socket = WSASocketW(AF_INET6, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (Socket == INVALID_SOCKET)
     {
         printf("WSASocket failed, 0x%x\r\n", WSAGetLastError());

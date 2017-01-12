@@ -91,7 +91,7 @@ ThreadError UdpSocket::SendTo(Message &aMessage, const MessageInfo &aMessageInfo
 
     if (messageInfoLocal.GetSockAddr().IsUnspecified())
     {
-        messageInfoLocal.GetSockAddr() = GetSockName().GetAddress();
+        messageInfoLocal.SetSockAddr(GetSockName().GetAddress());
     }
 
     if (GetSockName().mPort == 0)
@@ -148,7 +148,7 @@ ThreadError Udp::RemoveSocket(UdpSocket &aSocket)
         {
             if (socket->GetNext() == &aSocket)
             {
-                socket->SetNext(socket->GetNext());
+                socket->SetNext(aSocket.GetNext());
                 break;
             }
         }
@@ -203,7 +203,7 @@ ThreadError Udp::HandleMessage(Message &aMessage, MessageInfo &aMessageInfo)
     checksum = aMessage.UpdateChecksum(checksum, aMessage.GetOffset(), payloadLength);
     VerifyOrExit(checksum == 0xffff, ;);
 
-    aMessage.Read(aMessage.GetOffset(), sizeof(udpHeader), &udpHeader);
+    VerifyOrExit(aMessage.Read(aMessage.GetOffset(), sizeof(udpHeader), &udpHeader) == sizeof(udpHeader),);
     aMessage.MoveOffset(sizeof(udpHeader));
     aMessageInfo.mPeerPort = udpHeader.GetSourcePort();
     aMessageInfo.mSockPort = udpHeader.GetDestinationPort();

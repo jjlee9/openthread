@@ -35,6 +35,8 @@
 #include "precomp.h"
 #include "tunnel.tmh"
 
+KSTART_ROUTINE otLwfTunWorkerThread;
+
 ThreadError
 SpinelStatusToThreadError(
     spinel_status_t error
@@ -119,6 +121,7 @@ otLwfInitializeTunnelMode(
 {
     NDIS_STATUS Status = NDIS_STATUS_SUCCESS;
     uint32_t InterfaceType = 0;
+    HANDLE threadHandle = NULL;
 
     LogFuncEntry(DRIVER_DEFAULT);
 
@@ -127,9 +130,51 @@ otLwfInitializeTunnelMode(
     
     NdisAllocateSpinLock(&pFilter->tunCommandLock);
     InitializeListHead(&pFilter->tunCommandHandlers);
+    
+    KeInitializeEvent(
+        &pFilter->TunWorkerThreadStopEvent,
+        SynchronizationEvent, // auto-clearing event
+        FALSE                 // event initially non-signalled
+        );
+    KeInitializeEvent(
+        &pFilter->TunWorkerThreadAddressChangedEvent,
+        SynchronizationEvent, // auto-clearing event
+        FALSE                 // event initially non-signalled
+        );
+
+    // Start the worker thread
+    Status = PsCreateSystemThread(
+                &threadHandle,                  // ThreadHandle
+                THREAD_ALL_ACCESS,              // DesiredAccess
+                NULL,                           // ObjectAttributes
+                NULL,                           // ProcessHandle
+                NULL,                           // ClientId
+                otLwfTunWorkerThread,           // StartRoutine
+                pFilter                         // StartContext
+                );
+    if (!NT_SUCCESS(Status))
+    {
+        LogError(DRIVER_DEFAULT, "PsCreateSystemThread failed, %!STATUS!", Status);
+        goto error;
+    }
+
+    // Grab the object reference to the worker thread
+    Status = ObReferenceObjectByHandle(
+                threadHandle,
+                THREAD_ALL_ACCESS,
+                *PsThreadType,
+                KernelMode,
+                &pFilter->TunWorkerThread,
+                NULL
+                );
+    if (!NT_VERIFYMSG("ObReferenceObjectByHandle can't fail with a valid kernel handle", NT_SUCCESS(Status)))
+    {
+        LogError(DRIVER_DEFAULT, "ObReferenceObjectByHandle failed, %!STATUS!", Status);
+        KeSetEvent(&pFilter->TunWorkerThreadStopEvent, IO_NO_INCREMENT, FALSE);
+    }
 
     // Query the interface type to make sure it is a Thread device
-    Status = otLwfGetTunProp(pFilter, SPINEL_PROP_INTERFACE_TYPE, SPINEL_DATATYPE_UINT_PACKED_S, &InterfaceType);
+    Status = otLwfGetTunProp(pFilter, NULL, SPINEL_PROP_INTERFACE_TYPE, SPINEL_DATATYPE_UINT_PACKED_S, &InterfaceType);
     if (!NT_SUCCESS(Status))
     {
         LogError(DRIVER_DEFAULT, "Failed to query SPINEL_PROP_INTERFACE_TYPE, %!STATUS!", Status);
@@ -163,9 +208,125 @@ otLwfUninitializeTunnelMode(
     )
 {
     LogFuncEntry(DRIVER_DEFAULT);
-    UNREFERENCED_PARAMETER(pFilter);
+
+    // Clean up worker thread
+    if (pFilter->TunWorkerThread)
+    {
+        LogInfo(DRIVER_DEFAULT, "Stopping tunnel worker thread and waiting for it to complete.");
+
+        // Send event to shutdown worker thread
+        KeSetEvent(&pFilter->TunWorkerThreadStopEvent, 0, FALSE);
+
+        // Wait for worker thread to finish
+        KeWaitForSingleObject(
+            pFilter->TunWorkerThread,
+            Executive,
+            KernelMode,
+            FALSE,
+            NULL
+            );
+
+        // Free worker thread
+        ObDereferenceObject(pFilter->TunWorkerThread);
+        pFilter->TunWorkerThread = NULL;
+
+        LogInfo(DRIVER_DEFAULT, "Tunnel worker thread cleaned up.");
+    }
+
     // TODO - Clean up command handlers
+
     LogFuncExit(DRIVER_DEFAULT);
+}
+
+// Worker thread for processing all tunnel events
+_Use_decl_annotations_
+VOID
+otLwfTunWorkerThread(
+    PVOID   Context
+    )
+{
+    PMS_FILTER pFilter = (PMS_FILTER)Context;
+    NT_ASSERT(pFilter);
+
+    LogFuncEntry(DRIVER_DEFAULT);
+
+    PKEVENT WaitEvents[] = 
+    { 
+        &pFilter->TunWorkerThreadStopEvent,
+        &pFilter->TunWorkerThreadAddressChangedEvent
+    };
+
+    LogFuncExit(DRIVER_DEFAULT);
+    
+    while (true)
+    {
+        // Wait for event to stop or process event to fire
+        NTSTATUS status = 
+            KeWaitForMultipleObjects(
+                ARRAYSIZE(WaitEvents), 
+                (PVOID*)WaitEvents, 
+                WaitAny, 
+                Executive, 
+                KernelMode, 
+                FALSE, 
+                NULL, 
+                NULL);
+
+        // If it is the first event, then we are shutting down. Exit loop and terminate thread
+        if (status == STATUS_WAIT_0)
+        {
+            LogInfo(DRIVER_DEFAULT, "Received tunnel worker thread shutdown event.");
+            break;
+        }
+        else if (status == STATUS_WAIT_0 + 1) // TunWorkerThreadAddressChangedEvent fired
+        {
+            PVOID DataBuffer = NULL;
+            const uint8_t* value_data_ptr = NULL;
+            spinel_size_t value_data_len = 0;
+            
+            // Query the current addresses
+            status = 
+                otLwfGetTunProp(
+                    pFilter,
+                    &DataBuffer,
+                    SPINEL_PROP_IPV6_ADDRESS_TABLE,
+                    SPINEL_DATATYPE_DATA_S,
+                    &value_data_ptr,
+                    &value_data_len);
+            if (NT_SUCCESS(status))
+            {
+                uint32_t aNotifFlags = 0;
+                otLwfTunAddressesUpdated(pFilter, value_data_ptr, value_data_len, &aNotifFlags);
+
+                // Send notification
+                if (aNotifFlags != 0)
+                {
+                    PFILTER_NOTIFICATION_ENTRY NotifEntry = FILTER_ALLOC_NOTIF(pFilter);
+                    if (NotifEntry)
+                    {
+                        RtlZeroMemory(NotifEntry, sizeof(FILTER_NOTIFICATION_ENTRY));
+                        NotifEntry->Notif.InterfaceGuid = pFilter->InterfaceGuid;
+                        NotifEntry->Notif.NotifType = OTLWF_NOTIF_STATE_CHANGE;
+                        NotifEntry->Notif.StateChangePayload.Flags = aNotifFlags;
+
+                        otLwfIndicateNotification(NotifEntry);
+                    }
+                }
+            }
+            else
+            {
+                LogWarning(DRIVER_DEFAULT, "Failed to query addresses, %!STATUS!", status);
+            }
+
+            if (DataBuffer) FILTER_FREE_MEM(DataBuffer);
+        }
+        else
+        {
+            LogWarning(DRIVER_DEFAULT, "Unexpected wait result, %!STATUS!", status);
+        }
+    }
+
+    PsTerminateSystemThread(STATUS_SUCCESS);
 }
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -186,6 +347,8 @@ otLwfProcessSpinelValueIs(
     {
         spinel_status_t status = SPINEL_STATUS_OK;
         spinel_datatype_unpack(value_data_ptr, value_data_len, "i", &status);
+
+        LogWarning(DRIVER_DEFAULT, "[%p] received %d for SPINEL_PROP_LAST_STATUS", pFilter, status);
 
         if ((status >= SPINEL_STATUS_RESET__BEGIN) && (status <= SPINEL_STATUS_RESET__END)) 
         {
@@ -232,8 +395,7 @@ otLwfProcessSpinelValueIs(
     }
     else if (key == SPINEL_PROP_IPV6_ADDRESS_TABLE) 
     {
-        // TODO - Update cached addresses
-        // TODO - Send notification
+        KeSetEvent(&pFilter->TunWorkerThreadAddressChangedEvent, IO_NO_INCREMENT, FALSE);
     } 
     else if (key == SPINEL_PROP_THREAD_CHILD_TABLE) 
     {
@@ -283,7 +445,31 @@ otLwfProcessSpinelValueIs(
     } 
     else if (key == SPINEL_PROP_STREAM_DEBUG) 
     {
-        // TODO - Log
+        const uint8_t* output = NULL;
+        UINT output_len = 0;
+        spinel_ssize_t ret;
+
+        ret = spinel_datatype_unpack(
+            value_data_ptr,
+            value_data_len,
+            SPINEL_DATATYPE_DATA_S,
+            &output,
+            &output_len);
+
+        NT_ASSERT(ret > 0);
+        if (ret > 0 && output && output_len <= (UINT)ret)
+        {
+            if (strnlen((char*)output, output_len) != output_len)
+            {
+                LogInfo(DRIVER_DEFAULT, "DEBUG_STREAM: %s", (char*)output);
+            }
+            else if (output_len < 128)
+            {
+                char strOutput[128] = {0};
+                memcpy(strOutput, output, output_len);
+                LogInfo(DRIVER_DEFAULT, "DEBUG_STREAM: %s", strOutput);
+            }
+        }
     } 
 
     // Send notification
@@ -331,6 +517,9 @@ otLwfProcessSpinelValueInserted(
             NotifEntry->Notif.NotifType = OTLWF_NOTIF_ACTIVE_SCAN;
             NotifEntry->Notif.ActiveScanPayload.Valid = TRUE;
 
+            const uint8_t *aExtAddr = NULL;
+            const uint8_t *aExtPanId = NULL;
+            const char *aNetworkName = NULL;
             unsigned int xpanid_len = 0;
             
             //chan,rssi,(laddr,saddr,panid,lqi),(proto,flags,networkid,xpanid) [CcT(ESSC)T(iCUD.).]
@@ -340,18 +529,28 @@ otLwfProcessSpinelValueInserted(
                     "CcT(ESSC.)T(iCUD.).",
                     &NotifEntry->Notif.ActiveScanPayload.Results.mChannel,
                     &NotifEntry->Notif.ActiveScanPayload.Results.mRssi,
-                    &NotifEntry->Notif.ActiveScanPayload.Results.mExtAddress.m8,
+                    &aExtAddr,
                     NULL, // saddr (don't care)
                     &NotifEntry->Notif.ActiveScanPayload.Results.mPanId,
                     &NotifEntry->Notif.ActiveScanPayload.Results.mLqi,
                     NULL, // proto (don't care)
                     NULL, // flags (don't care)
-                    &NotifEntry->Notif.ActiveScanPayload.Results.mNetworkName.m8,
-                    &NotifEntry->Notif.ActiveScanPayload.Results.mExtendedPanId.m8,
+                    &aNetworkName,
+                    &aExtPanId,
                     &xpanid_len
                 ) &&
+                aExtAddr != NULL && aExtPanId != NULL && aNetworkName != NULL && 
                 xpanid_len == OT_EXT_PAN_ID_SIZE)
             {
+                memcpy_s(NotifEntry->Notif.ActiveScanPayload.Results.mExtAddress.m8,
+                         sizeof(NotifEntry->Notif.ActiveScanPayload.Results.mExtAddress.m8),
+                         aExtAddr, sizeof(otExtAddress));
+                memcpy_s(NotifEntry->Notif.ActiveScanPayload.Results.mExtendedPanId.m8,
+                         sizeof(NotifEntry->Notif.ActiveScanPayload.Results.mExtendedPanId.m8),
+                         aExtPanId, sizeof(otExtendedPanId));
+                strcpy_s(NotifEntry->Notif.ActiveScanPayload.Results.mNetworkName.m8,
+                         sizeof(NotifEntry->Notif.ActiveScanPayload.Results.mNetworkName.m8),
+                         aNetworkName);
                 otLwfIndicateNotification(NotifEntry);
             }
             else
@@ -582,8 +781,8 @@ otLwfSendTunnelPacket(
             DataBuffer, 
             NetBufferLength, 
             "Cii", 
-            SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0, 
-            SPINEL_CMD_PROP_VALUE_IS, 
+            (spinel_tid_t)(SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0), 
+            (UINT)SPINEL_CMD_PROP_VALUE_SET, 
             (Secured ? SPINEL_PROP_STREAM_NET : SPINEL_PROP_STREAM_NET_INSECURE));
     if (PackedLength < 0 || PackedLength + NetBuffer->DataLength > NetBufferLength)
     {
@@ -591,25 +790,27 @@ otLwfSendTunnelPacket(
         goto exit;
     }
 
+    NT_ASSERT(PackedLength >= 3);
     NetBuffer->DataLength += (ULONG)PackedLength;
-
-    // Copy the IP packet data
-    IpDataBuffer = (PUCHAR)NdisGetDataBuffer(IpNetBuffer, IpNetBuffer->DataLength, DataBuffer + NetBuffer->DataLength, 1, 0);
-    if (IpDataBuffer != DataBuffer + NetBuffer->DataLength)
-    {
-        RtlCopyMemory(IpDataBuffer, DataBuffer + NetBuffer->DataLength, NetBufferLength - NetBuffer->DataLength);
-    }
-    
-    v6Header = (IPV6_HEADER*)(DataBuffer + NetBuffer->DataLength);
-
-    NetBuffer->DataLength += IpNetBuffer->DataLength;
     
     // Copy over the data length
     DataBuffer[NetBuffer->DataLength+1] = (((USHORT)IpNetBuffer->DataLength) >> 8) & 0xff;
     DataBuffer[NetBuffer->DataLength]   = (((USHORT)IpNetBuffer->DataLength) >> 0) & 0xff;
+    NetBuffer->DataLength += 2;
+    
+    v6Header = (IPV6_HEADER*)(DataBuffer + NetBuffer->DataLength);
+
+    // Copy the IP packet data
+    IpDataBuffer = (PUCHAR)NdisGetDataBuffer(IpNetBuffer, IpNetBuffer->DataLength, v6Header, 1, 0);
+    if (IpDataBuffer != (PUCHAR)v6Header)
+    {
+        RtlCopyMemory(v6Header, IpDataBuffer, IpNetBuffer->DataLength);
+    }
+
+    NetBuffer->DataLength += IpNetBuffer->DataLength;
                                             
     LogVerbose(DRIVER_DATA_PATH, "Filter: %p, IP6_SEND: %p : %!IPV6ADDR! => %!IPV6ADDR! (%u bytes)", 
-                pFilter, NULL, &v6Header->SourceAddress, &v6Header->DestinationAddress, 
+                pFilter, NetBufferList, &v6Header->SourceAddress, &v6Header->DestinationAddress, 
                 NET_BUFFER_DATA_LENGTH(IpNetBuffer));
 
     // Send the NBL down
@@ -652,6 +853,7 @@ otLwfGetNextTunnelTransactionId(
         {
             TID = pFilter->tunNextTID;
             pFilter->tunNextTID = SPINEL_GET_NEXT_TID(pFilter->tunNextTID);
+            pFilter->tunTIDsInUse |= (1 << TID);
         }
 
         NdisReleaseSpinLock(&pFilter->tunCommandLock);
@@ -1137,6 +1339,7 @@ typedef struct _SPINEL_GET_PROP_CONTEXT
 {
     KEVENT              CompletionEvent;
     spinel_prop_key_t   Key;
+    PVOID              *DataBuffer;
     const char*         Format;
     va_list             Args;
     NTSTATUS            Status;
@@ -1182,6 +1385,21 @@ otLwfGetPropHandler(
     }
     else if (Key == CmdContext->Key)
     {
+        if (CmdContext->DataBuffer)
+        {
+            CmdContext->DataBuffer = FILTER_ALLOC_MEM(pFilter->FilterHandle, DataLength);
+            if (CmdContext->DataBuffer == NULL)
+            {
+                CmdContext->Status = STATUS_INSUFFICIENT_RESOURCES;
+                DataLength = 0;
+            }
+            else
+            {
+                memcpy(CmdContext->DataBuffer, Data, DataLength);
+                Data = (uint8_t*)CmdContext->DataBuffer;
+            }
+        }
+
         spinel_ssize_t packed_len = spinel_datatype_vunpack(Data, DataLength, CmdContext->Format, CmdContext->Args);
         if (packed_len < 0 || (ULONG)packed_len > DataLength)
         {
@@ -1207,6 +1425,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
 otLwfGetTunProp(
     _In_ PMS_FILTER pFilter,
+    _Out_opt_ PVOID *DataBuffer,
     _In_ spinel_prop_key_t Key,
     _In_ const char *pack_format, 
     ...
@@ -1220,6 +1439,7 @@ otLwfGetTunProp(
     SPINEL_GET_PROP_CONTEXT Context;
     KeInitializeEvent(&Context.CompletionEvent, SynchronizationEvent, FALSE);
     Context.Key = Key;
+    Context.DataBuffer = DataBuffer;
     Context.Format = pack_format;
     Context.Status = STATUS_SUCCESS;
     va_start(Context.Args, pack_format);
@@ -1244,14 +1464,12 @@ otLwfGetTunProp(
         WaitTimeout.QuadPart = -1000 * 10000;
 
         // Wait for the response
-        if (!NT_SUCCESS(
-            KeWaitForSingleObject(
+        if (KeWaitForSingleObject(
                 &Context.CompletionEvent,
                 Executive,
                 KernelMode,
                 FALSE,
-                &WaitTimeout)
-            ))
+                &WaitTimeout) != STATUS_SUCCESS)
         {
             if (!otLwfCancelCommandHandler(pFilter, FALSE, tid))
             {
@@ -1378,14 +1596,12 @@ otLwfSetTunProp(
         WaitTimeout.QuadPart = -1000 * 10000;
 
         // Wait for the response
-        if (!NT_SUCCESS(
-            KeWaitForSingleObject(
+        if (KeWaitForSingleObject(
                 &Context.CompletionEvent,
                 Executive,
                 KernelMode,
                 FALSE,
-                &WaitTimeout)
-            ))
+                &WaitTimeout) != STATUS_SUCCESS)
         {
             if (!otLwfCancelCommandHandler(pFilter, FALSE, tid))
             {
@@ -1482,21 +1698,6 @@ otLwfProcessSpinelIPv6Packet(
         LogVerbose(DRIVER_DATA_PATH, "Filter: %p dropping internal address message.", pFilter);
         goto exit;
     }
-    
-    // Filter internal Thread messages
-    /*if (v6Header->NextHeader == IPPROTO_UDP &&
-        BufferLength >= sizeof(IPV6_HEADER) + sizeof(UDPHeader) &&
-        memcmp(&pFilter->otLinkLocalAddr, &v6Header->DestinationAddress, sizeof(IN6_ADDR)) == 0)
-    {
-        // Check for MLE message
-        UDPHeader* UdpHeader = (UDPHeader*)(v6Header + 1);
-        if (UdpHeader->DestinationPort == UdpHeader->SourcePort &&
-            UdpHeader->DestinationPort == RtlUshortByteSwap(19788)) // MLE Port
-        {
-            LogVerbose(DRIVER_DATA_PATH, "Filter: %p dropping MLE message.", pFilter);
-            goto exit;
-        }
-    }*/
     
     LogVerbose(DRIVER_DATA_PATH, "Filter: %p, IP6_RECV: %p : %!IPV6ADDR! => %!IPV6ADDR! (%u bytes)", 
                pFilter, NetBufferList, &v6Header->SourceAddress, &v6Header->DestinationAddress,

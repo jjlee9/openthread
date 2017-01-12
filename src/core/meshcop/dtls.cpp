@@ -48,28 +48,37 @@ namespace Thread {
 namespace MeshCoP {
 
 Dtls::Dtls(ThreadNetif &aNetif):
+    mPskLength(0),
     mStarted(false),
     mTimer(aNetif.GetIp6().mTimerScheduler, &Dtls::HandleTimer, this),
     mTimerIntermediate(0),
     mTimerSet(false),
+    mReceiveMessage(NULL),
+    mReceiveOffset(0),
+    mReceiveLength(0),
+    mConnectedHandler(NULL),
+    mReceiveHandler(NULL),
+    mSendHandler(NULL),
+    mContext(NULL),
+    mClient(false),
     mNetif(aNetif)
 {
+    memset(mPsk, 0, sizeof(mPsk));
+    memset(&mEntropy, 0, sizeof(mEntropy));
+    memset(&mCtrDrbg, 0, sizeof(mCtrDrbg));
+    memset(&mSsl, 0, sizeof(mSsl));
+    memset(&mConf, 0, sizeof(mConf));
+    memset(&mCookieCtx, 0, sizeof(mCookieCtx));
     mProvisioningUrl.Init();
 }
 
-Dtls::~Dtls(void)
-{
-    if (mStarted)
-    {
-        Close();
-    }
-}
-
-ThreadError Dtls::Start(bool aClient, ReceiveHandler aReceiveHandler, SendHandler aSendHandler, void *aContext)
+ThreadError Dtls::Start(bool aClient, ConnectedHandler aConnectedHandler, ReceiveHandler aReceiveHandler,
+                        SendHandler aSendHandler, void *aContext)
 {
     static const int ciphersuites[2] = {0xC0FF, 0}; // EC-JPAKE cipher suite
     int rval;
 
+    mConnectedHandler = aConnectedHandler;
     mReceiveHandler = aReceiveHandler;
     mSendHandler = aSendHandler;
     mContext = aContext;
@@ -136,18 +145,22 @@ ThreadError Dtls::Stop(void)
 
 void Dtls::Close(void)
 {
+    VerifyOrExit(mStarted,);
+
     mStarted = false;
     mbedtls_ssl_free(&mSsl);
     mbedtls_ssl_config_free(&mConf);
     mbedtls_ctr_drbg_free(&mCtrDrbg);
     mbedtls_entropy_free(&mEntropy);
     mbedtls_ssl_cookie_free(&mCookieCtx);
-#if DBG
-    memset(&mSsl, 0, sizeof(mSsl));
-    memset(&mConf, 0, sizeof(mConf));
-    memset(&mCtrDrbg, 0, sizeof(mCtrDrbg));
-    memset(&mCookieCtx, 0, sizeof(mCookieCtx));
-#endif
+
+    if (mConnectedHandler != NULL)
+    {
+        mConnectedHandler(mContext, false);
+    }
+
+exit:
+    return;
 }
 
 bool Dtls::IsStarted(void)
@@ -179,10 +192,21 @@ bool Dtls::IsConnected(void)
     return mSsl.state == MBEDTLS_SSL_HANDSHAKE_OVER;
 }
 
-ThreadError Dtls::Send(const uint8_t *aBuf, uint16_t aLength)
+ThreadError Dtls::Send(Message &aMessage, uint16_t aLength)
 {
-    int rval = mbedtls_ssl_write(&mSsl, aBuf, aLength);
-    return MapError(rval);
+    ThreadError error = kThreadError_None;
+    uint8_t buffer[kApplicationDataMaxLength];
+
+    VerifyOrExit(aLength <= kApplicationDataMaxLength, error = kThreadError_NoBufs);
+
+    aMessage.Read(0, aLength, buffer);
+
+    SuccessOrExit(error = MapError(mbedtls_ssl_write(&mSsl, buffer, aLength)));
+
+    aMessage.Free();
+
+exit:
+    return error;
 }
 
 ThreadError Dtls::Receive(Message &aMessage, uint16_t aOffset, uint16_t aLength)
@@ -353,6 +377,11 @@ void Dtls::Process(void)
         if (mSsl.state != MBEDTLS_SSL_HANDSHAKE_OVER)
         {
             rval = mbedtls_ssl_handshake(&mSsl);
+
+            if ((mSsl.state == MBEDTLS_SSL_HANDSHAKE_OVER) && (mConnectedHandler != NULL))
+            {
+                mConnectedHandler(mContext, true);
+            }
         }
         else
         {

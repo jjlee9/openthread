@@ -223,5 +223,6 @@ DECL_IOCTL_FUNC(otSendPendingSet);
 DECL_IOCTL_FUNC(otSendMgmtCommissionerGet);
 DECL_IOCTL_FUNC(otSendMgmtCommissionerSet);
 DECL_IOCTL_FUNC_WITH_TUN2(otKeySwitchGuardtime);
+DECL_IOCTL_FUNC(otFactoryReset);
 
 #endif // _IOCONTROL_H

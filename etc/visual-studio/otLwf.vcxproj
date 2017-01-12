@@ -1,37 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
+  <Import Project="openthread.configuration.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3F1F7F6C-2A33-4635-9880-08FC5BC4E435}</ProjectGuid>
     <TemplateGuid>{8b1800b9-d017-4029-9785-13ef5e5b328e}</TemplateGuid>
-    <RootNamespace>Thread</RootNamespace>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
-    <Configuration>Debug</Configuration>
-    <Platform Condition="'$(Platform)' == ''">Win32</Platform>
-    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+    <RootNamespace>Thread</RootNamespace>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
   </PropertyGroup>
   <PropertyGroup Label="PropertySheets">
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
     <ConfigurationType>Driver</ConfigurationType>
-    <DriverType>WDM</DriverType>
-    <DriverTargetPlatform>Universal</DriverTargetPlatform>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
@@ -48,8 +29,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup>
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <OutputName>otlwf</OutputName>
     <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\sys\</OutDir>
     <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
@@ -98,20 +77,20 @@
         netio.lib;
         uuid.lib;
         cng.lib;
-        ..\..\build\bin\$(Platform)\$(Configuration)\lib\libopenthread_k.lib;
-        ..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls_k.lib;
-        ..\..\build\bin\$(Platform)\$(Configuration)\lib\spinel_k.lib;
       </AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command Condition="'$(Platform)'=='ARM'">inf2cat /driver:$(TargetDir) /os:8_ARM</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <!--Leaf Item elements-->
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\address.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\alarm.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\datapath.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\driver.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\eventprocessing.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\iocontrol.c" />
+    <ClCompile Include="..\..\examples\drivers\windows\otLwf\settings.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\thread.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\tunnel.c" />
     <ClCompile Include="..\..\examples\drivers\windows\otLwf\oid.c" />
@@ -130,12 +109,11 @@
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\nsihelper.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\oid.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\radio.h" />
-    <ClCompile Include="..\..\examples\drivers\windows\otLwf\settings.c" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\thread.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\tunnel.h" />
-    <ResourceCompile Include="..\..\examples\drivers\windows\otLwf\filter.rc" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\precomp.h" />
     <ClInclude Include="..\..\examples\drivers\windows\otLwf\filter.h" />
+    <ResourceCompile Include="..\..\examples\drivers\windows\otLwf\filter.rc" />
     <Inf Include="..\..\examples\drivers\windows\otLwf\otLwf.inf" />
   </ItemGroup>
   <ItemGroup>

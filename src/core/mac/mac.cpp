@@ -80,18 +80,27 @@ static_assert(kMinBackoffSum > 0, "The min backoff value should be greater than 
 
 void Mac::StartCsmaBackoff(void)
 {
-    uint32_t backoffExponent = kMinBE + mTransmitAttempts + mCsmaAttempts;
-    uint32_t backoff;
-
-    if (backoffExponent > kMaxBE)
+    if (RadioSupportsRetriesAndCsmaBackoff())
     {
-        backoffExponent = kMaxBE;
+        // If the radio supports the retry and back off logic, immediately schedule the send,
+        // and the radio will take care of everything.
+        mBackoffTimer.Start(0);
     }
+    else
+    {
+        uint32_t backoffExponent = kMinBE + mTransmitAttempts + mCsmaAttempts;
+        uint32_t backoff;
 
-    backoff = kMinBackoff + (kUnitBackoffPeriod * kPhyUsPerSymbol * (1 << backoffExponent)) / 1000;
-    backoff = (otPlatRandomGet() % backoff);
+        if (backoffExponent > kMaxBE)
+        {
+            backoffExponent = kMaxBE;
+        }
 
-    mBackoffTimer.Start(backoff);
+        backoff = kMinBackoff + (kUnitBackoffPeriod * kPhyUsPerSymbol * (1 << backoffExponent)) / 1000;
+        backoff = (otPlatRandomGet() % backoff);
+
+        mBackoffTimer.Start(backoff);
+    }
 }
 
 Mac::Mac(ThreadNetif &aThreadNetif):
@@ -153,6 +162,7 @@ Mac::Mac(ThreadNetif &aThreadNetif):
     mPcapCallbackContext = NULL;
 
     otPlatRadioEnable(mNetif.GetInstance());
+    mTxFrame = static_cast<Frame *>(otPlatRadioGetTransmitBuffer(mNetif.GetInstance()));
 }
 
 ThreadError Mac::ActiveScan(uint32_t aScanChannels, uint16_t aScanDuration, ActiveScanHandler aHandler, void *aContext)
@@ -279,6 +289,7 @@ void Mac::EnergyScanDone(int8_t aEnergyScanMaxRssi)
         // and start the next transmission task
         if (mScanChannels == 0 || mScanChannel > kPhyMaxChannel)
         {
+            otPlatRadioReceive(mNetif.GetInstance(), mChannel);
             mEnergyScanHandler(mScanContext, NULL);
             ScheduleNextTransmission();
             ExitNow();
@@ -712,7 +723,7 @@ exit:
 
 void Mac::HandleBeginTransmit(void)
 {
-    Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(mNetif.GetInstance())));
+    Frame &sendFrame(*mTxFrame);
     ThreadError error = kThreadError_None;
 
     if (mCsmaAttempts == 0 && mTransmitAttempts == 0)
@@ -756,7 +767,7 @@ void Mac::HandleBeginTransmit(void)
 
     error = otPlatRadioReceive(mNetif.GetInstance(), sendFrame.GetChannel());
     assert(error == kThreadError_None);
-    error = otPlatRadioTransmit(mNetif.GetInstance());
+    error = otPlatRadioTransmit(mNetif.GetInstance(), static_cast<RadioPacket *>(&sendFrame));
     assert(error == kThreadError_None);
 
     if (sendFrame.GetAckRequest() && !(otPlatRadioGetCaps(mNetif.GetInstance()) & kRadioCapsAckTimeout))
@@ -775,24 +786,43 @@ exit:
 
     if (error != kThreadError_None)
     {
-        TransmitDoneTask(false, kThreadError_Abort);
+        TransmitDoneTask(mTxFrame, false, kThreadError_Abort);
     }
 }
 
-extern "C" void otPlatRadioTransmitDone(otInstance *aInstance, bool aRxPending, ThreadError aError)
+extern "C" void otPlatRadioTransmitDone(otInstance *aInstance, RadioPacket *aPacket, bool aRxPending,
+                                        ThreadError aError)
 {
     otLogFuncEntryMsg("%!otError!, aRxPending=%u", aError, aRxPending ? 1 : 0);
-    aInstance->mThreadNetif.GetMac().TransmitDoneTask(aRxPending, aError);
+
+    aInstance->mThreadNetif.GetMac().TransmitDoneTask(aPacket, aRxPending, aError);
     otLogFuncExit();
 }
 
-void Mac::TransmitDoneTask(bool aRxPending, ThreadError aError)
+void Mac::TransmitDoneTask(RadioPacket *aPacket, bool aRxPending, ThreadError aError)
 {
     mMacTimer.Stop();
 
     mCounters.mTxTotal++;
 
-    if (aError == kThreadError_ChannelAccessFailure &&
+    Frame *packet = static_cast<Frame *>(aPacket);
+    Address addr;
+    packet->GetDstAddr(addr);
+
+    if (addr.mShortAddress == kShortAddrBroadcast)
+    {
+        // Broadcast packet
+        mCounters.mTxBroadcast++;
+    }
+    else
+    {
+        // Unicast packet
+        mCounters.mTxUnicast++;
+    }
+
+
+    if (!RadioSupportsRetriesAndCsmaBackoff() &&
+        aError == kThreadError_ChannelAccessFailure &&
         mCsmaAttempts < kMaxCSMABackoffs)
     {
         mCsmaAttempts++;
@@ -836,7 +866,7 @@ void Mac::HandleMacTimer(void *aContext)
 
 void Mac::HandleMacTimer(void)
 {
-    otPlatRadioReceive(mNetif.GetInstance(), mChannel);
+    Address addr;
 
     switch (mState)
     {
@@ -848,6 +878,7 @@ void Mac::HandleMacTimer(void)
 
             if (mScanChannels == 0 || mScanChannel > kPhyMaxChannel)
             {
+                otPlatRadioReceive(mNetif.GetInstance(), mChannel);
                 otPlatRadioSetPanId(mNetif.GetInstance(), mPanId);
                 mActiveScanHandler(mScanContext, NULL);
                 ScheduleNextTransmission();
@@ -865,7 +896,22 @@ void Mac::HandleMacTimer(void)
 
     case kStateTransmitData:
         otLogDebgMac("ack timer fired");
+        otPlatRadioReceive(mNetif.GetInstance(), mChannel);
         mCounters.mTxTotal++;
+
+        mTxFrame->GetDstAddr(addr);
+
+        if (addr.mShortAddress == kShortAddrBroadcast)
+        {
+            // Broadcast packet
+            mCounters.mTxBroadcast++;
+        }
+        else
+        {
+            // Unicast Packet
+            mCounters.mTxUnicast++;
+        }
+
         SentFrame(kThreadError_NoAck);
         break;
 
@@ -895,7 +941,7 @@ void Mac::HandleReceiveTimer(void)
 
 void Mac::SentFrame(ThreadError aError)
 {
-    Frame &sendFrame(*static_cast<Frame *>(otPlatRadioGetTransmitBuffer(mNetif.GetInstance())));
+    Frame &sendFrame(*mTxFrame);
     Sender *sender;
 
     switch (aError)
@@ -908,7 +954,8 @@ void Mac::SentFrame(ThreadError aError)
     case kThreadError_NoAck:
         otDumpDebgMac("NO ACK", sendFrame.GetHeader(), 16);
 
-        if (mTransmitAttempts < kMaxFrameAttempts)
+        if (!RadioSupportsRetriesAndCsmaBackoff() &&
+            mTransmitAttempts < kMaxFrameAttempts)
         {
             mTransmitAttempts++;
             StartCsmaBackoff();
@@ -926,6 +973,7 @@ void Mac::SentFrame(ThreadError aError)
     }
 
     mTransmitAttempts = 0;
+    mCsmaAttempts = 0;
 
     if (sendFrame.GetAckRequest())
     {
@@ -974,6 +1022,7 @@ void Mac::SentFrame(ThreadError aError)
         sender->mNext = NULL;
 
         mDataSequence++;
+        otDumpDebgMac("TX", sendFrame.GetHeader(), sendFrame.GetLength());
         sender->HandleSentFrame(sendFrame, aError);
 
         ScheduleNextTransmission();
@@ -1052,10 +1101,22 @@ ThreadError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, 
             ExitNow(error = kThreadError_Security);
         }
 
-        VerifyOrExit((keySequence > aNeighbor->mKeySequence) ||
-                     ((keySequence == aNeighbor->mKeySequence) &&
-                      (frameCounter >= aNeighbor->mValid.mLinkFrameCounter)),
-                     error = kThreadError_Security);
+        if (keySequence < aNeighbor->mKeySequence)
+        {
+            ExitNow(error = kThreadError_Security);
+        }
+        else if (keySequence == aNeighbor->mKeySequence)
+        {
+            if ((frameCounter + 1) < aNeighbor->mValid.mLinkFrameCounter)
+            {
+                ExitNow(error = kThreadError_Security);
+            }
+            else if ((frameCounter + 1) == aNeighbor->mValid.mLinkFrameCounter)
+            {
+                // drop duplicated packets
+                ExitNow(error = kThreadError_Duplicated);
+            }
+        }
 
         extAddress = &aSrcAddr.mExtAddress;
 
@@ -1101,15 +1162,6 @@ ThreadError Mac::ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, 
     aFrame.SetSecurityValid(true);
 
 exit:
-
-    if (error != kThreadError_None)
-    {
-        for (Receiver *receiver = mReceiveHead; receiver; receiver = receiver->mNext)
-        {
-            receiver->HandleReceivedFrame(aFrame, kThreadError_Security);
-        }
-    }
-
     return error;
 }
 
@@ -1129,6 +1181,7 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
     otMacWhitelistEntry *whitelistEntry;
     otMacBlacklistEntry *blacklistEntry;
     int8_t rssi;
+    bool receive = false;
     ThreadError error = aError;
 
     mCounters.mRxTotal++;
@@ -1143,6 +1196,10 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
         aFrame->mDidTX = false;
         mPcapCallback(aFrame, mPcapCallbackContext);
     }
+
+    // Ensure we have a valid frame before attempting to read any contents of
+    // the buffer received from the radio.
+    SuccessOrExit(error = aFrame->ValidatePsdu());
 
     aFrame->GetSrcAddr(srcaddr);
     neighbor = mMle.GetNeighbor(srcaddr);
@@ -1219,6 +1276,18 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
         break;
     }
 
+    // Increment coutners
+    if (dstaddr.mShortAddress == kShortAddrBroadcast)
+    {
+        // Broadcast packet
+        mCounters.mRxBroadcast++;
+    }
+    else
+    {
+        // Unicast packet
+        mCounters.mRxUnicast++;
+    }
+
     // Security Processing
     SuccessOrExit(error = ProcessReceiveSecurity(*aFrame, srcaddr, neighbor));
 
@@ -1243,9 +1312,10 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
         break;
 
     default:
-        if (dstaddr.mLength != 0)
+        if (!mRxOnWhenIdle && dstaddr.mLength != 0)
         {
             mReceiveTimer.Stop();
+            otPlatRadioSleep(mNetif.GetInstance());
         }
 
         switch (aFrame->GetType())
@@ -1256,14 +1326,17 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
                 ExitNow(error = kThreadError_None);
             }
 
+            receive = true;
             break;
 
         case Frame::kFcfFrameBeacon:
             mCounters.mRxBeacon++;
+            receive = true;
             break;
 
         case Frame::kFcfFrameData:
             mCounters.mRxData++;
+            receive = true;
             break;
 
         default:
@@ -1271,9 +1344,14 @@ void Mac::ReceiveDoneTask(Frame *aFrame, ThreadError aError)
             break;
         }
 
-        for (Receiver *receiver = mReceiveHead; receiver; receiver = receiver->mNext)
+        if (receive)
         {
-            receiver->HandleReceivedFrame(*aFrame, kThreadError_None);
+            otDumpDebgMac("RX", aFrame->GetHeader(), aFrame->GetLength());
+
+            for (Receiver *receiver = mReceiveHead; receiver; receiver = receiver->mNext)
+            {
+                receiver->HandleReceivedFrame(*aFrame);
+            }
         }
 
         break;
@@ -1313,6 +1391,10 @@ exit:
 
         case kThreadError_DestinationAddressFiltered:
             mCounters.mRxDestAddrFiltered++;
+            break;
+
+        case kThreadError_Duplicated:
+            mCounters.mRxDuplicated++;
             break;
 
         default:
@@ -1380,6 +1462,11 @@ void Mac::SetPromiscuous(bool aPromiscuous)
     }
 }
 
+bool Mac::RadioSupportsRetriesAndCsmaBackoff(void)
+{
+    return (otPlatRadioGetCaps(mNetif.GetInstance()) & kRadioCapsTransmitRetries) != 0;
+}
+
 Whitelist &Mac::GetWhitelist(void)
 {
     return mWhitelist;
@@ -1388,6 +1475,25 @@ Whitelist &Mac::GetWhitelist(void)
 Blacklist &Mac::GetBlacklist(void)
 {
     return mBlacklist;
+}
+
+void Mac::FillMacCountersTlv(NetworkDiagnostic::MacCountersTlv &aMacCounters) const
+{
+    aMacCounters.SetIfInUnknownProtos(mCounters.mRxOther);
+    aMacCounters.SetIfInErrors(mCounters.mRxErrNoFrame + mCounters.mRxErrUnknownNeighbor + mCounters.mRxErrInvalidSrcAddr +
+                               mCounters.mRxErrSec + mCounters.mRxErrFcs + mCounters.mRxErrOther);
+    aMacCounters.SetIfOutErrors(mCounters.mTxErrCca);
+    aMacCounters.SetIfInUcastPkts(mCounters.mRxUnicast);
+    aMacCounters.SetIfInBroadcastPkts(mCounters.mRxBroadcast);
+    aMacCounters.SetIfInDiscards(mCounters.mRxWhitelistFiltered + mCounters.mRxDestAddrFiltered + mCounters.mRxDuplicated);
+    aMacCounters.SetIfOutUcastPkts(mCounters.mTxUnicast);
+    aMacCounters.SetIfOutBroadcastPkts(mCounters.mTxBroadcast);
+    aMacCounters.SetIfOutDiscards(0);
+}
+
+void Mac::ResetCounters(void)
+{
+    memset(&mCounters, 0, sizeof(mCounters));
 }
 
 otMacCounters &Mac::GetCounters(void)

@@ -55,14 +55,18 @@ libopenthread_posix_a_SOURCES            += \
 endif
 
 if OPENTHREAD_ENABLE_NCP_SPI
-libopenthread_posix_a_SOURCES           += \
-    spi-stubs.c                            \
+libopenthread_posix_a_SOURCES            += \
+    spi-stubs.c                             \
     $(NULL)
 endif
 
 noinst_HEADERS                            = \
     platform-posix.h                        \
     $(NULL)
+
+Dash                                      = -
+libopenthread_posix_a_LIBADD              = \
+    $(shell find $(top_builddir)/examples/platforms/utils $(Dash)type f $(Dash)name "*.o")
 
 if OPENTHREAD_BUILD_COVERAGE
 CLEANFILES                                = $(wildcard *.gcda *.gcno)

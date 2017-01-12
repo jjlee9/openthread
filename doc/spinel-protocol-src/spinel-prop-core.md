@@ -88,7 +88,7 @@ Fields: | INTERFACE_TYPE
 This integer identifies what the network protocol for this NCP.
 Currently defined values are:
 
- *  1: ZigBee
+ *  0: Bootloader
  *  2: ZigBeeIP
  *  3: Thread
 
@@ -127,6 +127,12 @@ Currently defined values are:
  * 2: `CAP_NET_SAVE`
  * 3: `CAP_HBO`: Host Buffer Offload. See (#feature-host-buffer-offload).
  * 4: `CAP_POWER_SAVE`
+ * 5: `CAP_COUNTERS`
+ * 6: `CAP_JAM_DETECT`: Jamming detection. See (#feature-jam-detect)
+ * 7: `CAP_PEEK_POKE`: PEEK/POKE debugging commands.
+ * 8: `CAP_WRITABLE_RAW_STREAM`: `PROP_STREAM_RAW` is writable.
+ * 9: `CAP_GPIO`: Support for GPIO access. See (#feature-gpio-access).
+ * 10: `CAP_TRNG`: Support for true random number generation. See (#feature-trng).
  * 16: `CAP_802_15_4_2003`
  * 17: `CAP_802_15_4_2006`
  * 18: `CAP_802_15_4_2011`
@@ -206,8 +212,9 @@ Octets: |    8
 --------|------------
 Fields: | HWADDR
 
-The static EUI64 address of the device. This value is read-only, but
-may be writable under certain vendor-defined circumstances.
+The static EUI64 address of the device, used as a serial number.
+This value is read-only, but may be writable under certain
+vendor-defined circumstances.
 
 ### PROP 9: PROP_LOCK {#prop-lock}
 
@@ -269,8 +276,13 @@ fetch the value of this property. To receive traffic, you wait for
 `CMD_PROP_VALUE_IS` commands with this property id from the NCP.
 
 Implementations may OPTIONALLY support the ability to transmit arbitrary
-raw packets. If this capability is supported, you may call `CMD_PROP_VALUE_SET`
-on this property with the value of the raw packet.
+raw packets. Support for this feature is indicated by the presence of the
+`CAP_WRITABLE_RAW_STREAM` capability.
+
+If the capability `CAP_WRITABLE_RAW_STREAM` is set, then packets written
+to this stream with `CMD_PROP_VALUE_SET` will be sent out over the radio.
+This allows the caller to use the radio directly, with the stack being
+implemented on the host instead of the NCP.
 
 #### Frame Metadata Format {#frame-metadata-format}
 

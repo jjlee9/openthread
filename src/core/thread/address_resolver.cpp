@@ -182,12 +182,11 @@ ThreadError AddressResolver::SendAddressQuery(const Ip6::Address &aEid)
     targetTlv.SetTarget(aEid);
     SuccessOrExit(error = message->Append(&targetTlv, sizeof(targetTlv)));
 
-    memset(&messageInfo, 0, sizeof(messageInfo));
     messageInfo.GetPeerAddr().mFields.m16[0] = HostSwap16(0xff03);
     messageInfo.GetPeerAddr().mFields.m16[7] = HostSwap16(0x0002);
-    messageInfo.GetSockAddr() = *mMle.GetMeshLocal16();
-    messageInfo.mPeerPort = kCoapUdpPort;
-    messageInfo.mInterfaceId = mNetif.GetInterfaceId();
+    messageInfo.SetSockAddr(mMle.GetMeshLocal16());
+    messageInfo.SetPeerPort(kCoapUdpPort);
+    messageInfo.SetInterfaceId(mNetif.GetInterfaceId());
 
     SuccessOrExit(error = mCoapClient.SendMessage(*message, messageInfo));
 
@@ -208,10 +207,12 @@ exit:
     return error;
 }
 
-void AddressResolver::HandleAddressNotification(void *aContext, Coap::Header &aHeader, Message &aMessage,
-                                                const Ip6::MessageInfo &aMessageInfo)
+void AddressResolver::HandleAddressNotification(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+                                                const otMessageInfo *aMessageInfo)
 {
-    static_cast<AddressResolver *>(aContext)->HandleAddressNotification(aHeader, aMessage, aMessageInfo);
+    static_cast<AddressResolver *>(aContext)->HandleAddressNotification(
+        *static_cast<Coap::Header *>(aHeader), *static_cast<Message *>(aMessage),
+        *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
 void AddressResolver::HandleAddressNotification(Coap::Header &aHeader, Message &aMessage,
@@ -296,7 +297,7 @@ void AddressResolver::SendAddressNotificationResponse(const Coap::Header &aReque
     ThreadError error;
     Message *message;
     Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo;
+    Ip6::MessageInfo responseInfo(aRequestInfo);
 
     VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
 
@@ -304,8 +305,6 @@ void AddressResolver::SendAddressNotificationResponse(const Coap::Header &aReque
 
     SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
 
-    memcpy(&responseInfo, &aRequestInfo, sizeof(responseInfo));
-    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
     SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
 
     otLogInfoArp("Sent address notification acknowledgment");
@@ -336,8 +335,6 @@ ThreadError AddressResolver::SendAddressError(const ThreadTargetTlv &aTarget, co
     SuccessOrExit(error = message->Append(&aTarget, sizeof(aTarget)));
     SuccessOrExit(error = message->Append(&aEid, sizeof(aEid)));
 
-    memset(&messageInfo, 0, sizeof(messageInfo));
-
     if (aDestination == NULL)
     {
         messageInfo.GetPeerAddr().mFields.m16[0] = HostSwap16(0xff03);
@@ -348,8 +345,9 @@ ThreadError AddressResolver::SendAddressError(const ThreadTargetTlv &aTarget, co
         memcpy(&messageInfo.GetPeerAddr(), aDestination, sizeof(messageInfo.GetPeerAddr()));
     }
 
-    messageInfo.mPeerPort = kCoapUdpPort;
-    messageInfo.mInterfaceId = mNetif.GetInterfaceId();
+    messageInfo.SetSockAddr(mMle.GetMeshLocal16());
+    messageInfo.SetPeerPort(kCoapUdpPort);
+    messageInfo.SetInterfaceId(mNetif.GetInterfaceId());
 
     SuccessOrExit(error = mCoapClient.SendMessage(*message, messageInfo));
 
@@ -371,7 +369,7 @@ void AddressResolver::SendAddressErrorResponse(const Coap::Header &aRequestHeade
     ThreadError error;
     Message *message;
     Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo;
+    Ip6::MessageInfo responseInfo(aRequestInfo);
 
     VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
 
@@ -379,8 +377,6 @@ void AddressResolver::SendAddressErrorResponse(const Coap::Header &aRequestHeade
 
     SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
 
-    memcpy(&responseInfo, &aRequestInfo, sizeof(responseInfo));
-    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
     SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
 
     otLogInfoArp("Sent address error notification acknowledgment");
@@ -393,10 +389,12 @@ exit:
     }
 }
 
-void AddressResolver::HandleAddressError(void *aContext, Coap::Header &aHeader,
-                                         Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void AddressResolver::HandleAddressError(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+                                         const otMessageInfo *aMessageInfo)
 {
-    static_cast<AddressResolver *>(aContext)->HandleAddressError(aHeader, aMessage, aMessageInfo);
+    static_cast<AddressResolver *>(aContext)->HandleAddressError(
+        *static_cast<Coap::Header *>(aHeader), *static_cast<Message *>(aMessage),
+        *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
 void AddressResolver::HandleAddressError(Coap::Header &aHeader, Message &aMessage,
@@ -429,7 +427,7 @@ void AddressResolver::HandleAddressError(Coap::Header &aHeader, Message &aMessag
     for (const Ip6::NetifUnicastAddress *address = mNetif.GetUnicastAddresses(); address; address = address->GetNext())
     {
         if (memcmp(&address->mAddress, targetTlv.GetTarget(), sizeof(address->mAddress)) == 0 &&
-            memcmp(mMle.GetMeshLocal64()->GetIid(), mlIidTlv.GetIid(), 8))
+            memcmp(mMle.GetMeshLocal64().GetIid(), mlIidTlv.GetIid(), 8))
         {
             // Target EID matches address and Mesh Local EID differs
             mNetif.RemoveUnicastAddress(*address);
@@ -471,10 +469,12 @@ exit:
     {}
 }
 
-void AddressResolver::HandleAddressQuery(void *aContext, Coap::Header &aHeader, Message &aMessage,
-                                         const Ip6::MessageInfo &aMessageInfo)
+void AddressResolver::HandleAddressQuery(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+                                         const otMessageInfo *aMessageInfo)
 {
-    static_cast<AddressResolver *>(aContext)->HandleAddressQuery(aHeader, aMessage, aMessageInfo);
+    static_cast<AddressResolver *>(aContext)->HandleAddressQuery(
+        *static_cast<Coap::Header *>(aHeader), *static_cast<Message *>(aMessage),
+        *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
 void AddressResolver::HandleAddressQuery(Coap::Header &aHeader, Message &aMessage,
@@ -500,7 +500,7 @@ void AddressResolver::HandleAddressQuery(Coap::Header &aHeader, Message &aMessag
 
     if (mNetif.IsUnicastAddress(*targetTlv.GetTarget()))
     {
-        mlIidTlv.SetIid(mMle.GetMeshLocal64()->GetIid());
+        mlIidTlv.SetIid(mMle.GetMeshLocal64().GetIid());
         SendAddressQueryResponse(targetTlv, mlIidTlv, NULL, aMessageInfo.GetPeerAddr());
         ExitNow();
     }
@@ -565,10 +565,9 @@ void AddressResolver::SendAddressQueryResponse(const ThreadTargetTlv &aTargetTlv
         SuccessOrExit(error = message->Append(aLastTransactionTimeTlv, sizeof(*aLastTransactionTimeTlv)));
     }
 
-    memset(&messageInfo, 0, sizeof(messageInfo));
-    memcpy(&messageInfo.GetPeerAddr(), &aDestination, sizeof(messageInfo.GetPeerAddr()));
-    messageInfo.GetSockAddr() = *mMle.GetMeshLocal16();
-    messageInfo.mPeerPort = kCoapUdpPort;
+    messageInfo.SetPeerAddr(aDestination);
+    messageInfo.SetSockAddr(mMle.GetMeshLocal16());
+    messageInfo.SetPeerPort(kCoapUdpPort);
 
     SuccessOrExit(error = mCoapClient.SendMessage(*message, messageInfo));
 

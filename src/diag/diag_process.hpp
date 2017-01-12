@@ -65,7 +65,7 @@ class Diag
 public:
     static void Init(otInstance *aInstance);
     static char *ProcessCmd(int argc, char *argv[]);
-    static bool isEnabled();
+    static bool isEnabled(void);
 
     static void DiagTransmitDone(otInstance *aInstance, bool aRxPending, ThreadError aError);
     static void DiagReceiveDone(otInstance *aInstance, RadioPacket *aFrame, ThreadError aError);
@@ -81,7 +81,7 @@ private:
     static void ProcessStats(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen);
     static void ProcessChannel(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen);
     static void ProcessPower(int argc, char *argv[], char *aOutput, size_t aOutputMaxLen);
-    static void TxPacket();
+    static void TxPacket(void);
     static ThreadError ParseLong(char *aString, long &aLong);
 
     static char sDiagOutput[];
@@ -92,6 +92,7 @@ private:
     static uint8_t sTxLen;
     static uint32_t sTxPeriod;
     static uint32_t sTxPackets;
+    static RadioPacket *sTxPacket;
     static otInstance *sContext;
 };
 

@@ -35,15 +35,7 @@
 #ifndef OPENTHREAD_COMMISSIONER_H_
 #define OPENTHREAD_COMMISSIONER_H_
 
-#ifdef OTDLL
-#ifndef OTAPI
-#define OTAPI __declspec(dllimport)
-#endif
-#define OTCALL WINAPI
-#else
-#define OTAPI
-#define OTCALL
-#endif
+#include <platform/toolchain.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -219,6 +211,16 @@ OTAPI ThreadError OTCALL otSendMgmtCommissionerGet(otInstance *, const uint8_t *
  */
 OTAPI ThreadError OTCALL otSendMgmtCommissionerSet(otInstance *, const otCommissioningDataset *aDataset,
                                                    const uint8_t *aTlvs, uint8_t aLength);
+
+/**
+ * This function returns the origian Commissioner Session ID.
+ *
+ * @param[in]  aInstance  A pointer to an OpenThread instance.
+ *
+ * @returns The current commissioner session id.
+ *
+ */
+OTAPI uint16_t OTCALL otCommissionerGetSessionId(otInstance *);
 
 /**
  * @}

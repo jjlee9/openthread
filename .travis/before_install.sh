@@ -86,6 +86,20 @@ cd /tmp || die
     [ $BUILD_TARGET != posix-32-bit ] || {
         sudo apt-get install g++-multilib || die
     }
+
+    [ $BUILD_TARGET != posix-distcheck ] || {
+        sudo apt-get install clang || die
+    }
+
+    [ $BUILD_TARGET != posix -o $CC != clang ] || {
+        sudo apt-get install clang || die
+    }
+
+    # Packages used by sniffer
+    sudo -H pip install pycryptodome==3.4.3 || die
+    sudo -H pip install enum34 || die
+    pip install pycryptodome==3.4.3 || die
+    pip install enum34 || die
 }
 
 [ $TRAVIS_OS_NAME != osx ] || {

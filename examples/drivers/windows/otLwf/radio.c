@@ -131,6 +131,8 @@ otLwfRadioInit(
     pFilter->otRadioCapabilities = kRadioCapsEnergyScan;
     if ((pFilter->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_ACK_TIMEOUT) != 0)
         pFilter->otRadioCapabilities |= kRadioCapsAckTimeout;
+    if ((pFilter->MiniportCapabilities.RadioCapabilities & OT_RADIO_CAP_MAC_RETRY_AND_COLLISION_AVOIDANCE) != 0)
+        pFilter->otRadioCapabilities |= kRadioCapsTransmitRetries;
 
     pFilter->otPhyState = kStateDisabled;
     pFilter->otCurrentListenChannel = 0xFF;
@@ -243,7 +245,7 @@ void otPlatRadioSetShortAddress(_In_ otInstance *otCtx, uint16_t address)
     }
 }
 
-void otPlatRadioSetPromiscuous(_In_ otInstance *otCtx, int aEnable)
+void otPlatRadioSetPromiscuous(_In_ otInstance *otCtx, bool aEnable)
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
@@ -442,7 +444,7 @@ otRadioCaps otPlatRadioGetCaps(_In_ otInstance *otCtx)
     return otCtxToFilter(otCtx)->otRadioCapabilities;
 }
 
-int otPlatRadioGetPromiscuous(_In_ otInstance *otCtx)
+bool otPlatRadioGetPromiscuous(_In_ otInstance *otCtx)
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
@@ -474,12 +476,14 @@ otLwfRadioReceiveFrame(
     LogFuncExit(DRIVER_DATA_PATH);
 }
 
-ThreadError otPlatRadioTransmit(_In_ otInstance *otCtx)
+ThreadError otPlatRadioTransmit(_In_ otInstance *otCtx, _In_ RadioPacket *aPacket)
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
     ThreadError error = kThreadError_Busy;
-    
+
+    UNREFERENCED_PARAMETER(aPacket);
+
     LogFuncEntryMsg(DRIVER_DATA_PATH, "Filter: %p", pFilter);
 
     NT_ASSERT(pFilter->otPhyState == kStateReceive);
@@ -574,19 +578,19 @@ otLwfRadioTransmitFrameDone(
         POT_NBL_CONTEXT SendNblContext = GetNBLContext(pFilter->SendNetBufferList);
         BOOLEAN FramePending = (SendNblContext->Flags & OT_NBL_FLAG_ACK_FRAME_PENDING) != 0 || pFilter->CountPendingRecvNBLs != 0;
 
-        otPlatRadioTransmitDone(pFilter->otCtx, FramePending, kThreadError_None);
+        otPlatRadioTransmitDone(pFilter->otCtx, &pFilter->otTransmitFrame, FramePending, kThreadError_None);
     }
     else if (STATUS_DEVICE_BUSY == pFilter->SendNetBufferList->Status)
     {
-        otPlatRadioTransmitDone(pFilter->otCtx, false, kThreadError_ChannelAccessFailure);
+        otPlatRadioTransmitDone(pFilter->otCtx, &pFilter->otTransmitFrame, false, kThreadError_ChannelAccessFailure);
     }
     else if (STATUS_TIMEOUT == pFilter->SendNetBufferList->Status)
     {
-        otPlatRadioTransmitDone(pFilter->otCtx, false, kThreadError_NoAck);
+        otPlatRadioTransmitDone(pFilter->otCtx, &pFilter->otTransmitFrame, false, kThreadError_NoAck);
     }
     else
     {
-        otPlatRadioTransmitDone(pFilter->otCtx, false, kThreadError_Abort);
+        otPlatRadioTransmitDone(pFilter->otCtx, &pFilter->otTransmitFrame, false, kThreadError_Abort);
     }
 
     LogFuncExit(DRIVER_DATA_PATH);

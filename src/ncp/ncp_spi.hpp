@@ -33,6 +33,12 @@
 #ifndef NCP_SPI_HPP_
 #define NCP_SPI_HPP_
 
+#ifdef OPENTHREAD_CONFIG_FILE
+#include OPENTHREAD_CONFIG_FILE
+#else
+#include <openthread-config.h>
+#endif
+
 #include <ncp/ncp_base.hpp>
 #include <ncp/ncp_buffer.hpp>
 
@@ -61,9 +67,17 @@ public:
 private:
     enum
     {
-        kSpiBufferSize   = 1500, // Spi buffer size (should be large enough to fit a max length frame + spi header).
-        kTxBufferSize    = 512,  // Tx Buffer size (used by mTxFrameBuffer).
-        kSpiHeaderLength = 5,    // Size of spi header.
+        kSpiBufferSize   = OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE, // Spi buffer size (should be large enough to fit a
+                                                                  // max length frame + spi header).
+        kTxBufferSize    = OPENTHREAD_CONFIG_NCP_TX_BUFFER_SIZE,  // Tx Buffer size (used by mTxFrameBuffer).
+        kSpiHeaderLength = 5,                                     // Size of spi header.
+    };
+
+    enum TxState
+    {
+        kTxStateIdle,                      // No frame to send
+        kTxStateSending,                   // A frame is ready to be sent
+        kTxStateHandlingSendDone           // The frame was sent successfully, waiting to prepare the next one (if any)
     };
 
     uint16_t OutboundFrameSize(void);
@@ -95,9 +109,8 @@ private:
 
     ThreadError PrepareNextSpiSendFrame(void);
 
-    bool mSending;
+    TxState mTxState;
     bool mHandlingRxFrame;
-    bool mHandlingSendDone;
 
     Tasklet mHandleRxFrameTask;
     Tasklet mPrepareTxFrameTask;

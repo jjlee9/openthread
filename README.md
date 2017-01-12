@@ -42,10 +42,10 @@ Mesh Routing.
 ![OpenThread Contributor Logos](doc/images/openthread_contrib.png)
 
 Nest, along with ARM, Atmel, a subsidiary of Microchip Technology,
-Dialog Semiconductor, Microsoft Corporation, Qualcomm Technologies,
-Inc. (a subsidiary of Qualcomm Incorporated), and Texas Instruments
-Incorporated are contributing to the ongoing development of
-OpenThread.
+Dialog Semiconductor, Microsoft Corporation, Nordic Semiconductor,
+Qualcomm Technologies, Inc. (a subsidiary of Qualcomm Incorporated),
+and Texas Instruments Incorporated are contributing to the ongoing
+development of OpenThread.
 
 
 # Getting started #
@@ -62,8 +62,9 @@ In the repo you'll find the following directories and files:
 
 File/Folder   | Provides
 --------------|----------------------------------------------------------------
-`doc`         | Doxygen docs
-`examples`    | Sample applications demonstrating OpenThread
+`doc`         | Code and protocol docs
+`etc`         | Configuration files for other build systems (e.g. Visual Studio)
+`examples`    | Sample applications and platforms demonstrating OpenThread
 `include`     | Public API header files
 `src`         | Core implementation of the Thread standard and related add-ons
 `tests`       | Unit and Thread conformance tests

@@ -35,21 +35,7 @@
 #ifndef OPENTHREAD_H_
 #define OPENTHREAD_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-
 #include <openthread-types.h>
-#include <platform/radio.h>
-
-#ifdef OTDLL
-#ifndef OTAPI
-#define OTAPI __declspec(dllimport)
-#endif
-#define OTCALL WINAPI
-#else
-#define OTAPI
-#define OTCALL
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,50 +100,6 @@ extern "C" {
  *
  */
 
-#ifndef OTDLL
-
-/**
- * @addtogroup execution  Execution
- *
- * @brief
- *   This module includes functions that control the Thread stack's execution.
- *
- * @{
- *
- */
-
-/**
- * Run all queued OpenThread tasklets at the time this is called.
- *
- * @param[in] aInstance A pointer to an OpenThread instance.
- */
-void otProcessQueuedTasklets(otInstance *aInstance);
-
-/**
- * Indicates whether or not OpenThread has tasklets pending.
- *
- * @param[in] aInstance A pointer to an OpenThread instance.
- *
- * @retval TRUE   If there are tasklets pending.
- * @retval FALSE  If there are no tasklets pending.
- */
-bool otAreTaskletsPending(otInstance *aInstance);
-
-/**
- * OpenThread calls this function when the tasklet queue transitions from empty to non-empty.
- *
- * @param[in] aInstance A pointer to an OpenThread instance.
- *
- */
-extern void otSignalTaskletPending(otInstance *aInstance);
-
-#endif
-
-/**
- * @}
- *
- */
-
 /**
  * @addtogroup commands  Commands
  *
@@ -186,7 +128,7 @@ OTAPI const char *OTCALL otGetVersionString(void);
  * @sa otApiFinalize
  *
  */
-OTAPI otApiInstance *OTCALL otApiInit();
+OTAPI otApiInstance *OTCALL otApiInit(void);
 
 /**
  * This function uninitializes the OpenThread library.
@@ -490,6 +432,19 @@ OTAPI ThreadError OTCALL otDiscover(otInstance *aInstance, uint32_t aScanChannel
  *
  */
 OTAPI bool OTCALL otIsDiscoverInProgress(otInstance *aInstance);
+
+/**
+ * This function enqueues an IEEE 802.15.4 Data Request message for transmission.
+ *
+ * @param[in] aInstance  A pointer to an OpenThread instance.
+ *
+ * @retval kThreadError_None          Successfully enqueued an IEEE 802.15.4 Data Request message.
+ * @retval kThreadError_Already       An IEEE 802.15.4 Data Request message is already enqueued.
+ * @retval kThreadError_InvalidState  Device is not in rx-off-when-idle mode.
+ * @retval kThreadError_NoBufs        Insufficient message buffers available.
+ *
+ */
+OTAPI ThreadError OTCALL otSendMacDataRequest(otInstance *aInstance);
 
 /**
  * @}
@@ -917,69 +872,6 @@ OTAPI ThreadError OTCALL otAddUnicastAddress(otInstance *aInstance, const otNeti
 OTAPI ThreadError OTCALL otRemoveUnicastAddress(otInstance *aInstance, const otIp6Address *aAddress);
 
 /**
- * This function pointer is called to create IPv6 IID during SLAAC procedure.
- *
- * @param[in]     aInstance  A pointer to an OpenThread instance.
- * @param[inout]  aAddress   A pointer to structure containing IPv6 address for which IID is being created.
- * @param[inout]  aContext   A pointer to creator-specific context.
- *
- * @retval kThreadError_None                        Created valid IID for given IPv6 address.
- * @retval kThreadError_Ipv6AddressCreationFailure  Creation of valid IID for given IPv6 address failed.
- *
- */
-typedef ThreadError(*otSlaacIidCreate)(otInstance *aInstance, otNetifAddress *aAddress, void *aContext);
-
-/**
- * Update all automatically created IPv6 addresses for prefixes from current Network Data with SLAAC procedure.
- *
- * @param[in]     aInstance      A pointer to an OpenThread instance.
- * @param[inout]  aAddresses     A pointer to an array of automatically created IPv6 addresses.
- * @param[in]     aNumAddresses  The number of slots in aAddresses array.
- * @param[in]     aIidCreate     A pointer to a function that is called to create IPv6 IIDs.
- * @param[in]     aContext       A pointer to data passed to aIidCreate function.
- *
- */
-void otSlaacUpdate(otInstance *aInstance, otNetifAddress *aAddresses, uint32_t aNumAddresses,
-                   otSlaacIidCreate aIidCreate, void *aContext);
-
-/**
- * Create random IID for given IPv6 address.
- *
- * @param[in]     aInstance  A pointer to an OpenThread instance.
- * @param[inout]  aAddress   A pointer to structure containing IPv6 address for which IID is being created.
- * @param[in]     aContext   A pointer to unused data.
- *
- * @retval kThreadError_None  Created valid IID for given IPv6 address.
- *
- */
-ThreadError otCreateRandomIid(otInstance *aInstance, otNetifAddress *aAddresses, void *aContext);
-
-/**
- * Create IID for given IPv6 address using extended MAC address.
- *
- * @param[in]     aInstance  A pointer to an OpenThread instance.
- * @param[inout]  aAddress   A pointer to structure containing IPv6 address for which IID is being created.
- * @param[in]     aContext   A pointer to unused data.
- *
- * @retval kThreadError_None  Created valid IID for given IPv6 address.
- *
- */
-ThreadError otCreateMacIid(otInstance *aInstance, otNetifAddress *aAddresses, void *aContext);
-
-/**
- * Create semantically opaque IID for given IPv6 address.
- *
- * @param[in]     aInstance  A pointer to an OpenThread instance.
- * @param[inout]  aAddress   A pointer to structure containing IPv6 address for which IID is being created.
- * @param[inout]  aContext   A pointer to a otSemanticallyOpaqueIidGeneratorData structure.
- *
- * @retval kThreadError_None                        Created valid IID for given IPv6 address.
- * @retval kThreadError_Ipv6AddressCreationFailure  Could not create valid IID for given IPv6 address.
- *
- */
-ThreadError otCreateSemanticallyOpaqueIid(otInstance *aInstance, otNetifAddress *aAddresses, void *aContext);
-
-/**
  * This function pointer is called to notify certain configuration or state changes within OpenThread.
  *
  * @param[in]  aFlags    A bit-field indicating specific state that has changed.
@@ -1057,7 +949,7 @@ OTAPI ThreadError OTCALL otGetPendingDataset(otInstance *aInstance, otOperationa
  * @param[in]  aDataset  A pointer to the Pending Operational Dataset.
  *
  * @retval kThreadError_None         Successfully set the Pending Operational Dataset.
- * @retval kThreadError_NoBufs       Insufficient buffer space to set the Pending Operational Datset.
+ * @retval kThreadError_NoBufs       Insufficient buffer space to set the Pending Operational Dataset.
  * @retval kThreadError_InvalidArgs  @p aDataset was NULL.
  *
  */
@@ -1069,12 +961,14 @@ OTAPI ThreadError OTCALL otSetPendingDataset(otInstance *aInstance, const otOper
  * @param[in]  aInstance  A pointer to an OpenThread instance.
  * @param[in]  aTlvTypes  A pointer to the TLV Types.
  * @param[in]  aLength    The length of TLV Types.
+ * @param[in]  aAddress   A pointer to the IPv6 destination, if it is NULL, will use Leader ALOC as default.
  *
  * @retval kThreadError_None         Successfully send the meshcop dataset command.
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError OTCALL otSendActiveGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength);
+OTAPI ThreadError OTCALL otSendActiveGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength,
+                                         const otIp6Address *aAddress);
 
 /**
  * This function sends MGMT_ACTIVE_SET.
@@ -1089,8 +983,7 @@ OTAPI ThreadError OTCALL otSendActiveGet(otInstance *aInstance, const uint8_t *a
  *
  */
 OTAPI ThreadError OTCALL otSendActiveSet(otInstance *aInstance, const otOperationalDataset *aDataset,
-                                         const uint8_t *aTlvs,
-                                         uint8_t aLength);
+                                         const uint8_t *aTlvs, uint8_t aLength);
 
 /**
  * This function sends MGMT_PENDING_GET.
@@ -1098,12 +991,14 @@ OTAPI ThreadError OTCALL otSendActiveSet(otInstance *aInstance, const otOperatio
  * @param[in]  aInstance  A pointer to an OpenThread instance.
  * @param[in]  aTlvTypes  A pointer to the TLV Types.
  * @param[in]  aLength    The length of TLV Types.
+ * @param[in]  aAddress   A pointer to the IPv6 destination, if it is NULL, will use Leader ALOC as default.
  *
  * @retval kThreadError_None         Successfully send the meshcop dataset command.
  * @retval kThreadError_NoBufs       Insufficient buffer space to send.
  *
  */
-OTAPI ThreadError OTCALL otSendPendingGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength);
+OTAPI ThreadError OTCALL otSendPendingGet(otInstance *aInstance, const uint8_t *aTlvTypes, uint8_t aLength,
+                                          const otIp6Address *aAddress);
 
 /**
  * This function sends MGMT_PENDING_SET.
@@ -1118,8 +1013,7 @@ OTAPI ThreadError OTCALL otSendPendingGet(otInstance *aInstance, const uint8_t *
  *
  */
 OTAPI ThreadError OTCALL otSendPendingSet(otInstance *aInstance, const otOperationalDataset *aDataset,
-                                          const uint8_t *aTlvs,
-                                          uint8_t aLength);
+                                          const uint8_t *aTlvs, uint8_t aLength);
 
 /**
  * Get the data poll period of sleepy end device.
@@ -1788,6 +1682,13 @@ OTAPI void OTCALL otSetAssignLinkQuality(otInstance *aInstance, const uint8_t *a
 OTAPI void OTCALL otPlatformReset(otInstance *aInstance);
 
 /**
+ * This method deletes all the settings stored on non-volatile memory, and then triggers platform reset.
+ *
+ * @param[in]  aInstance A pointer to an OpenThread instance.
+ */
+OTAPI void OTCALL otFactoryReset(otInstance *aInstance);
+
+/**
  * Get the ROUTER_DOWNGRADE_THRESHOLD parameter used in the Router role.
  *
  * @param[in]  aInstance  A pointer to an OpenThread instance.
@@ -2006,60 +1907,50 @@ OTAPI ThreadError OTCALL otGetParentInfo(otInstance *aInstance, otRouterInfo *aP
  */
 OTAPI uint8_t OTCALL otGetStableNetworkDataVersion(otInstance *aInstance);
 
-#ifndef OTDLL
-
 /**
- * This function pointer is called when an IEEE 802.15.4 frame is received.
+ * This function pointer is called when Network Diagnostic Get response is received.
  *
- * @note This callback is called after FCS processing and @p aFrame may not contain the actual FCS that was received.
- *
- * @note This callback is called before IEEE 802.15.4 security processing and mSecurityValid in @p aFrame will
- * always be false.
- *
- * @param[in]  aFrame    A pointer to the received IEEE 802.15.4 frame.
- * @param[in]  aContext  A pointer to application-specific context.
+ * @param[in]  aMessage      A pointer to the message buffer containing the received Network Diagnostic
+ *                           Get response payload.
+ * @param[in]  aMessageInfo  A pointer to the message info for @p aMessage.
+ * @param[in]  aContext      A pointer to application-specific context.
  *
  */
-typedef void (*otLinkPcapCallback)(const RadioPacket *aFrame, void *aContext);
+typedef void (*otReceiveDiagnosticGetCallback)(otMessage aMessage, const otMessageInfo *aMessageInfo,
+                                               void *aContext);
 
 /**
- * This function registers a callback to provide received raw IEEE 802.15.4 frames.
+ * This function registers a callback to provide received raw Network Diagnostic Get response payload.
  *
  * @param[in]  aInstance         A pointer to an OpenThread instance.
- * @param[in]  aPcapCallback     A pointer to a function that is called when receiving an IEEE 802.15.4 link frame or
- *                               NULL to disable the callback.
+ * @param[in]  aCallback         A pointer to a function that is called when Network Diagnostic Get response
+ *                               is received or NULL to disable the callback.
  * @param[in]  aCallbackContext  A pointer to application-specific context.
  *
  */
-void otSetLinkPcapCallback(otInstance *aInstance, otLinkPcapCallback aPcapCallback, void *aCallbackContext);
+void otSetReceiveDiagnosticGetCallback(otInstance *aInstance, otReceiveDiagnosticGetCallback aCallback,
+                                       void *aCallbackContext);
 
 /**
- * This function indicates whether or not promiscuous mode is enabled at the link layer.
+ * Send a Network Diagnostic Get request.
  *
- * @param[in]  aInstance A pointer to an OpenThread instance.
- *
- * @retval true   Promiscuous mode is enabled.
- * @retval false  Promiscuous mode is not enabled.
- *
+ * @param[in]  aDestination   A pointer to destination address.
+ * @param[in]  aTlvTypes      An array of Network Diagnostic TLV types.
+ * @param[in]  aCount         Number of types in aTlvTypes
  */
-bool otIsLinkPromiscuous(otInstance *aInstance);
+OTAPI ThreadError OTCALL otSendDiagnosticGet(otInstance *aInstance, const otIp6Address *aDestination,
+                                             const uint8_t aTlvTypes[], uint8_t aCount);
 
 /**
- * This function enables or disables the link layer promiscuous mode.
+ * Send a Network Diagnostic Reset request.
  *
- * @note Promiscuous mode may only be enabled when the Thread interface is disabled.
- *
- * @param[in]  aInstance     A pointer to an OpenThread instance.
- * @param[in]  aPromiscuous  true to enable promiscuous mode, or false otherwise.
- *
- * @retval kThreadError_None          Successfully enabled promiscuous mode.
- * @retval kThreadError_InvalidState  Could not enable promiscuous mode because
- *                                    the Thread interface is enabled.
- *
+ * @param[in]  aInstance      A pointer to an OpenThread instance.
+ * @param[in]  aDestination   A pointer to destination address.
+ * @param[in]  aTlvTypes      An array of Network Diagnostic TLV types. Currently only Type 9 is allowed.
+ * @param[in]  aCount         Number of types in aTlvTypes
  */
-ThreadError otSetLinkPromiscuous(otInstance *aInstance, bool aPromiscuous);
-
-#endif
+OTAPI ThreadError OTCALL otSendDiagnosticReset(otInstance *aInstance, const otIp6Address *aDestination,
+                                               const uint8_t aTlvTypes[], uint8_t aCount);
 
 /**
  * Get the MAC layer counters.
@@ -2069,6 +1960,15 @@ ThreadError otSetLinkPromiscuous(otInstance *aInstance, bool aPromiscuous);
  * @returns A pointer to the MAC layer counters.
  */
 OTAPI const otMacCounters *OTCALL otGetMacCounters(otInstance *aInstance);
+
+/**
+ * Get the Message Buffer information.
+ *
+ * @param[in]   aInstance    A pointer to the OpenThread instance.
+ * @param[out]  aBufferInfo  A pointer where the message buffer information is written.
+ *
+ */
+OTAPI void OTCALL otGetMessageBufferInfo(otInstance *aInstance, otBufferInfo *aBufferInfo);
 
 /**
  * @}
@@ -2108,404 +2008,15 @@ OTAPI ThreadError OTCALL otIp6AddressFromString(const char *aString, otIp6Addres
  */
 OTAPI uint8_t OTCALL otIp6PrefixMatch(const otIp6Address *aFirst, const otIp6Address *aSecond);
 
-#ifndef OTDLL
-
 /**
- * @addtogroup messages  Message Buffers
+ * This function converts a ThreadError enum into a string.
  *
- * @brief
- *   This module includes functions that manipulate OpenThread message buffers
+ * @param[in]  aError     A ThreadError enum.
  *
- * @{
+ * @returns  A string representation of a ThreadError.
  *
  */
-
-/**
- * Free an allocated message buffer.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- *
- * @retval kThreadErrorNone  Successfully freed the message buffer.
- *
- * @sa otNewUdpMessage
- * @sa otAppendMessage
- * @sa otGetMessageLength
- * @sa otSetMessageLength
- * @sa otGetMessageOffset
- * @sa otSetMessageOffset
- * @sa otReadMessage
- * @sa otWriteMessage
- */
-ThreadError otFreeMessage(otMessage aMessage);
-
-/**
- * Get the message length in bytes.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- *
- * @returns The message length in bytes.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otAppendMessage
- * @sa otSetMessageLength
- * @sa otGetMessageOffset
- * @sa otSetMessageOffset
- * @sa otReadMessage
- * @sa otWriteMessage
- * @sa otSetMessageLength
- */
-uint16_t otGetMessageLength(otMessage aMessage);
-
-/**
- * Set the message length in bytes.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- * @param[in]  aLength   A length in bytes.
- *
- * @retval kThreadErrorNone    Successfully set the message length.
- * @retval kThreadErrorNoBufs  No available buffers to grow the message.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otAppendMessage
- * @sa otGetMessageLength
- * @sa otGetMessageOffset
- * @sa otSetMessageOffset
- * @sa otReadMessage
- * @sa otWriteMessage
- */
-ThreadError otSetMessageLength(otMessage aMessage, uint16_t aLength);
-
-/**
- * Get the message offset in bytes.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- *
- * @returns The message offset value.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otAppendMessage
- * @sa otGetMessageLength
- * @sa otSetMessageLength
- * @sa otSetMessageOffset
- * @sa otReadMessage
- * @sa otWriteMessage
- */
-uint16_t otGetMessageOffset(otMessage aMessage);
-
-/**
- * Set the message offset in bytes.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- * @param[in]  aOffset   An offset in bytes.
- *
- * @retval kThreadErrorNone        Successfully set the message offset.
- * @retval kThreadErrorInvalidArg  The offset is beyond the message length.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otAppendMessage
- * @sa otGetMessageLength
- * @sa otSetMessageLength
- * @sa otGetMessageOffset
- * @sa otReadMessage
- * @sa otWriteMessage
- */
-ThreadError otSetMessageOffset(otMessage aMessage, uint16_t aOffset);
-
-/**
- * Append bytes to a message.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- * @param[in]  aBuf      A pointer to the data to append.
- * @param[in]  aLength   Number of bytes to append.
- *
- * @retval kThreadErrorNone    Successfully appended to the message
- * @retval kThreadErrorNoBufs  No available buffers to grow the message.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otGetMessageLength
- * @sa otSetMessageLength
- * @sa otGetMessageOffset
- * @sa otSetMessageOffset
- * @sa otReadMessage
- * @sa otWriteMessage
- */
-ThreadError otAppendMessage(otMessage aMessage, const void *aBuf, uint16_t aLength);
-
-/**
- * Read bytes from a message.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- * @param[in]  aOffset   An offset in bytes.
- * @param[in]  aBuf      A pointer to a buffer that message bytes are read to.
- * @param[in]  aLength   Number of bytes to read.
- *
- * @returns The number of bytes read.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otAppendMessage
- * @sa otGetMessageLength
- * @sa otSetMessageLength
- * @sa otGetMessageOffset
- * @sa otSetMessageOffset
- * @sa otWriteMessage
- */
-int otReadMessage(otMessage aMessage, uint16_t aOffset, void *aBuf, uint16_t aLength);
-
-/**
- * Write bytes to a message.
- *
- * @param[in]  aMessage  A pointer to a message buffer.
- * @param[in]  aOffset   An offset in bytes.
- * @param[in]  aBuf      A pointer to a buffer that message bytes are written from.
- * @param[in]  aLength   Number of bytes to write.
- *
- * @returns The number of bytes written.
- *
- * @sa otNewUdpMessage
- * @sa otFreeMessage
- * @sa otAppendMessage
- * @sa otGetMessageLength
- * @sa otSetMessageLength
- * @sa otGetMessageOffset
- * @sa otSetMessageOffset
- * @sa otReadMessage
- */
-int otWriteMessage(otMessage aMessage, uint16_t aOffset, const void *aBuf, uint16_t aLength);
-
-/**
- * @}
- *
- */
-
-/**
- * @addtogroup ip6  IPv6
- *
- * @brief
- *   This module includes functions that control IPv6 communication.
- *
- * @{
- *
- */
-
-/**
- * Allocate a new message buffer for sending an IPv6 message.
- *
- * @param[in]  aInstance             A pointer to an OpenThread instance.
- * @param[in]  aLinkSecurityEnabled  TRUE if the message should be secured at Layer 2
- *
- * @returns A pointer to the message buffer or NULL if no message buffers are available.
- *
- * @sa otFreeMessage
- */
-otMessage otNewIp6Message(otInstance *aInstance, bool aLinkSecurityEnabled);
-
-/**
- * This function pointer is called when an IPv6 datagram is received.
- *
- * @param[in]  aMessage  A pointer to the message buffer containing the received IPv6 datagram.
- * @param[in]  aContext  A pointer to application-specific context.
- *
- */
-typedef void (*otReceiveIp6DatagramCallback)(otMessage aMessage, void *aContext);
-
-/**
- * This function registers a callback to provide received IPv6 datagrams.
- *
- * By default, this callback does not pass Thread control traffic.  See otSetReceiveIp6DatagramFilterEnabled() to
- * change the Thread control traffic filter setting.
- *
- * @param[in]  aInstance         A pointer to an OpenThread instance.
- * @param[in]  aCallback         A pointer to a function that is called when an IPv6 datagram is received or
- *                               NULL to disable the callback.
- * @param[in]  aCallbackContext  A pointer to application-specific context.
- *
- * @sa otIsReceiveIp6DatagramFilterEnabled
- * @sa otSetReceiveIp6DatagramFilterEnabled
- *
- */
-void otSetReceiveIp6DatagramCallback(otInstance *aInstance, otReceiveIp6DatagramCallback aCallback,
-                                     void *aCallbackContext);
-
-/**
- * This function indicates whether or not Thread control traffic is filtered out when delivering IPv6 datagrams
- * via the callback specified in otSetReceiveIp6DatagramCallback().
- *
- * @param[in]  aInstance A pointer to an OpenThread instance.
- *
- * @returns  TRUE if Thread control traffic is filtered out, FALSE otherwise.
- *
- * @sa otSetReceiveIp6DatagramCallback
- * @sa otSetReceiveIp6DatagramFilterEnabled
- *
- */
-bool otIsReceiveIp6DatagramFilterEnabled(otInstance *aInstance);
-
-/**
- * This function sets whether or not Thread control traffic is filtered out when delivering IPv6 datagrams
- * via the callback specified in otSetReceiveIp6DatagramCallback().
- *
- * @param[in]  aInstance A pointer to an OpenThread instance.
- * @param[in]  aEnabled  TRUE if Thread control traffic is filtered out, FALSE otherwise.
- *
- * @sa otSetReceiveIp6DatagramCallback
- * @sa otIsReceiveIp6DatagramFilterEnabled
- *
- */
-void otSetReceiveIp6DatagramFilterEnabled(otInstance *aInstance, bool aEnabled);
-
-/**
- * This function sends an IPv6 datagram via the Thread interface.
- *
- * @param[in]  aInstance A pointer to an OpenThread instance.
- * @param[in]  aMessage  A pointer to the message buffer containing the IPv6 datagram.
- *
- */
-ThreadError otSendIp6Datagram(otInstance *aInstance, otMessage aMessage);
-
-/**
- * This function indicates whether or not ICMPv6 Echo processing is enabled.
- *
- * @param[in]  aInstance A pointer to an OpenThread instance.
- *
- * @retval TRUE   ICMPv6 Echo processing is enabled.
- * @retval FALSE  ICMPv6 Echo processing is disabled.
- *
- */
-bool otIsIcmpEchoEnabled(otInstance *aInstance);
-
-/**
- * This function sets whether or not ICMPv6 Echo processing is enabled.
- *
- * @param[in]  aInstance A pointer to an OpenThread instance.
- * @param[in]  aEnabled  TRUE to enable ICMPv6 Echo processing, FALSE otherwise.
- *
- */
-void otSetIcmpEchoEnabled(otInstance *aInstance, bool aEnabled);
-
-/**
- * @}
- *
- */
-
-/**
- * @addtogroup udp  UDP
- *
- * @brief
- *   This module includes functions that control UDP communication.
- *
- * @{
- *
- */
-
-/**
- * Allocate a new message buffer for sending a UDP message.
- *
- * @param[in]  aInstance             A pointer to an OpenThread instance.
- * @param[in]  aLinkSecurityEnabled  TRUE if the message should be secured at Layer 2.
- *
- * @returns A pointer to the message buffer or NULL if no message buffers are available.
- *
- * @sa otFreeMessage
- */
-otMessage otNewUdpMessage(otInstance *aInstance, bool aLinkSecurityEnabled);
-
-/**
- * Open a UDP/IPv6 socket.
- *
- * @param[in]  aInstance  A pointer to an OpenThread instance.
- * @param[in]  aSocket    A pointer to a UDP socket structure.
- * @param[in]  aCallback  A pointer to the application callback function.
- * @param[in]  aContext   A pointer to application-specific context.
- *
- * @retval kThreadErrorNone         Successfully opened the socket.
- * @retval kThreadErrorInvalidArgs  Given socket structure was already opened.
- *
- * @sa otNewUdpMessage
- * @sa otCloseUdpSocket
- * @sa otBindUdpSocket
- * @sa otSendUdp
- */
-ThreadError otOpenUdpSocket(otInstance *aInstance, otUdpSocket *aSocket, otUdpReceive aCallback, void *aContext);
-
-/**
- * Close a UDP/IPv6 socket.
- *
- * @param[in]  aSocket  A pointer to a UDP socket structure.
- *
- * @retval kThreadErrorNone  Successfully closed the socket.
- *
- * @sa otNewUdpMessage
- * @sa otOpenUdpSocket
- * @sa otBindUdpSocket
- * @sa otSendUdp
- */
-ThreadError otCloseUdpSocket(otUdpSocket *aSocket);
-
-/**
- * Bind a UDP/IPv6 socket.
- *
- * @param[in]  aSocket    A pointer to a UDP socket structure.
- * @param[in]  aSockName  A pointer to an IPv6 socket address structure.
- *
- * @retval kThreadErrorNone  Bind operation was successful.
- *
- * @sa otNewUdpMessage
- * @sa otOpenUdpSocket
- * @sa otCloseUdpSocket
- * @sa otSendUdp
- */
-ThreadError otBindUdpSocket(otUdpSocket *aSocket, otSockAddr *aSockName);
-
-/**
- * Send a UDP/IPv6 message.
- *
- * @param[in]  aSocket       A pointer to a UDP socket structure.
- * @param[in]  aMessage      A pointer to a message buffer.
- * @param[in]  aMessageInfo  A pointer to a message info structure.
- *
- * @sa otNewUdpMessage
- * @sa otOpenUdpSocket
- * @sa otCloseUdpSocket
- * @sa otBindUdpSocket
- * @sa otSendUdp
- */
-ThreadError otSendUdp(otUdpSocket *aSocket, otMessage aMessage, const otMessageInfo *aMessageInfo);
-
-/**
- * @}
- *
- */
-
-#endif
-
-/**
- * Send a Network Diagnostic Get request
- *
- * @param[in]  aDestination   A pointer to destination address.
- * @param[in]  aTlvTypes      An array of Network Diagnostic TLV types.
- * @param[in]  aCount         Number of types in aTlvTypes
- */
-OTAPI ThreadError OTCALL otSendDiagnosticGet(otInstance *aInstance, const otIp6Address *aDestination,
-                                             const uint8_t aTlvTypes[],
-                                             uint8_t aCount);
-
-/**
- * Send a Network Diagnostic Reset request
- *
- * @param[in]  aInstance      A pointer to an OpenThread instance.
- * @param[in]  aDestination   A pointer to destination address.
- * @param[in]  aTlvTypes      An array of Network Diagnostic TLV types. Currently only Type 9 is allowed.
- * @param[in]  aCount         Number of types in aTlvTypes
- */
-OTAPI ThreadError OTCALL otSendDiagnosticReset(otInstance *aInstance, const otIp6Address *aDestination,
-                                               const uint8_t aTlvTypes[],
-                                               uint8_t aCount);
+OTAPI const char *OTCALL otThreadErrorToString(ThreadError aError);
 
 #ifdef __cplusplus
 }  // extern "C"

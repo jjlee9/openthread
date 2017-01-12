@@ -36,7 +36,8 @@
 
 #include <stddef.h>
 
-#include <openthread-types.h>
+#include <openthread-ip6.h>
+#include <openthread-udp.h>
 #include <common/encoding.hpp>
 #include <common/message.hpp>
 #include <net/icmp6.hpp>
@@ -99,7 +100,7 @@ public:
     enum
     {
         kDefaultHopLimit = 64,
-        kMaxDatagramLength = 1500,
+        kMaxDatagramLength = 1280,
     };
 
     /**
@@ -243,6 +244,14 @@ public:
     void SetReceiveIp6FilterEnabled(bool aEnabled);
 
     /**
+     * This method indicates whether or not IPv6 forwarding is enabled.
+     *
+     * @returns TRUE if IPv6 forwarding is enabled, FALSE otherwise.
+     *
+     */
+    bool IsForwardingEnabled(void);
+
+    /**
      * This method enables/disables IPv6 forwarding.
      *
      * @param[in]  aEnable  TRUE to enable IPv6 forwarding, FALSE otherwise.
@@ -327,7 +336,15 @@ public:
      * @returns The pointer to the parent otInstance structure.
      *
      */
-    otInstance *GetInstance();
+    otInstance *GetInstance(void);
+
+    /**
+     * This method returns a reference to the send queue.
+     *
+     * @returns A reference to the send queue.
+     *
+     */
+    const MessageQueue &GetSendQueue(void) const { return mSendQueue; }
 
     Routes mRoutes;
     Icmp mIcmp;
@@ -346,8 +363,9 @@ private:
     ThreadError HandleExtensionHeaders(Message &message, Header &header, uint8_t &nextHeader, bool forward,
                                        bool receive);
     ThreadError HandleFragment(Message &message);
-    ThreadError AddMplOption(Message &message, Header &header, IpProto nextHeader, uint16_t payloadLength);
-    ThreadError InsertMplOption(Message &message, Header &header);
+    ThreadError AddMplOption(Message &message, Header &header);
+    ThreadError AddTunneledMplOption(Message &message, Header &header, MessageInfo &messageInfo);
+    ThreadError InsertMplOption(Message &message, Header &header, MessageInfo &messageInfo);
     ThreadError RemoveMplOption(Message &aMessage);
     ThreadError HandleOptions(Message &message, Header &header, bool &forward);
     ThreadError HandlePayload(Message &message, MessageInfo &messageInfo, uint8_t ipproto);

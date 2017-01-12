@@ -155,6 +155,17 @@ public:
     void SetPollPeriod(uint32_t aPeriod);
 
     /**
+     * This method enqueues an IEEE 802.15.4 Data Request message.
+     *
+     * @retval kThreadError_None          Successfully enqueued an IEEE 802.15.4 Data Request message.
+     * @retval kThreadError_Already       An IEEE 802.15.4 Data Request message is already enqueued.
+     * @retval kThreadError_InvalidState  Device is not in rx-off-when-idle mode.
+     * @retval kThreadError_NoBufs        Insufficient message buffers available.
+     *
+     */
+    ThreadError SendMacDataRequest(void);
+
+    /**
      * This method gets the Data Poll period.
      *
      * @returns  The Data Poll period in milliseconds.
@@ -171,10 +182,41 @@ public:
      */
     void SetDiscoverParameters(uint32_t aScanChannels, uint16_t aScanDuration);
 
+    /**
+     * This method frees any indirect messages queued for children that are no longer attached.
+     *
+     */
+    void UpdateIndirectMessages(void);
+
+    /**
+     * This method returns a reference to the send queue.
+     *
+     * @returns  A reference to the send queue.
+     *
+     */
+    const MessageQueue &GetSendQueue(void) const { return mSendQueue; }
+
+    /**
+     * This method returns a reference to the reassembly queue.
+     *
+     * @returns  A reference to the reassembly queue.
+     *
+     */
+    const MessageQueue &GetReassemblyQueue(void) const { return mReassemblyList; }
+
+    /**
+     * This method returns a reference to the resolving queue.
+     *
+     * @returns  A reference to the resolving queue.
+     *
+     */
+    const MessageQueue &GetResolvingQueue(void) const { return mResolvingQueue; }
+
 private:
     enum
     {
-        kStateUpdatePeriod = 1000,  ///< State update period in milliseconds.
+        kStateUpdatePeriod    = 1000,  ///< State update period in milliseconds.
+        kDataRequstRetryDelay = 1000,  ///< Retry delay in milliseconds.
     };
 
     ThreadError CheckReachability(uint8_t *aFrame, uint8_t aFrameLength,
@@ -183,7 +225,8 @@ private:
     ThreadError GetMacSourceAddress(const Ip6::Address &aIp6Addr, Mac::Address &aMacAddr);
     Message *GetDirectTransmission(void);
     Message *GetIndirectTransmission(const Child &aChild);
-    void HandleMesh(uint8_t *aFrame, uint8_t aPayloadLength, const ThreadMessageInfo &aMessageInfo);
+    void HandleMesh(uint8_t *aFrame, uint8_t aPayloadLength, const Mac::Address &aMacSource,
+                    const ThreadMessageInfo &aMessageInfo);
     void HandleFragment(uint8_t *aFrame, uint8_t aPayloadLength,
                         const Mac::Address &aMacSource, const Mac::Address &aMacDest,
                         const ThreadMessageInfo &aMessageInfo);
@@ -191,7 +234,6 @@ private:
                         const Mac::Address &aMacSource, const Mac::Address &aMacDest,
                         const ThreadMessageInfo &aMessageInfo);
     void HandleDataRequest(const Mac::Address &aMacSource, const ThreadMessageInfo &aMessageInfo);
-    void MoveToResolving(const Ip6::Address &aDestination);
     ThreadError SendPoll(Message &aMessage, Mac::Frame &aFrame);
     ThreadError SendMesh(Message &aMessage, Mac::Frame &aFrame);
     ThreadError SendFragment(Message &aMessage, Mac::Frame &aFrame);
@@ -200,8 +242,8 @@ private:
     ThreadError UpdateMeshRoute(Message &aMessage);
     ThreadError HandleDatagram(Message &aMessage, const ThreadMessageInfo &aMessageInfo);
 
-    static void HandleReceivedFrame(void *aContext, Mac::Frame &aFrame, ThreadError aError);
-    void HandleReceivedFrame(Mac::Frame &aFrame, ThreadError aError);
+    static void HandleReceivedFrame(void *aContext, Mac::Frame &aFrame);
+    void HandleReceivedFrame(Mac::Frame &aFrame);
 
     static ThreadError HandleFrameRequest(void *aContext, Mac::Frame &aFrame);
     ThreadError HandleFrameRequest(Mac::Frame &aFrame);
@@ -219,7 +261,7 @@ private:
     static void ScheduleTransmissionTask(void *aContext);
     void ScheduleTransmissionTask(void);
 
-    ThreadError AddPendingSrcMatchEntries();
+    ThreadError AddPendingSrcMatchEntries(void);
     ThreadError AddSrcMatchEntry(Child &aChild);
     void ClearSrcMatchEntry(Child &aChild);
 

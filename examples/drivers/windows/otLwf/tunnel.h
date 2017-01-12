@@ -177,6 +177,7 @@ _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
 otLwfGetTunProp(
     _In_ PMS_FILTER pFilter,
+    _Out_opt_ PVOID *DataBuffer,
     _In_ spinel_prop_key_t Key,
     _In_ const char *pack_format, 
     ...
