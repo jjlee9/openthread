@@ -36,19 +36,6 @@
 #include <common/code_utils.hpp>
 #include <common/encoding.hpp>
 
-static void printBuffer(char* buffer, int len)
-{
-    for (int i = 0; i < len; i++)
-    {
-        printf("%02x", (unsigned char)*buffer++);
-        if (i % 4 == 3)
-        {
-            printf(" ");
-        }
-    }
-    printf("\n");
-}
-
 namespace OffMesh {
 namespace Coap {
 
@@ -273,8 +260,6 @@ const Header::Option *Header::GetNextOption(void)
     optionDelta = mHeader[mNextOptionOffset] >> 4;
     optionLength = mHeader[mNextOptionOffset] & 0xf;
     mNextOptionOffset += sizeof(uint8_t);
-
-    printBuffer((char*)(mHeader + mNextOptionOffset), optionLength);
 
     if (optionDelta < kOption1ByteExtension)
     {

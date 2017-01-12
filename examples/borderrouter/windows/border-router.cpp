@@ -267,16 +267,16 @@ int main(int argc, char* argv[])
         BorderRouter router;
         router.Start();
     }
-    else
-    {
-        FakeLeader leader;
-        leader.Start();
-    }
     //else
     //{
-    //    Client client;
-    //    client.Start();
+    //    FakeLeader leader;
+    //    leader.Start();
     //}
+    else
+    {
+        Client client;
+        client.Start();
+    }
 }
 
 BorderRouter::BorderRouter() :
@@ -408,8 +408,21 @@ void BorderRouter::HandleThreadSocketReceive(uint8_t* aBuf, DWORD aLength)
     //
     // currently, all responses are the same, so we just forward over DTLS to
     // the commissioner
-    // TODO: REMOVE HACK
-    aLength = min(aLength, 20);
+
+    // TODO: delete debug code that is inspecting the packet
+    OffMesh::Coap::Header receiveHeader;
+    auto threadError = receiveHeader.FromBytes(aBuf, aLength);
+    if (threadError == ThreadError::kThreadError_None)
+    {
+        auto headerType = receiveHeader.GetType();
+        printf("coap header type is 0x%x\n", headerType);
+        printBuffer((char*)receiveHeader.GetBytes(), receiveHeader.GetLength());
+    }
+    else
+    {
+        printf("failed to parse coap header\n");
+    }
+
     mDtls.Send(aBuf, static_cast<uint16_t>(aLength));
 }
 
@@ -468,7 +481,8 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
              strcmp(aUriPath, OPENTHREAD_URI_ACTIVE_SET) == 0 ||
              strcmp(aUriPath, OPENTHREAD_URI_PENDING_GET) == 0 ||
              strcmp(aUriPath, OPENTHREAD_URI_PENDING_SET) == 0 ||
-             strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0)
+             strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0 ||
+             strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_GET) == 0)
     {
         // these URIs don't need to be modified, send them as is
         destinationUri = aUriPath;
@@ -477,6 +491,12 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     {
         printf("BorderRouter::HandleCoapMessage unknown URI received: %s, ignoring", aUriPath);
         return;
+    }
+
+    if (strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0)
+    {
+        printf("commissioner set received:\n");
+        printBuffer((char*)aBuf, aLength);
     }
 
     sockaddr_in6 threadLeaderAddress = { 0 };

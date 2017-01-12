@@ -35,19 +35,6 @@
 #include "br_coap_server.hpp"
 #include <common/code_utils.hpp>
 
-static void printBuffer(char* buffer, int len)
-{
-    for (int i = 0; i < len; i++)
-    {
-        printf("%02x", (unsigned char)*buffer++);
-        if (i % 4 == 3)
-        {
-            printf(" ");
-        }
-    }
-    printf("\n");
-}
-
 namespace OffMesh {
 namespace Coap {
 
@@ -86,7 +73,6 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
     coapOption = header.GetCurrentOption();
 
     auto bytes = header.GetBytes();
-    printBuffer((char*)bytes, header.GetLength());
 
     while (coapOption != NULL)
     {
@@ -94,7 +80,6 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
         {
         case OffMesh::Coap::Header::Option::kOptionUriPath:
             VerifyOrExit(coapOption->mLength < sizeof(uriPath) - static_cast<size_t>(curUriPath - uriPath), ;);
-            printBuffer((char*)coapOption->mValue, coapOption->mLength);
             memcpy(curUriPath, coapOption->mValue, coapOption->mLength);
             curUriPath[coapOption->mLength] = '/';
             curUriPath += coapOption->mLength + 1;
@@ -113,7 +98,6 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
     }
 
     curUriPath[-1] = '\0';
-    printf("The current URI path from the Coap packet is %s:\n", uriPath);
 
     for (Resource *resource = mResources; resource; resource = resource->mNext)
     {
