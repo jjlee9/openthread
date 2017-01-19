@@ -460,12 +460,7 @@ ThreadError Mac::SetNetworkName(const char *aNetworkName)
 
     VerifyOrExit(strlen(aNetworkName) <= OT_NETWORK_NAME_MAX_SIZE, error = kThreadError_InvalidArgs);
 
-    memset(&mNetworkName, 0, sizeof(mNetworkName));
-#ifdef _WIN32
-    strncpy_s(mNetworkName.m8, sizeof(mNetworkName.m8), aNetworkName, sizeof(mNetworkName));
-#else
-    strncpy(mNetworkName.m8, aNetworkName, sizeof(mNetworkName));
-#endif
+    strncpy(mNetworkName.m8, aNetworkName, sizeof(mNetworkName) - 1);
 
 exit:
     otLogFuncExitErr(error);
@@ -676,6 +671,7 @@ void Mac::ProcessTransmitSecurity(Frame &aFrame)
     case Frame::kKeyIdMode0:
         key = mKeyManager.GetKek();
         frameCounter = mKeyManager.GetKekFrameCounter();
+        mKeyManager.IncrementKekFrameCounter();
         extAddress = &mExtAddress;
         break;
 

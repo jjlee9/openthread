@@ -73,7 +73,7 @@ ThreadError PanIdQueryClient::SendQuery(uint16_t aPanId, uint32_t aChannelMask, 
     header.AppendUriPathOptions(OPENTHREAD_URI_PANID_QUERY);
     header.SetPayloadMarker();
 
-    VerifyOrExit((message = mCoapClient.NewMessage(header)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapClient.NewMeshCoPMessage(header)) != NULL, error = kThreadError_NoBufs);
 
     sessionId.Init();
     sessionId.SetCommissionerSessionId(mNetif.GetCommissioner().GetSessionId());
@@ -119,6 +119,7 @@ void PanIdQueryClient::HandleConflict(Coap::Header &aHeader, Message &aMessage, 
 {
     MeshCoP::PanIdTlv panId;
     MeshCoP::ChannelMask0Tlv channelMask;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
     VerifyOrExit(aHeader.GetType() == kCoapTypeConfirmable &&
                  aHeader.GetCode() == kCoapRequestPost, ;);
@@ -136,37 +137,13 @@ void PanIdQueryClient::HandleConflict(Coap::Header &aHeader, Message &aMessage, 
         mCallback(panId.GetPanId(), channelMask.GetMask(), mContext);
     }
 
-    SendConflictResponse(aHeader, aMessageInfo);
+    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
+    SuccessOrExit(mCoapServer.SendEmptyAck(aHeader, responseInfo));
+
+    otLogInfoMeshCoP("sent panid query conflict response");
 
 exit:
     return;
-}
-
-ThreadError PanIdQueryClient::SendConflictResponse(const Coap::Header &aRequestHeader,
-                                                   const Ip6::MessageInfo &aRequestInfo)
-{
-    ThreadError error = kThreadError_None;
-    Message *message;
-    Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo(aRequestInfo);
-
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-
-    responseHeader.SetDefaultResponseHeader(aRequestHeader);
-
-    SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
-
-    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
-
-exit:
-
-    if (error != kThreadError_None && message != NULL)
-    {
-        message->Free();
-    }
-
-    return error;
 }
 
 }  // namespace Thread

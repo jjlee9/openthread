@@ -112,8 +112,9 @@ ThreadError Leader::SendPetitionResponse(const Coap::Header &aRequestHeader, con
     StateTlv state;
     CommissionerSessionIdTlv sessionId;
     Message *message;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapServer.NewMeshCoPMessage(0)) != NULL, error = kThreadError_NoBufs);
 
     responseHeader.SetDefaultResponseHeader(aRequestHeader);
     responseHeader.SetPayloadMarker();
@@ -137,7 +138,8 @@ ThreadError Leader::SendPetitionResponse(const Coap::Header &aRequestHeader, con
         SuccessOrExit(error = message->Append(&sessionId, sizeof(sessionId)));
     }
 
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, aMessageInfo));
+    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
+    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
 
     otLogInfoMeshCoP("sent petition response");
 
@@ -202,8 +204,9 @@ ThreadError Leader::SendKeepAliveResponse(const Coap::Header &aRequestHeader, co
     Coap::Header responseHeader;
     StateTlv state;
     Message *message;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapServer.NewMeshCoPMessage(0)) != NULL, error = kThreadError_NoBufs);
 
     responseHeader.SetDefaultResponseHeader(aRequestHeader);
     responseHeader.SetPayloadMarker();
@@ -214,6 +217,7 @@ ThreadError Leader::SendKeepAliveResponse(const Coap::Header &aRequestHeader, co
     state.SetState(aState);
     SuccessOrExit(error = message->Append(&state, sizeof(state)));
 
+    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
     SuccessOrExit(error = mCoapServer.SendMessage(*message, aMessageInfo));
 
     otLogInfoMeshCoP("sent keep alive response");
@@ -239,7 +243,7 @@ ThreadError Leader::SendDatasetChanged(const Ip6::Address &aAddress)
     header.SetToken(Coap::Header::kDefaultTokenLength);
     header.AppendUriPathOptions(OPENTHREAD_URI_DATASET_CHANGED);
 
-    VerifyOrExit((message = mCoapClient.NewMessage(header)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapClient.NewMeshCoPMessage(header)) != NULL, error = kThreadError_NoBufs);
 
     messageInfo.SetPeerAddr(aAddress);
     messageInfo.SetPeerPort(kCoapUdpPort);

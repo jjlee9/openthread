@@ -772,6 +772,15 @@ public:
     void FillNetworkDataTlv(NetworkDataTlv &aTlv, bool aStableOnly);
 
 protected:
+
+    /**
+     * This method allocates a new message buffer for preparing an MLE message.
+     *
+     * @returns A pointer to the message or NULL if insufficient message buffers are available.
+     *
+     */
+    Message *NewMleMessage(void);
+
     /**
      * This method appends an MLE header to a message.
      *
@@ -1145,14 +1154,6 @@ protected:
     ThreadError SetStateChild(uint16_t aRloc16);
 
     /**
-     * This method returns a new MLE message.
-     *
-     * @returns A pointer to the message or NULL if no buffers are available.
-     *
-     */
-    Message *NewMessage(void) { return mSocket.NewMessage(0); };
-
-    /**
      * This method sets the Leader's Partition ID, Weighting, and Router ID values.
      *
      * @param[in]  aPartitionId     The Leader's Partition ID value.
@@ -1216,10 +1217,13 @@ protected:
     uint8_t mRouterSelectionJitter;         ///< The variable to save the assigned jitter value.
     uint8_t mRouterSelectionJitterTimeout;  ///< The Timeout prior to request/release Router ID.
 
+    uint8_t mLastPartitionRouterIdSequence;
+    uint32_t mLastPartitionId;
 private:
     enum
     {
         kAttachDataPollPeriod = OPENTHREAD_CONFIG_ATTACH_DATA_POLL_PERIOD,
+        kMleMessagePriority = Message::kPriorityHigh,
     };
 
     void GenerateNonce(const Mac::ExtAddress &aMacAddr, uint32_t aFrameCounter, uint8_t aSecurityLevel,

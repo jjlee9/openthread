@@ -83,6 +83,9 @@ const NcpBase::CommandHandlerEntry NcpBase::mCommandHandlerTable[] =
     { SPINEL_CMD_PROP_VALUE_SET, &NcpBase::CommandHandler_PROP_VALUE_SET },
     { SPINEL_CMD_PROP_VALUE_INSERT, &NcpBase::CommandHandler_PROP_VALUE_INSERT },
     { SPINEL_CMD_PROP_VALUE_REMOVE, &NcpBase::CommandHandler_PROP_VALUE_REMOVE },
+    { SPINEL_CMD_NET_SAVE, &NcpBase::CommandHandler_NET_SAVE },
+    { SPINEL_CMD_NET_CLEAR, &NcpBase::CommandHandler_NET_CLEAR },
+    { SPINEL_CMD_NET_RECALL, &NcpBase::CommandHandler_NET_RECALL },
 };
 
 const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
@@ -510,14 +513,13 @@ NcpBase::NcpBase(otInstance *aInstance):
 
 void NcpBase::HandleDatagramFromStack(otMessage aMessage, void *aContext)
 {
-    static_cast<NcpBase *>(aContext)->HandleDatagramFromStack(*static_cast<Message *>(aMessage));
+    static_cast<NcpBase *>(aContext)->HandleDatagramFromStack(aMessage);
 }
 
-void NcpBase::HandleDatagramFromStack(Message &aMessage)
+void NcpBase::HandleDatagramFromStack(otMessage aMessage)
 {
     ThreadError errorCode = kThreadError_None;
-    Message *message = &aMessage;
-    bool isSecure = message->IsLinkSecurityEnabled();
+    bool isSecure = otIsMessageLinkSecurityEnabled(aMessage);
 
     SuccessOrExit(errorCode = OutboundFrameBegin());
 
@@ -529,15 +531,15 @@ void NcpBase::HandleDatagramFromStack(Message &aMessage)
             isSecure
             ? SPINEL_PROP_STREAM_NET
             : SPINEL_PROP_STREAM_NET_INSECURE,
-            message->GetLength()
+            otGetMessageLength(aMessage)
     ));
 
-    SuccessOrExit(errorCode = OutboundFrameFeedMessage(*message));
+    SuccessOrExit(errorCode = OutboundFrameFeedMessage(aMessage));
 
-    // Set the message pointer to NULL, to indicate that it does not need to be freed at the exit.
-    // The message is now owned by the OutboundFrame and will be freed when the frame is either successfully sent and
+    // Set the aMessage pointer to NULL, to indicate that it does not need to be freed at the exit.
+    // The aMessage is now owned by the OutboundFrame and will be freed when the frame is either successfully sent and
     // then removed, or if the frame gets discarded.
-    message = NULL;
+    aMessage = NULL;
 
     // Append any metadata (rssi, lqi, channel, etc) here!
 
@@ -545,9 +547,9 @@ void NcpBase::HandleDatagramFromStack(Message &aMessage)
 
 exit:
 
-    if (message != NULL)
+    if (aMessage != NULL)
     {
-        message->Free();
+        otFreeMessage(aMessage);
     }
 
     if (errorCode != kThreadError_None)
@@ -881,6 +883,10 @@ void NcpBase::UpdateChangedProps(void)
                           ));
 
             mChangedFlags &= ~static_cast<uint32_t>(OT_THREAD_NETDATA_UPDATED);
+        }
+        else if ((mChangedFlags & (OT_IP6_RLOC_ADDED | OT_IP6_RLOC_REMOVED)) != 0)
+        {
+            mChangedFlags &= ~static_cast<uint32_t>(OT_IP6_RLOC_ADDED | OT_IP6_RLOC_REMOVED);
         }
     }
 
@@ -1218,27 +1224,26 @@ exit:
     return errorCode;
 }
 
-ThreadError NcpBase::SendPropertyUpdate(uint8_t header, uint8_t command, spinel_prop_key_t key, Message &aMessage)
+ThreadError NcpBase::SendPropertyUpdate(uint8_t header, uint8_t command, spinel_prop_key_t key, otMessage aMessage)
 {
     ThreadError errorCode = kThreadError_None;
-    Message    *message = &aMessage;
 
     SuccessOrExit(errorCode = OutboundFrameBegin());
     SuccessOrExit(errorCode = OutboundFrameFeedPacked("Cii", header, command, key));
-    SuccessOrExit(errorCode = OutboundFrameFeedMessage(*message));
+    SuccessOrExit(errorCode = OutboundFrameFeedMessage(aMessage));
 
-    // Set the message pointer to NULL, to indicate that it does not need to be freed at the exit.
+    // Set the aMessage pointer to NULL, to indicate that it does not need to be freed at the exit.
     // The message is now owned by the OutboundFrame and will be freed when the frame is either successfully sent and
     // then removed, or if the frame gets discarded.
-    message = NULL;
+    aMessage = NULL;
 
     SuccessOrExit(errorCode = OutboundFrameSend());
 
 exit:
 
-    if (message != NULL)
+    if (aMessage != NULL)
     {
-        message->Free();
+        otFreeMessage(aMessage);
     }
 
     return errorCode;
@@ -1298,7 +1303,7 @@ ThreadError NcpBase::CommandHandler_RESET(uint8_t header, unsigned int command, 
 
     // Signal a platform reset. If implemented, this function
     // shouldn't return.
-    otPlatReset(mInstance);
+    otPlatformReset(mInstance);
 
     // We only get to this point if the
     // platform doesn't support resetting.
@@ -1419,6 +1424,35 @@ ThreadError NcpBase::CommandHandler_PROP_VALUE_REMOVE(uint8_t header, unsigned i
     return errorCode;
 }
 
+ThreadError NcpBase::CommandHandler_NET_SAVE(uint8_t header, unsigned int command, const uint8_t *arg_ptr,
+                                             uint16_t arg_len)
+{
+    (void)command;
+    (void)arg_ptr;
+    (void)arg_len;
+
+    return SendLastStatus(header, SPINEL_STATUS_UNIMPLEMENTED);
+}
+
+ThreadError NcpBase::CommandHandler_NET_CLEAR(uint8_t header, unsigned int command, const uint8_t *arg_ptr,
+                                              uint16_t arg_len)
+{
+    (void)command;
+    (void)arg_ptr;
+    (void)arg_len;
+
+    return SendLastStatus(header, ThreadErrorToSpinelStatus(otPersistentInfoErase(mInstance)));
+}
+
+ThreadError NcpBase::CommandHandler_NET_RECALL(uint8_t header, unsigned int command, const uint8_t *arg_ptr,
+                                               uint16_t arg_len)
+{
+    (void)command;
+    (void)arg_ptr;
+    (void)arg_len;
+
+    return SendLastStatus(header, SPINEL_STATUS_UNIMPLEMENTED);
+}
 
 // ----------------------------------------------------------------------------
 // MARK: Individual Property Getters
@@ -3076,6 +3110,10 @@ ThreadError NcpBase::SetPropertyHandler_MAC_PROMISCUOUS_MODE(uint8_t header, spi
         case SPINEL_MAC_PROMISCUOUS_MODE_FULL:
             otPlatRadioSetPromiscuous(mInstance, true);
             errorCode = kThreadError_None;
+            break;
+
+        default:
+            errorCode = kThreadError_InvalidArgs;
             break;
         }
 

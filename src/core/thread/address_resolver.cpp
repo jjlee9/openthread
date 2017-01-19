@@ -223,6 +223,7 @@ void AddressResolver::HandleAddressNotification(Coap::Header &aHeader, Message &
     ThreadRloc16Tlv rloc16Tlv;
     ThreadLastTransactionTimeTlv lastTransactionTimeTlv;
     uint32_t lastTransactionTime;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
     VerifyOrExit(aHeader.GetType() == kCoapTypeConfirmable &&
                  aHeader.GetCode() == kCoapRequestPost, ;);
@@ -281,7 +282,14 @@ void AddressResolver::HandleAddressNotification(Coap::Header &aHeader, Message &
             mCache[i].mTimeout = 0;
             mCache[i].mFailures = 0;
             mCache[i].mState = Cache::kStateCached;
-            SendAddressNotificationResponse(aHeader, aMessageInfo);
+
+            memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
+
+            if (mCoapServer.SendEmptyAck(aHeader, aMessageInfo) == kThreadError_None)
+            {
+                otLogInfoArp("Sent address notification acknowledgment");
+            }
+
             mMeshForwarder.HandleResolved(*targetTlv.GetTarget(), kThreadError_None);
             break;
         }
@@ -289,32 +297,6 @@ void AddressResolver::HandleAddressNotification(Coap::Header &aHeader, Message &
 
 exit:
     return;
-}
-
-void AddressResolver::SendAddressNotificationResponse(const Coap::Header &aRequestHeader,
-                                                      const Ip6::MessageInfo &aRequestInfo)
-{
-    ThreadError error;
-    Message *message;
-    Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo(aRequestInfo);
-
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-
-    responseHeader.SetDefaultResponseHeader(aRequestHeader);
-
-    SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
-
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
-
-    otLogInfoArp("Sent address notification acknowledgment");
-
-exit:
-
-    if (error != kThreadError_None && message != NULL)
-    {
-        message->Free();
-    }
 }
 
 ThreadError AddressResolver::SendAddressError(const ThreadTargetTlv &aTarget, const ThreadMeshLocalEidTlv &aEid,
@@ -363,32 +345,6 @@ exit:
     return error;
 }
 
-void AddressResolver::SendAddressErrorResponse(const Coap::Header &aRequestHeader,
-                                               const Ip6::MessageInfo &aRequestInfo)
-{
-    ThreadError error;
-    Message *message;
-    Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo(aRequestInfo);
-
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-
-    responseHeader.SetDefaultResponseHeader(aRequestHeader);
-
-    SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
-
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
-
-    otLogInfoArp("Sent address error notification acknowledgment");
-
-exit:
-
-    if (error != kThreadError_None && message != NULL)
-    {
-        message->Free();
-    }
-}
-
 void AddressResolver::HandleAddressError(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
                                          const otMessageInfo *aMessageInfo)
 {
@@ -407,6 +363,7 @@ void AddressResolver::HandleAddressError(Coap::Header &aHeader, Message &aMessag
     uint8_t numChildren;
     Mac::ExtAddress macAddr;
     Ip6::Address destination;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
     VerifyOrExit(aHeader.GetType() == kCoapTypeConfirmable &&
                  aHeader.GetCode() == kCoapRequestPost, error = kThreadError_Drop);
@@ -415,7 +372,12 @@ void AddressResolver::HandleAddressError(Coap::Header &aHeader, Message &aMessag
 
     if (!aMessageInfo.GetSockAddr().IsMulticast())
     {
-        SendAddressErrorResponse(aHeader, aMessageInfo);
+        memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
+
+        if (mCoapServer.SendEmptyAck(aHeader, responseInfo) == kThreadError_None)
+        {
+            otLogInfoArp("Sent address error notification acknowledgment");
+        }
     }
 
     SuccessOrExit(error = ThreadTlv::GetTlv(aMessage, ThreadTlv::kTarget, sizeof(targetTlv), targetTlv));

@@ -167,7 +167,9 @@ void Leader::HandleServerData(Coap::Header &aHeader, Message &aMessage,
                             networkData.GetTlvs(), networkData.GetLength());
     }
 
-    SendServerDataResponse(aHeader, aMessageInfo, NULL, 0);
+    SuccessOrExit(mCoapServer.SendEmptyAck(aHeader, aMessageInfo));
+
+    otLogInfoNetData("Sent network data registration acknowledgment");
 
 exit:
     return;
@@ -289,37 +291,6 @@ void Leader::HandleCommissioningGet(Coap::Header &aHeader, Message &aMessage, co
     SendCommissioningGetResponse(aHeader, aMessageInfo, tlvs, length);
 }
 
-void Leader::SendServerDataResponse(const Coap::Header &aRequestHeader, const Ip6::MessageInfo &aMessageInfo,
-                                    const uint8_t *aTlvs, uint8_t aTlvsLength)
-{
-    ThreadError error = kThreadError_None;
-    Coap::Header responseHeader;
-    Message *message;
-
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-
-    responseHeader.SetDefaultResponseHeader(aRequestHeader);
-
-    if (aTlvsLength > 0)
-    {
-        responseHeader.SetPayloadMarker();
-    }
-
-    SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
-    SuccessOrExit(error = message->Append(aTlvs, aTlvsLength));
-
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, aMessageInfo));
-
-    otLogInfoNetData("Sent network data registration acknowledgment");
-
-exit:
-
-    if (error != kThreadError_None && message != NULL)
-    {
-        message->Free();
-    }
-}
-
 void Leader::SendCommissioningGetResponse(const Coap::Header &aRequestHeader, const Ip6::MessageInfo &aMessageInfo,
                                           uint8_t *aTlvs, uint8_t aLength)
 {
@@ -330,7 +301,7 @@ void Leader::SendCommissioningGetResponse(const Coap::Header &aRequestHeader, co
     uint8_t *data = NULL;
     uint8_t length = 0;
 
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapServer.NewMeshCoPMessage(0)) != NULL, error = kThreadError_NoBufs);
 
     responseHeader.SetDefaultResponseHeader(aRequestHeader);
     responseHeader.SetPayloadMarker();
@@ -391,8 +362,9 @@ void Leader::SendCommissioningSetResponse(const Coap::Header &aRequestHeader, co
     Coap::Header responseHeader;
     Message *message;
     MeshCoP::StateTlv state;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapServer.NewMeshCoPMessage(0)) != NULL, error = kThreadError_NoBufs);
 
     responseHeader.SetDefaultResponseHeader(aRequestHeader);
     responseHeader.SetPayloadMarker();
@@ -403,7 +375,8 @@ void Leader::SendCommissioningSetResponse(const Coap::Header &aRequestHeader, co
     state.SetState(aState);
     SuccessOrExit(error = message->Append(&state, sizeof(state)));
 
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, aMessageInfo));
+    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
+    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
 
     otLogInfoMeshCoP("sent commissioning dataset set response");
 

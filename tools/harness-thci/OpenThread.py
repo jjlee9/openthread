@@ -80,7 +80,8 @@ class OpenThread(IThci):
             self.pskc = ModuleHelper.Default_PSKc
             self.securityPolicySecs = ModuleHelper.Default_SecurityPolicy
             self.activetimestamp = ModuleHelper.Default_ActiveTimestamp
-            self.sedPollingRate = ModuleHelper.Default_Harness_SED_Polling_Rate
+            #self.sedPollingRate = ModuleHelper.Default_Harness_SED_Polling_Rate
+            self.sedPollingRate = 3
             self.deviceRole = None
             self.provisioningUrl = ''
             self.logThread = Queue()
@@ -2412,7 +2413,7 @@ class OpenThread(IThci):
 
             if xBorderRouterLocator != None:
                 cmd += ' locator '
-                cmd += str(xBorderRouterLocator)
+                cmd += str(hex(xBorderRouterLocator))
 
             if xChannelTlv != None:
                 cmd += ' binary '

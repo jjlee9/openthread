@@ -80,7 +80,7 @@ ThreadError EnergyScanClient::SendQuery(uint32_t aChannelMask, uint8_t aCount, u
     header.AppendUriPathOptions(OPENTHREAD_URI_ENERGY_SCAN);
     header.SetPayloadMarker();
 
-    VerifyOrExit((message = mCoapClient.NewMessage(header)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapClient.NewMeshCoPMessage(header)) != NULL, error = kThreadError_NoBufs);
 
     sessionId.Init();
     sessionId.SetCommissionerSessionId(mNetif.GetCommissioner().GetSessionId());
@@ -133,6 +133,7 @@ void EnergyScanClient::HandleReport(void *aContext, otCoapHeader *aHeader, otMes
 void EnergyScanClient::HandleReport(Coap::Header &aHeader, Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     MeshCoP::ChannelMask0Tlv channelMask;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
     OT_TOOL_PACKED_BEGIN
     struct
@@ -157,36 +158,13 @@ void EnergyScanClient::HandleReport(Coap::Header &aHeader, Message &aMessage, co
         mCallback(channelMask.GetMask(), energyList.list, energyList.tlv.GetLength(), mContext);
     }
 
-    SendResponse(aHeader, aMessageInfo);
+    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
+    SuccessOrExit(mCoapServer.SendEmptyAck(aHeader, responseInfo));
+
+    otLogInfoMeshCoP("sent energy scan report response");
 
 exit:
     return;
-}
-
-ThreadError EnergyScanClient::SendResponse(const Coap::Header &aRequestHeader, const Ip6::MessageInfo &aRequestInfo)
-{
-    ThreadError error = kThreadError_None;
-    Message *message;
-    Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo(aRequestInfo);
-
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-
-    responseHeader.SetDefaultResponseHeader(aRequestHeader);
-
-    SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
-
-    memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
-
-exit:
-
-    if (error != kThreadError_None && message != NULL)
-    {
-        message->Free();
-    }
-
-    return error;
 }
 
 }  // namespace Thread

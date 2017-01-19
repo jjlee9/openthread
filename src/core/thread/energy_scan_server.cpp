@@ -79,6 +79,7 @@ void EnergyScanServer::HandleRequest(Coap::Header &aHeader, Message &aMessage, c
     MeshCoP::PeriodTlv period;
     MeshCoP::ScanDurationTlv scanDuration;
     MeshCoP::ChannelMask0Tlv channelMask;
+    Ip6::MessageInfo responseInfo(aMessageInfo);
 
     VerifyOrExit(aHeader.GetCode() == kCoapRequestPost, ;);
 
@@ -92,7 +93,7 @@ void EnergyScanServer::HandleRequest(Coap::Header &aHeader, Message &aMessage, c
     VerifyOrExit(scanDuration.IsValid(), ;);
 
     SuccessOrExit(MeshCoP::Tlv::GetTlv(aMessage, MeshCoP::Tlv::kChannelMask, sizeof(channelMask), channelMask));
-    VerifyOrExit(channelMask.IsValid(),);
+    VerifyOrExit(channelMask.IsValid(), ;);
 
     mChannelMask = channelMask.GetMask();
     mChannelMaskCurrent = mChannelMask;
@@ -104,40 +105,14 @@ void EnergyScanServer::HandleRequest(Coap::Header &aHeader, Message &aMessage, c
     mTimer.Start(kScanDelay);
 
     mCommissioner = aMessageInfo.GetPeerAddr();
-    SendResponse(aHeader, aMessageInfo);
-
-exit:
-    return;
-}
-
-ThreadError EnergyScanServer::SendResponse(const Coap::Header &aRequestHeader, const Ip6::MessageInfo &aRequestInfo)
-{
-    ThreadError error = kThreadError_None;
-    Message *message = NULL;
-    Coap::Header responseHeader;
-    Ip6::MessageInfo responseInfo(aRequestInfo);
-
-    VerifyOrExit(aRequestHeader.GetType() == kCoapTypeConfirmable, ;);
-
-    VerifyOrExit((message = mCoapServer.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-
-    responseHeader.SetDefaultResponseHeader(aRequestHeader);
-
-    SuccessOrExit(error = message->Append(responseHeader.GetBytes(), responseHeader.GetLength()));
 
     memset(&responseInfo.mSockAddr, 0, sizeof(responseInfo.mSockAddr));
-    SuccessOrExit(error = mCoapServer.SendMessage(*message, responseInfo));
+    SuccessOrExit(mCoapServer.SendEmptyAck(aHeader, responseInfo));
 
     otLogInfoMeshCoP("sent energy scan query response");
 
 exit:
-
-    if (error != kThreadError_None && message != NULL)
-    {
-        message->Free();
-    }
-
-    return error;
+    return;
 }
 
 void EnergyScanServer::HandleTimer(void *aContext)
@@ -216,7 +191,7 @@ ThreadError EnergyScanServer::SendReport(void)
     header.AppendUriPathOptions(OPENTHREAD_URI_ENERGY_REPORT);
     header.SetPayloadMarker();
 
-    VerifyOrExit((message = mCoapClient.NewMessage(header)) != NULL, error = kThreadError_NoBufs);
+    VerifyOrExit((message = mCoapClient.NewMeshCoPMessage(header)) != NULL, error = kThreadError_NoBufs);
 
     channelMask.Init();
     channelMask.SetMask(mChannelMask);

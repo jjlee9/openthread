@@ -299,6 +299,12 @@ public:
     ThreadError SetPreferredRouterId(uint8_t aRouterId);
 
     /**
+     * This method gets the Partition Id which the device joined successfully once.
+     *
+     */
+    uint32_t GetPreviousPartitionId(void) const;
+
+    /**
      * This method sets the Partition Id which the device joins successfully.
      *
      * @param[in]  aPartitionId   The Partition Id.
@@ -746,7 +752,6 @@ private:
     ThreadError SendAddressRelease(void);
     void SendAddressSolicitResponse(const Coap::Header &aRequest, uint8_t aRouterId,
                                     const Ip6::MessageInfo &aMessageInfo);
-    void SendAddressReleaseResponse(const Coap::Header &aRequestHeader, const Ip6::MessageInfo &aMessageInfo);
     ThreadError SendAdvertisement(void);
     ThreadError SendLinkRequest(Neighbor *aNeighbor);
     ThreadError SendLinkAccept(const Ip6::MessageInfo &aMessageInfo, Neighbor *aNeighbor,
