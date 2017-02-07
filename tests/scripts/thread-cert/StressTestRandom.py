@@ -32,12 +32,13 @@ import time
 import unittest
 import random
 from enum import Enum
+from NodeGraph import Graph
 
 import node
 # import config
 
 LEADER = 0
-NUM_OF_STEPS = 3000
+NUM_OF_STEPS = 30
 START_N_OF_NODES = 20
 RAND_SEED = 981203748
 # TODO: seems like after exactly 16 routers next node becomes a child
@@ -151,9 +152,15 @@ class StressTestRandom(unittest.TestCase):
         for i in range(START_N_OF_NODES):
             self.start_node(i)
 
+        # for i in range(START_N_OF_NODES):
+        #     print("Node #%d's [%s] Neighbors" % (i, self.nodes[i].get_addr64()))
+        #     print(self.nodes[0].get_neighbors_info())
+        #
+        # return()
+
         n_of_nodes = START_N_OF_NODES
         for step in range(NUM_OF_STEPS):
-            rand_action = random.choice(list(Action)[:3])
+            rand_action = random.choice(list(Action))
             print("Iteration #%d [%s]" % (step, rand_action))
             if rand_action == Action.STOP_NODE:  # stop some node
                 if len(self.running_ns) > 0:
@@ -171,23 +178,30 @@ class StressTestRandom(unittest.TestCase):
             elif rand_action == Action.PINGING:
                 print("Nodes pinging one another")
                 print("Running devices:", self.running_ns)
+
                 # continue
-                # time.sleep(15)
+                time.sleep(15)
                 # running nodes must participate in the network
-                for node_id in self.running_ns:
-                    # self.nodes[node_id].get_addrs()
-                    # TODO: child remains detached for some time
-                    self.assertNotEqual(self.nodes[node_id].get_state(), State.DISABLED)
-                    self.assertNotEqual(self.nodes[node_id].get_state(), State.DETACHED)
+                # for node_id in self.running_ns:
+                #     # self.nodes[node_id].get_addrs()
+                #     # TODO: child remains detached for some time
+                #     self.assertNotEqual(self.nodes[node_id].get_state(), State.DISABLED)
+                #     self.assertNotEqual(self.nodes[node_id].get_state(), State.DETACHED)
+
+                g = Graph(self.nodes)
+                print(g)
                 # continue
                 for node_id in self.running_ns:
                     for other_n in self.running_ns:
-                        if other_n != node_id and self.nodes[node_id].get_partition_id() == \
-                                self.nodes[other_n].get_partition_id():
+                        if other_n != node_id and g.connected_id(node_id, other_n) and \
+                                        self.nodes[node_id].get_partition_id() == \
+                                        self.nodes[other_n].get_partition_id():
+
                             if self.nodes[node_id].get_state() == State.LEADER and \
                                         self.nodes[other_n].get_state() == State.LEADER:
                                 print("Two leaders!!! Weird, huh?")
                                 continue
+
                             for addr in self.nodes[other_n].get_addrs():
                                 if addr[:4] != 'fe80':
                                     print("Node %s %d [%d] pinging %s %d [%d] on %s"
@@ -213,9 +227,9 @@ class StressTestRandom(unittest.TestCase):
             else:
                 print("Unsupported action ", rand_action)
 
-        for node in list(self.nodes.values()):
-            node.get_state()
-            node.get_addrs()
+        for cur_node in list(self.nodes.values()):
+            cur_node.get_state()
+            cur_node.get_addrs()
 
 if __name__ == "__main__":
     unittest.main()
