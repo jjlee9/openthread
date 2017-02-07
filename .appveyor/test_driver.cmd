@@ -34,6 +34,8 @@ REM Query the driver state
 
 sc query otlwf
 
+"C:\Program Files (x86)\Windows Kits\10\Tools\%Platform%\devcon.exe" status *ottmp*
+
 REM Run the basic driver test
 
 otTestRunner.exe ..\tests\scripts\thread-cert Test_otLwf* appveyor

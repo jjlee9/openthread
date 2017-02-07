@@ -32,12 +32,20 @@ pushd %APPVEYOR_BUILD_FOLDER%\build\bin\%Platform2%\%Configuration%\sys
 
 REM Install the certifications to the cert stores
 certutil -addstore root otLwf.cer
+certutil -addstore root ottmp.cer
 certutil -addstore TrustedPublisher otLwf.cer
+certutil -addstore TrustedPublisher ottmp.cer
 
 cd otLwf
 
 REM Install the NDIS LWF driver, otLwf.sys
 
 netcfg.exe -v -l otlwf.inf -c s -i otLwf
+
+cd ..\ottmp
+
+REM Install the NDIS MP driver, ottmp.sys
+
+"C:\Program Files (x86)\Windows Kits\10\Tools\%Platform%\devcon.exe" install ottmp.inf root\ottmp
 
 popd
