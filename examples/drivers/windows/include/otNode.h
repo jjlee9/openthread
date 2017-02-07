@@ -396,6 +396,21 @@ typedef struct otMacFrame
  */
 OTNODEAPI int32_t OTCALL otListenerRead(otListener* aListener, otMacFrame *aFrame);
 
+/**
+ * Gets node's child's information by its id
+ */
+OTNODEAPI const char* OTCALL otNodeGetChildInfoById(otNode* aNode, uint16_t aChildId);
+
+/**
+* Gets node's child's information by its index
+*/
+OTNODEAPI const char* OTCALL otNodeGetChildInfoByIndex(otNode* aNode, uint8_t aChildIndex);
+
+/**
+* Gets node's next neighbor's information
+*/
+OTNODEAPI const char* OTCALL otNodeGetNextNeighborInfo(otNode* aNode, otNeighborInfoIterator* aIterator);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

@@ -32,6 +32,7 @@ import sys
 import time
 import ctypes
 
+
 class otApi:
     def __init__(self, nodeid):
         self.verbose = int(float(os.getenv('VERBOSE', 0)))
@@ -351,6 +352,17 @@ class otApi:
             ) != 0:
             raise OSError("otNodeSendPendingSet failed!")
 
+    def get_child_info_by_id(self, child_id):
+        return self.Api.otNodeGetChildInfoById(self.otNode, ctypes.c_uint16(child_id)).decode('utf-8')
+
+    def get_child_info_by_index(self, child_index):
+        return self.Api.otNodeGetChildInfoByIndex(self.otNode, ctypes.c_uint8(child_index)).decode('utf-8')
+
+    OTNeighborIterator = ctypes.c_uint16
+
+    def get_next_neighbor_info(self, iterator):
+        return self.Api.otNodeGetNextNeighborInfo(self.otNode, ctypes.byref(iterator)).decode('utf-8')
+
     def log(self, message):
         self.Api.otNodeLog(message)
 
@@ -581,8 +593,20 @@ class otApi:
 
         self.Api.otNodeSetMaxChildren.argtypes = [ctypes.c_void_p, 
                                                   ctypes.c_ubyte]
+
+        self.Api.otNodeGetChildInfoById.argtypes = [ctypes.c_void_p,
+                                                    ctypes.c_uint16]
+        self.Api.otNodeGetChildInfoById.restype = ctypes.c_char_p
+
+        self.Api.otNodeGetChildInfoByIndex.argtypes = [ctypes.c_void_p,
+                                                       ctypes.c_uint8]
+        self.Api.otNodeGetChildInfoByIndex.restype = ctypes.c_char_p
+
+        self.Api.otNodeGetNextNeighborInfo.argtypes = [ctypes.c_void_p,
+                                                       ctypes.POINTER(ctypes.c_uint16)]
+        self.Api.otNodeGetNextNeighborInfo.restype = ctypes.c_char_p
         
         # Initialize a new node
         self.otNode = self.Api.otNodeInit(ctypes.c_uint(nodeid))
-        if self.otNode == None:
+        if self.otNode is None:
             raise OSError("otNodeInit failed!")

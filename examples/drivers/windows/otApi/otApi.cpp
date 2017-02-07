@@ -2886,6 +2886,43 @@ otGetChildInfoByIndex(
 }
 
 OTAPI
+ThreadError
+OTCALL
+otGetNextNeighborInfo(
+	_In_	otInstance				*aInstance,
+	_Inout_	otNeighborInfoIterator	*aIterator,
+	_Out_	otNeighborInfo			*aInfo
+	)
+{
+	if (aInstance == nullptr || aIterator == nullptr || aInfo == nullptr) {
+		return kThreadError_InvalidArgs;
+	}
+
+	PackedBuffer2<GUID, otNeighborInfoIterator> InBuffer(aInstance->InterfaceGuid, *aIterator);
+	BYTE OutBuffer[sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo)];
+	
+	ThreadError aError =
+		DwordToThreadError(
+			SendIOCTL(
+				aInstance->ApiHandle,
+				IOCTL_OTLWF_OT_NEXT_NEIGHBOR_INFO,
+				&InBuffer, sizeof(InBuffer),
+				OutBuffer, sizeof(OutBuffer)
+			)
+		);
+
+	if (aError == kThreadError_None) {
+		memcpy(aIterator, OutBuffer, sizeof(otNeighborInfoIterator));
+		memcpy(aInfo, OutBuffer + sizeof(otNeighborInfoIterator), sizeof(otNeighborInfo));
+	}
+	else {
+		ZeroMemory(aInfo, sizeof(otNeighborInfo));
+	}
+
+	return aError;
+}
+
+OTAPI
 otDeviceRole 
 OTCALL
 otGetDeviceRole(

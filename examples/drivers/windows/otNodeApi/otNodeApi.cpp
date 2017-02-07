@@ -2270,3 +2270,81 @@ OTNODEAPI int32_t OTCALL otListenerRead(otListener* aListener, otMacFrame *aFram
 
     return 0;
 }
+
+char* ExtAddressToString(otNode* aNode, uint32_t str_len, uint16_t data_len, uint8_t addr[]) {
+	if (sizeof(addr) < data_len * sizeof(uint8_t)) {
+		return nullptr;
+	}
+	char* str = (char*)malloc(str_len);
+	aNode->mMemoryToFree.push_back(str);
+	if (str != nullptr) {
+		RtlZeroMemory(str, str_len);
+		for (int i = 0; i < data_len; ++i) {
+			sprintf_s(
+				str + i * 2, str_len - 2 * i,
+				"%02x", addr[i]
+			);
+		}
+	}
+	return str;
+}
+
+OTNODEAPI const char* OTCALL otNodeGetChildInfoById(otNode* aNode, uint16_t aChildId)
+{
+	otLogFuncEntryMsg("[%d]", aNode->mId);
+
+	otChildInfo aChildInfo;
+	auto error = otGetChildInfoById(aNode->mInstance, aChildId, &aChildInfo);
+	if (error != kThreadError_None) {
+		printf("%d: [otNodeGetChildInfoById] %s\n", aNode->mId, otThreadErrorToString(error));
+		return "";
+	}
+
+	char* str = ExtAddressToString(aNode, 18, 8, aChildInfo.mExtAddress.m8);
+	if (str != nullptr) {
+		printf("%d (child): extaddr\r\n%s\r\n", aChildInfo.mChildId, str);
+	}
+
+	otLogFuncExit();
+	return str;
+}
+
+OTNODEAPI const char* OTCALL otNodeGetChildInfoByIndex(otNode* aNode, uint8_t aChildIndex)
+{
+	otLogFuncEntryMsg("[%d]", aNode->mId);
+
+	otChildInfo aChildInfo;
+	auto error = otGetChildInfoByIndex(aNode->mInstance, aChildIndex, &aChildInfo);
+	if (error != kThreadError_None) {
+		printf("%d: [otNodeGetChildInfoByIndex] %s\n", aNode->mId, otThreadErrorToString(error));
+		return "";
+	}
+
+	char* str = ExtAddressToString(aNode, 18, 8, aChildInfo.mExtAddress.m8);
+	if (str != nullptr) {
+		printf("%d (child): extaddr\r\n%s\r\n", aChildInfo.mChildId, str);
+	}
+
+	otLogFuncExit();
+	return str;
+}
+
+OTNODEAPI const char* OTCALL otNodeGetNextNeighborInfo(otNode* aNode, otNeighborInfoIterator* aIterator)
+{
+	otLogFuncEntryMsg("[%d]", aNode->mId);
+
+	otNeighborInfo aNeighborInfo;
+	auto error = otGetNextNeighborInfo(aNode->mInstance, aIterator, &aNeighborInfo);
+	if (error != kThreadError_None) {
+		printf("%d: [otNodeGetNextNeighborInfo] %s\n", aNode->mId, otThreadErrorToString(error));
+		return "";
+	}
+
+	char* str = ExtAddressToString(aNode, 18, 8, aNeighborInfo.mExtAddress.m8);
+	if (str != nullptr) {
+		printf("%d (neighbor): extaddr\r\n%s\r\n", aNeighborInfo.mRloc16, str);
+	}
+
+	otLogFuncExit();
+	return str;
+}

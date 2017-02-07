@@ -137,7 +137,8 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_GET",  REF_IOCTL_FUNC(otSendMgmtCommissionerGet) },
     { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET",  REF_IOCTL_FUNC(otSendMgmtCommissionerSet) },
     { "IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME",        REF_IOCTL_FUNC_WITH_TUN(otKeySwitchGuardtime) },
-    { "IOCTL_OTLWF_OT_FACTORY_RESET",               REF_IOCTL_FUNC(otFactoryReset) }
+    { "IOCTL_OTLWF_OT_FACTORY_RESET",               REF_IOCTL_FUNC(otFactoryReset) },
+	{ "IOCTL_OTLWF_OT_NEXT_NEIGHBOR_INFO",			REF_IOCTL_FUNC(otNextNeighborInfo) }
 };
 
 static_assert(ARRAYSIZE(IoCtls) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE) + 1,
@@ -3883,6 +3884,47 @@ otLwfIoCtl_otChildInfoByIndex(
     }
 
     return status;
+}
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+otLwfIoCtl_otNextNeighborInfo(
+	_In_ PMS_FILTER			pFilter,
+	_In_reads_bytes_(InBufferLength)
+			PUCHAR			InBuffer,
+	_In_	ULONG			InBufferLength,
+	_Out_writes_bytes_(*OutBufferLength)
+			PVOID			OutBuffer,
+	_Inout_	PULONG			OutBufferLength
+	)
+{
+	NTSTATUS status = STATUS_INVALID_PARAMETER;
+
+	if (InBufferLength >= sizeof(otNeighborInfoIterator) &&
+		*OutBufferLength >= sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo)) {
+
+		otNeighborInfoIterator aIterator = *(otNeighborInfoIterator*)InBuffer;
+		otNeighborInfo* aInfo = (otNeighborInfo*) ((PUCHAR)OutBuffer + sizeof(otNeighborInfoIterator));
+
+		status = ThreadErrorToNtstatus(
+			otGetNextNeighborInfo(
+				pFilter->otCtx,
+				&aIterator,
+				aInfo
+			)
+		);
+
+		*OutBufferLength = sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo);
+
+		if (status == STATUS_SUCCESS) {
+			*(otNeighborInfoIterator*)OutBuffer = aIterator;
+		}
+	}
+	else {
+		*OutBufferLength = 0;
+	}
+
+	return status;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)

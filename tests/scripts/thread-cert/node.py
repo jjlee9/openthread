@@ -30,11 +30,13 @@
 import os
 import sys
 import time
+
 if sys.platform != 'win32':
     import node_cli
 else:
     import node_api
 import unittest
+
 
 class Node:
     def __init__(self, nodeid):
@@ -42,6 +44,7 @@ class Node:
             self.interface = node_cli.otCli(nodeid)
         else:
             self.interface = node_api.otApi(nodeid)
+            self.NeighborIterator = self.interface.OTNeighborIterator
 
         self.interface.clear_whitelist()
         self.interface.disable_whitelist()
@@ -67,7 +70,7 @@ class Node:
 
     def thread_stop(self):
         self.interface.thread_stop()
-            
+
     def commissioner_start(self):
         self.interface.commissioner_start()
 
@@ -193,13 +196,13 @@ class Node:
     def set_context_reuse_delay(self, delay):
         self.interface.set_context_reuse_delay(delay)
 
-    def add_prefix(self, prefix, flags, prf = 'med'):
+    def add_prefix(self, prefix, flags, prf='med'):
         self.interface.add_prefix(prefix, flags, prf)
 
     def remove_prefix(self, prefix):
         self.interface.remove_prefix(prefix)
 
-    def add_route(self, prefix, prf = 'med'):
+    def add_route(self, prefix, prf='med'):
         self.interface.add_route(prefix, prf)
 
     def remove_route(self, prefix):
@@ -241,6 +244,26 @@ class Node:
                               panid=None, master_key=None, mesh_local=None, network_name=None):
         self.interface.send_mgmt_pending_set(pending_timestamp, active_timestamp, delay_timer, channel, panid,
                                              master_key, mesh_local, network_name)
+
+    def get_child_info_by_id(self, child_id):
+        return self.interface.get_child_info_by_id(child_id)
+
+    def get_child_info_by_index(self, child_index):
+        return self.interface.get_child_info_by_index(child_index)
+
+    def get_next_neighbor_info(self, iterator):
+        return self.interface.get_next_neighbor_info(iterator)
+
+    def get_neighbors_info(self):
+        neighbors = []
+        it = self.NeighborIterator(0)
+        while True:
+            neighbor = self.get_next_neighbor_info(it)
+            if neighbor is None or neighbor == "":
+                break
+            neighbors.append(neighbor)
+        return neighbors
+
 
 if __name__ == '__main__':
     unittest.main()

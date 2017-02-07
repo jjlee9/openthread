@@ -173,6 +173,7 @@ DECL_IOCTL_FUNC_WITH_TUN(otClearMacWhitelist);
 DECL_IOCTL_FUNC_WITH_TUN2(otDeviceRole);
 DECL_IOCTL_FUNC(otChildInfoById);
 DECL_IOCTL_FUNC(otChildInfoByIndex);
+DECL_IOCTL_FUNC(otNextNeighborInfo);
 DECL_IOCTL_FUNC(otEidCacheEntry);
 DECL_IOCTL_FUNC(otLeaderData);
 DECL_IOCTL_FUNC_WITH_TUN2(otLeaderRouterId);
