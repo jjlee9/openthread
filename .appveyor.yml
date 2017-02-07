@@ -30,7 +30,6 @@ version: 0.1.{build}
 image: Windows Server 2016
 configuration:
 - Release
-- Debug
 platform:
 - x64
 - x86
