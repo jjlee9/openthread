@@ -31,8 +31,8 @@
  *   This file includes definitions for using mbedTLS.
  */
 
-#ifndef DTLS_HPP_
-#define DTLS_HPP_
+#ifndef OFFMESH_DTLS_HPP_
+#define OFFMESH_DTLS_HPP_
 
 #include <openthread-types.h>
 

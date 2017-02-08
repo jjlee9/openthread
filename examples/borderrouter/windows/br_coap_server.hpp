@@ -31,8 +31,8 @@
  *   This file includes definitions for the CoAP server.
  */
 
-#ifndef COAP_SERVER_HPP_
-#define COAP_SERVER_HPP_
+#ifndef OFFMESH_COAP_SERVER_HPP_
+#define OFFMESH_COAP_SERVER_HPP_
 
 #include "br_coap_header.hpp"
 

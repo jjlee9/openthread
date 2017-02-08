@@ -29,6 +29,7 @@
 #pragma once
 
 #include <windows.h>
+#include <mbedtls/platform.h>
 
 typedef void(*BrSocketReadCallback)(void* aContext, uint8_t* aBuf, DWORD cbReceived);
 
@@ -36,15 +37,16 @@ class BRSocket
 {
 public:
 
-    BRSocket(ADDRESS_FAMILY addressFamily);
+    BRSocket(ADDRESS_FAMILY addressFamily, BrSocketReadCallback readCallback, void* clientContext);
     ~BRSocket();
 
-    HRESULT Initialize(BrSocketReadCallback readCallback, void* clientContext);
+    HRESULT Initialize();
     // safe to be called multiple times. called from destructor. if more fine grained control
     // of timing is desired, can be called manually
     void Uninitialize();
     HRESULT Bind(unsigned short port, PIN6_ADDR sin6Addr);
     HRESULT Read();
+    bool IsReading();
     HRESULT Reply(const uint8_t* aBuf, uint16_t aLength);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* peerToSendTo);
@@ -54,8 +56,16 @@ private:
     SOCKET mSocket;
     sockaddr_storage mPeerAddr;
     ADDRESS_FAMILY mAddressFamily;
+    WSAOVERLAPPED mOverlapped;
+    char mRecvBuffer[MBEDTLS_SSL_MAX_CONTENT_LEN];
+    bool mIsReading;
 
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo, size_t cbSizeOfPeerToSendTo);
+
+    static void CALLBACK AsyncSocketWaitComplete(DWORD dwError,
+                                                 DWORD cbTransferred,
+                                                 LPWSAOVERLAPPED lpOverlapped,
+                                                 DWORD dwFlags);
 
     BrSocketReadCallback mClientReceiveCallback;
     void* mClientContext;

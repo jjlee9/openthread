@@ -31,6 +31,7 @@
 #include "br_dtls.hpp"
 #include "br_coap_server.hpp"
 #include "border-router-socket.hpp"
+#include "openthread-types.h"
 #include <windows.h>
 
 /**

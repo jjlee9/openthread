@@ -31,7 +31,7 @@
 #include "br_coap_server.hpp"
 #include "fake-leader.hpp"
 #include "border-router-socket.hpp"
-#include <thread/meshcop_dataset.hpp>
+//#include <thread/meshcop_dataset.hpp>
 #include <windows.h>
 #include <ws2tcpip.h>
 

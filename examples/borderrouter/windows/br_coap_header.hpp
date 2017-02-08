@@ -31,8 +31,8 @@
  *   This file includes definitions for generating and processing CoAP headers.
  */
 
-#ifndef COAP_HEADER_HPP_
-#define COAP_HEADER_HPP_
+#ifndef OFFMESH_COAP_HEADER_HPP_
+#define OFFMESH_COAP_HEADER_HPP_
 
 #include <string.h>
 

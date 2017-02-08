@@ -28,7 +28,8 @@
 
 #include "stdafx.h"
 #include <mbedtls/memory_buffer_alloc.h>
-#include <thread/meshcop_tlvs.hpp>
+#include <common/message.hpp>
+#include <thread/thread_tlvs.hpp>
 #include <ws2tcpip.h>
 #include <memory>
 #include "client.hpp"
@@ -37,7 +38,7 @@
 using namespace Thread::MeshCoP;
 
 Client::Client() :
-    mBorderRouterSocket(AF_INET)
+    mBorderRouterSocket(AF_INET, HandleBorderRouterSocketReceive, this)
 {
 
 }
@@ -51,7 +52,7 @@ HRESULT Client::Start()
         return hr;
     }
 
-    hr = mBorderRouterSocket.Initialize(HandleBorderRouterSocketReceive, this);
+    hr = mBorderRouterSocket.Initialize();
     if (FAILED(hr))
     {
         return hr;
@@ -64,8 +65,10 @@ HRESULT Client::Start()
 
     while (!mDtls.IsConnected())
     {
-        printf("entering the read loop!\n");
-        mBorderRouterSocket.Read();
+        if (!mBorderRouterSocket.IsReading())
+        {
+            mBorderRouterSocket.Read();
+        }
     }
 
     // once we are connected, we don't want to read infinitely anymore, we want to send the comm_pet
@@ -104,7 +107,7 @@ HRESULT Client::Start()
 
     while (1)
     {
-        mBorderRouterSocket.Read();
+        // now wait
     }
 
     return S_OK;

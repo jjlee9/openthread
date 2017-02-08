@@ -27,12 +27,15 @@
 */
 
 #include "stdafx.h"
-#include <mbedtls/platform.h>
 #include "border-router-socket.hpp"
 
-BRSocket::BRSocket(ADDRESS_FAMILY addressFamily) :
+BRSocket::BRSocket(ADDRESS_FAMILY addressFamily, BrSocketReadCallback readCallback, void* clientContext) :
     mSocket(INVALID_SOCKET),
-    mAddressFamily(addressFamily)
+    mAddressFamily(addressFamily),
+    mOverlapped({ 0 }),
+    mClientReceiveCallback(readCallback),
+    mClientContext(clientContext),
+    mIsReading(false)
 {
 }
 
@@ -41,16 +44,19 @@ BRSocket::~BRSocket()
     Uninitialize();
 }
 
-HRESULT BRSocket::Initialize(BrSocketReadCallback readCallback, void* clientContext)
+HRESULT BRSocket::Initialize()
 {
-    mClientReceiveCallback = readCallback;
-    mClientContext = clientContext;
-
     mSocket = WSASocket(mAddressFamily, SOCK_DGRAM, IPPROTO_UDP, nullptr, 0, WSA_FLAG_OVERLAPPED);
     if (mSocket == INVALID_SOCKET)
     {
         return HRESULT_FROM_WIN32(WSAGetLastError());
     }
+
+    // from MSDN documentation on WSARecvFrom:
+    // "If lpCompletionRoutine is not NULL, the hEvent parameter is ignored and can be used by
+    // the application to pass context information to the completion routine"
+    // We will use this to provide a this ptr to call member functions with
+    mOverlapped.hEvent = this;
 
     return S_OK;
 }
@@ -93,72 +99,67 @@ HRESULT BRSocket::Bind(unsigned short port, PIN6_ADDR sin6Addr)
     return S_OK;
 }
 
+// static
+void CALLBACK BRSocket::AsyncSocketWaitComplete(DWORD dwError,
+                                                DWORD cbTransferred,
+                                                LPWSAOVERLAPPED lpOverlapped,
+                                                DWORD dwFlags)
+{
+    wprintf(L"%p: AsyncSocketWaitComplete entered\n", lpOverlapped->hEvent);
+    auto pThis = static_cast<BRSocket*>(lpOverlapped->hEvent);
+
+    if (dwError == ERROR_SUCCESS)
+    {
+        wprintf(L"%p: Looks like we got a message! dwFlags is 0x%x, cbTransferred is %d\n", pThis, dwFlags, cbTransferred);
+
+        // Let the client handle their callback before reading from the socket again so callbacks are
+        // serialized
+        pThis->mClientReceiveCallback(pThis->mClientContext, (uint8_t*)pThis->mRecvBuffer, cbTransferred);
+    }
+    else
+    {
+        wprintf(L"%p: Error in AsyncSocketWaitComplete indicated, 0x%x\n", pThis, dwError);
+    }
+
+    pThis->Read();
+}
+
 HRESULT BRSocket::Read()
 {
-    printf("ReadFromSocket called!\n");
+    wprintf(L"%p: ReadFromSocket called!\n", this);
 
-    char recvBuffer[MBEDTLS_SSL_MAX_CONTENT_LEN];
-    WSABUF wsaRecvBuffer = { sizeof(recvBuffer), recvBuffer };
+    WSABUF wsaRecvBuffer = { sizeof(mRecvBuffer), mRecvBuffer };
     DWORD cbReceived = 0;
     DWORD dwFlags = MSG_PARTIAL;
 
-
     int cbSourceAddr = sizeof(mPeerAddr);
-    WSAOVERLAPPED overlapped = {};
-    WSAEVENT overlappedEvent = WSACreateEvent();
-    if (WSA_INVALID_EVENT == overlappedEvent)
-    {
-        return WSAGetLastError();
-    }
-    overlapped.hEvent = overlappedEvent;
 
-    bool pending = false;
-    if (SOCKET_ERROR == WSARecvFrom(mSocket, &wsaRecvBuffer, 1, &cbReceived, &dwFlags, reinterpret_cast<sockaddr*>(&mPeerAddr), &cbSourceAddr, &overlapped, nullptr))
+    mIsReading = true;
+
+    if (SOCKET_ERROR == WSARecvFrom(mSocket, &wsaRecvBuffer, 1, &cbReceived, &dwFlags, reinterpret_cast<sockaddr*>(&mPeerAddr), &cbSourceAddr, &mOverlapped, AsyncSocketWaitComplete))
     {
         DWORD dwError = WSAGetLastError();
-        if (WSA_IO_PENDING == dwError)
+        if (WSA_IO_PENDING != dwError)
         {
-            pending = true;
+            wprintf(L"We failed to RecvFrom. The error is 0x%x\n", dwError);
+            return HRESULT_FROM_WIN32(dwError);
         }
         else
         {
-            wprintf(L"We failed to RecvFrom. The error is 0x%x\n", dwError);
-            return dwError;
+            wprintf(L"WSA_IO_PENDING, completion should be scheduled\n");
         }
     }
-
-    while (pending)
+    else
     {
-        wprintf(L"pending. going to call WSAWaitForMultipleEvents!\n");
-        DWORD result = WSAWaitForMultipleEvents(1, &overlapped.hEvent, true, INFINITE, true);
-        if (result == WSA_WAIT_EVENT_0)
-        {
-            pending = false;
-            if (!WSAGetOverlappedResult(mSocket, &overlapped, &cbReceived, false, &dwFlags))
-            {
-                return WSAGetLastError();
-            }
-        }
-        else if (result == WSA_WAIT_TIMEOUT)
-        {
-            return WSA_WAIT_TIMEOUT;
-        }
-        else if (result == WSA_WAIT_FAILED)
-        {
-            return WSAGetLastError();
-        }
-        // in the case of WSA_WAIT_IO_COMPLETION, our event is not yet signaled, and
-        // WSAWaitForMultipleEvents needs to be called again
+        wprintf(L"no error, completion should be scheduled\n");
     }
-
-    // at this time we should have some bytes in our buffer and dwFlags should let us know if there is more data to read, which we would read
-    // using WSARecvFrom/WSAGetOverlappedResult
-    printf("Looks like we got a message! dwFlags is 0x%x, cbReceived is %d\n", dwFlags, cbReceived);
-    WSACloseEvent(overlappedEvent);
-
-    mClientReceiveCallback(mClientContext, (uint8_t*)recvBuffer, cbReceived);
 
     return S_OK;
+}
+
+bool BRSocket::IsReading()
+{
+    return mIsReading;
 }
 
 HRESULT BRSocket::Reply(const uint8_t* aBuf, uint16_t aLength)

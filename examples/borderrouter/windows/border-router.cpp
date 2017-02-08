@@ -28,6 +28,7 @@
 
 #include "stdafx.h"
 #include <mbedtls/memory_buffer_alloc.h>
+#include <common/message.hpp>
 #include <thread/thread_uris.hpp>
 #include <crypto/mbedtls.hpp>
 #include <memory>
@@ -267,7 +268,7 @@ int main(int argc, char* argv[])
         BorderRouter router;
         router.Start();
     }
-    //else
+    //else if (argc > 2)
     //{
     //    FakeLeader leader;
     //    leader.Start();
@@ -282,8 +283,8 @@ int main(int argc, char* argv[])
 BorderRouter::BorderRouter() :
     mCoapHandler(HandleCoapMessage, this),
     mApiInstance(otApiInit()),
-    mThreadLeaderSocket(AF_INET6),
-    mCommissionerSocket(AF_INET)
+    mThreadLeaderSocket(AF_INET6, HandleThreadSocketReceive, this),
+    mCommissionerSocket(AF_INET, HandleCommissionerSocketReceive, this)
 {
     mCoap.AddResource(mCoapHandler);
 }
@@ -317,7 +318,7 @@ HRESULT BorderRouter::Start()
         return E_FAIL;
     }
 
-    hr = mCommissionerSocket.Initialize(HandleCommissionerSocketReceive, this);
+    hr = mCommissionerSocket.Initialize();
     if (FAILED(hr))
     {
         return hr;
@@ -330,7 +331,7 @@ HRESULT BorderRouter::Start()
         return E_FAIL;
     }
 
-    hr = mThreadLeaderSocket.Initialize(HandleThreadSocketReceive, this);
+    hr = mThreadLeaderSocket.Initialize();
     if (FAILED(hr))
     {
         return hr;
@@ -358,11 +359,15 @@ HRESULT BorderRouter::Start()
     mDtls.SetPsk(derivedKey, sizeof(derivedKey));
     mDtls.Start(false, HandleDtlsReceive, HandleDtlsSend, this);
 
+    mCommissionerSocket.Read();
+
     while (1)
     {
-        printf("entering the read loop!\n");
-        mCommissionerSocket.Read();
+        wprintf(L"going to sleep!\n");
+        SleepEx(INFINITE, TRUE);
     }
+
+    wprintf(L"oops we stopped sleeping\n");
 
     return S_OK;
 }
@@ -493,7 +498,7 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
         return;
     }
 
-    if (strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0)
+    if (strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0 || strcmp(aUriPath, OPENTHREAD_URI_ACTIVE_SET) == 0)
     {
         printf("commissioner set received:\n");
         printBuffer((char*)aBuf, aLength);
@@ -531,5 +536,8 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     printf("Attempting to send to leader at IPv6 adress %s\n", szIpAddress);
 
     mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
-    mThreadLeaderSocket.Read();
+    if (!mThreadLeaderSocket.IsReading())
+    {
+        mThreadLeaderSocket.Read();
+    }
 }

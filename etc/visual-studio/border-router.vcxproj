@@ -22,7 +22,7 @@
     <ProjectGuid>{EDA10DA0-9CE9-4833-800F-5C48FA72D033}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>borderrouter</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,7 +71,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\jovergar\Source\Repos\openthreadnickwindows\third_party\mbedtls;C:\Users\jovergar\Source\Repos\openthreadnickwindows\include;C:\Users\jovergar\Source\Repos\openthreadnickwindows\examples\borderrouter\windows;C:\Users\jovergar\Source\Repos\openthreadnickwindows\src\core\;C:\Users\jovergar\Source\Repos\openthreadnickwindows\third_party\mbedtls\repo\include\;$(IncludePath)</IncludePath>
+    <OutDir>..\..\build\bin\$(Platform)\$(Configuration)\exe\</OutDir>
+    <IntDir>..\..\build\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -90,12 +91,15 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;MBEDTLS_CONFIG_FILE="mbedtls-config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);MBEDTLS_CONFIG_FILE="mbedtls-config.h";OPENTHREAD_CONFIG_FILE="openthread-windows-config.h";OTDLL</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);..\..\include;..\..\src;..\..\src\core;..\..\third_party\mbedtls\repo\include;..\..\third_party\mbedtls</AdditionalIncludeDirectories>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>ws2_32.lib;bcrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -110,7 +114,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>..\..\build\bin\$(Platform)\$(Configuration)\dll\otApi.lib;..\..\build\bin\$(Platform)\$(Configuration)\lib\mbedtls.lib;ws2_32.lib;bcrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;bcrypt.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -175,12 +179,15 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="..\..\examples\borderrouter\windows\border-router.rc" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="mbedtls.vcxproj">
       <Project>{4111c8bb-d354-4348-ad3c-eb6832e84831}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\..\examples\borderrouter\windows\border-router.rc" />
+    <ProjectReference Include="otApi.vcxproj">
+      <Project>{ed0ea262-c222-42c7-98d3-e70c72978ed2}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

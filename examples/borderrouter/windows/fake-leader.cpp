@@ -30,14 +30,14 @@
 #include "fake-leader.hpp"
 #include "border-router.hpp"
 #include <thread/thread_uris.hpp>
-#include <thread/meshcop_tlvs.hpp>
+#include <thread/thread_tlvs.hpp>
 #include <memory>
 
 using namespace Thread::MeshCoP;
 
 FakeLeader::FakeLeader() :
     mCoapHandler(HandleCoapMessage, this),
-    mBorderRouterSocket(AF_INET6)
+    mBorderRouterSocket(AF_INET6, HandleBorderRouterSocketReceive, this)
 {
     mCoap.AddResource(mCoapHandler);
 }
@@ -51,7 +51,7 @@ HRESULT FakeLeader::Start()
         return hr;
     }
 
-    hr = mBorderRouterSocket.Initialize(HandleBorderRouterSocketReceive, this);
+    hr = mBorderRouterSocket.Initialize();
     if (FAILED(hr))
     {
         return hr;
