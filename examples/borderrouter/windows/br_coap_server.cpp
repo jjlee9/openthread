@@ -61,7 +61,6 @@ exit:
 
 void Server::Receive(uint8_t *aMessage, uint16_t aLength)
 {
-    printf("Server::Receive called!\n");
     OffMesh::Coap::Header header;
     char uriPath[kMaxReceivedUriPath];
     char *curUriPath = uriPath;
@@ -89,7 +88,7 @@ void Server::Receive(uint8_t *aMessage, uint16_t aLength)
             break;
 
         default:
-            printf("We found a weird option, it was %u. Ignore it for now, but this is an error from the client!\n", (unsigned int)coapOption->mNumber);
+            //wprintf(L"We found a weird option, it was %u. Ignore it for now, but this is an error from the client!\n", (unsigned int)coapOption->mNumber);
             break;
             //ExitNow();
         }

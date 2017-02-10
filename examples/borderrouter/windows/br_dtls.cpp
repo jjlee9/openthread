@@ -171,8 +171,6 @@ ThreadError Dtls::Send(const uint8_t *aBuf, uint16_t aLength)
 
 ThreadError Dtls::Receive(uint8_t *aMessage, uint16_t aLength)
 {
-    printf("Dtls::Receive\r\n");
-
     mReceiveMessageBuffer = aMessage;
     mReceiveOffset = 0;
     mReceiveLength = aLength;

@@ -83,13 +83,25 @@ private:
     static void HandleThreadSocketReceive(void *aContext, uint8_t *aBuf, DWORD aLength);
     void HandleThreadSocketReceive(uint8_t *aBuf, DWORD aLength);
 
+    static void HandleThreadManagementSocketReceive(void *aContext, uint8_t *aBuf, DWORD aLength)
+    {
+        // this functions exists just to provide a unique place to log something, remove later
+        wprintf(L"!!! HandleThreadManagementSocketReceive called!\n");
+        HandleThreadSocketReceive(aContext, aBuf, aLength);
+    }
+
     // coap handlers
     static void HandleCoapMessage(void *aContext, OffMesh::Coap::Header & aHeader, uint8_t *aMessage, uint16_t aLength, const char* aUriPath);
     void HandleCoapMessage(OffMesh::Coap::Header & aHeader, uint8_t * aMessage, uint16_t aLength, const char* aUriPath);
 
     OffMesh::MeshCoP::Dtls mDtls;
     BRSocket mCommissionerSocket;
-    BRSocket mThreadLeaderSocket;
+    // this socket sends/listens from an ephermeral port to thread leader port MM, as per section 8.4.2.1 of Thread Spec 1.1
+    // it is used when the commissioner wants to send something to the leader
+    BRSocket mThreadLeaderCommPetSocket;
+    // this socket sends/listens from port MM, as per section 8.4.4.5 of Thread Spec 1.1
+    // it is used when a Joiner is trying to join
+    BRSocket mThreadLeaderManagementSocket;
 
     OffMesh::Coap::Server mCoap;
     OffMesh::Coap::Resource mCoapHandler;

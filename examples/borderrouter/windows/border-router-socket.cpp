@@ -105,7 +105,6 @@ void CALLBACK BRSocket::AsyncSocketWaitComplete(DWORD dwError,
                                                 LPWSAOVERLAPPED lpOverlapped,
                                                 DWORD dwFlags)
 {
-    wprintf(L"%p: AsyncSocketWaitComplete entered\n", lpOverlapped->hEvent);
     auto pThis = static_cast<BRSocket*>(lpOverlapped->hEvent);
 
     if (dwError == ERROR_SUCCESS)
@@ -118,16 +117,82 @@ void CALLBACK BRSocket::AsyncSocketWaitComplete(DWORD dwError,
     }
     else
     {
-        wprintf(L"%p: Error in AsyncSocketWaitComplete indicated, 0x%x\n", pThis, dwError);
+        wprintf(L"%p: Error in AsyncSocketWaitComplete indicated, %d\n", pThis, dwError);
     }
 
     pThis->Read();
 }
 
+HRESULT BRSocket::BlockingRead()
+{
+    printf("ReadFromSocket called!\n");
+
+    char recvBuffer[MBEDTLS_SSL_MAX_CONTENT_LEN];
+    WSABUF wsaRecvBuffer = { sizeof(recvBuffer), recvBuffer };
+    DWORD cbReceived = 0;
+    DWORD dwFlags = MSG_PARTIAL;
+
+
+    int cbSourceAddr = sizeof(mPeerAddr);
+    WSAOVERLAPPED overlapped = {};
+    WSAEVENT overlappedEvent = WSACreateEvent();
+    if (WSA_INVALID_EVENT == overlappedEvent)
+    {
+        return WSAGetLastError();
+    }
+    overlapped.hEvent = overlappedEvent;
+
+    bool pending = false;
+    if (SOCKET_ERROR == WSARecvFrom(mSocket, &wsaRecvBuffer, 1, &cbReceived, &dwFlags, reinterpret_cast<sockaddr*>(&mPeerAddr), &cbSourceAddr, &overlapped, nullptr))
+    {
+        DWORD dwError = WSAGetLastError();
+        if (WSA_IO_PENDING == dwError)
+        {
+            pending = true;
+        }
+        else
+        {
+            wprintf(L"%p: We failed to RecvFrom. The error is %d\n", this, dwError);
+            return dwError;
+        }
+    }
+
+    while (pending)
+    {
+        wprintf(L"pending. going to call WSAWaitForMultipleEvents!\n");
+        DWORD result = WSAWaitForMultipleEvents(1, &overlapped.hEvent, true, INFINITE, true);
+        if (result == WSA_WAIT_EVENT_0)
+        {
+            pending = false;
+            if (!WSAGetOverlappedResult(mSocket, &overlapped, &cbReceived, false, &dwFlags))
+            {
+                return WSAGetLastError();
+            }
+        }
+        else if (result == WSA_WAIT_TIMEOUT)
+        {
+            return WSA_WAIT_TIMEOUT;
+        }
+        else if (result == WSA_WAIT_FAILED)
+        {
+            return WSAGetLastError();
+        }
+        // in the case of WSA_WAIT_IO_COMPLETION, our event is not yet signaled, and
+        // WSAWaitForMultipleEvents needs to be called again
+    }
+
+    // at this time we should have some bytes in our buffer and dwFlags should let us know if there is more data to read, which we would read
+    // using WSARecvFrom/WSAGetOverlappedResult
+    printf("Looks like we got a message! dwFlags is 0x%x, cbReceived is %d\n", dwFlags, cbReceived);
+    WSACloseEvent(overlappedEvent);
+
+    mClientReceiveCallback(mClientContext, (uint8_t*)recvBuffer, cbReceived);
+
+    return S_OK;
+}
+
 HRESULT BRSocket::Read()
 {
-    wprintf(L"%p: ReadFromSocket called!\n", this);
-
     WSABUF wsaRecvBuffer = { sizeof(mRecvBuffer), mRecvBuffer };
     DWORD cbReceived = 0;
     DWORD dwFlags = MSG_PARTIAL;
@@ -141,17 +206,9 @@ HRESULT BRSocket::Read()
         DWORD dwError = WSAGetLastError();
         if (WSA_IO_PENDING != dwError)
         {
-            wprintf(L"We failed to RecvFrom. The error is 0x%x\n", dwError);
+            wprintf(L"%p: We failed to RecvFrom. The error is %d\n", this, dwError);
             return HRESULT_FROM_WIN32(dwError);
         }
-        else
-        {
-            wprintf(L"WSA_IO_PENDING, completion should be scheduled\n");
-        }
-    }
-    else
-    {
-        wprintf(L"no error, completion should be scheduled\n");
     }
 
     return S_OK;
@@ -164,18 +221,7 @@ bool BRSocket::IsReading()
 
 HRESULT BRSocket::Reply(const uint8_t* aBuf, uint16_t aLength)
 {
-    DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, reinterpret_cast<sockaddr*>(&mPeerAddr), sizeof(mPeerAddr));
-    if (result == SOCKET_ERROR)
-    {
-        DWORD wsaError = WSAGetLastError();
-        printf("wsaError in Reply occurred. %d\n", wsaError);
-        return HRESULT_FROM_WIN32(wsaError);
-    }
-    else
-    {
-        printf("wrote %d bytes out of %u in Reply\n", result, aLength);
-        return S_OK;
-    }
+    return SendTo(aBuf, aLength, reinterpret_cast<sockaddr*>(&mPeerAddr), sizeof(mPeerAddr));
 }
 
 HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo)
@@ -190,19 +236,59 @@ HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* pee
 
 HRESULT BRSocket::SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr* peerToSendTo, size_t cbSizeOfPeerToSendTo)
 {
-    printf("trying to send %d bytes\n", aLength);
     DWORD result = sendto(mSocket, (char*)aBuf, (int)aLength, 0, peerToSendTo, (int)cbSizeOfPeerToSendTo);
     if (result == SOCKET_ERROR)
     {
         DWORD wsaError = WSAGetLastError();
-        printf("wsaError in SendTo occurred. %d\n", wsaError);
+        wprintf(L"%p: wsaError in SendTo occurred. %d\n", this, wsaError);
         return HRESULT_FROM_WIN32(wsaError);
     }
     else
     {
-        printf("wrote %d bytes out of %d in SendTo\n", result, aLength);
+        wprintf(L"%p wrote %d bytes out of %d in SendTo\n", this, result, aLength);
         return S_OK;
     }
+
+    // winsock overlapped version of the above...
+
+    //WSABUF dataBuf = { aLength, (char*)(aBuf) };
+    //WSAOVERLAPPED overlapped = { 0 };
+    //overlapped.hEvent = WSACreateEvent();
+    //if (overlapped.hEvent == WSA_INVALID_EVENT)
+    //{
+    //    return E_UNEXPECTED;
+    //}
+
+    //DWORD result = WSASendTo(mSocket, &dataBuf, 1, nullptr, 0, peerToSendTo, (int)cbSizeOfPeerToSendTo, &overlapped, nullptr);
+    //if (result == SOCKET_ERROR)
+    //{
+    //    DWORD wsaError = WSAGetLastError();
+    //    if (WSA_IO_PENDING != wsaError)
+    //    {
+    //        wprintf(L"%p: We failed to SendTo, %d\n", this, wsaError);
+    //        return HRESULT_FROM_WIN32(wsaError);
+    //    }
+    //}
+
+    //result = WSAWaitForMultipleEvents(1, &overlapped.hEvent, TRUE, INFINITE, TRUE);
+    //if (result == WSA_WAIT_FAILED)
+    //{
+    //    DWORD wsaError = WSAGetLastError();
+    //    wprintf(L"%p: Wait failed, %d\n", this, wsaError);
+    //    return HRESULT_FROM_WIN32(wsaError);
+    //}
+
+    //DWORD cbTransferred = 0;
+    //DWORD dwFlags = 0;
+    //if (!WSAGetOverlappedResult(mSocket, &overlapped, &cbTransferred, FALSE, &dwFlags))
+    //{
+    //    DWORD wsaError = WSAGetLastError();
+    //    wprintf(L"%p: SendTo failed, %d\n", this, wsaError);
+    //    return HRESULT_FROM_WIN32(wsaError);
+    //}
+
+    //wprintf(L"wrote %d bytes out of %d in SendTo\n", cbTransferred, aLength);
+    //return S_OK;
 }
 
 void BRSocket::GetLastPeer(sockaddr_storage* lastPeer)

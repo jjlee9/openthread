@@ -45,6 +45,7 @@ public:
     // of timing is desired, can be called manually
     void Uninitialize();
     HRESULT Bind(unsigned short port, PIN6_ADDR sin6Addr);
+    HRESULT BlockingRead();
     HRESULT Read();
     bool IsReading();
     HRESULT Reply(const uint8_t* aBuf, uint16_t aLength);

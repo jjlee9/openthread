@@ -63,12 +63,11 @@ HRESULT Client::Start()
     mDtls.SetPsk(derivedKey, sizeof(derivedKey));
     mDtls.Start(true, HandleDtlsReceive, HandleDtlsSend, this);
 
+    mBorderRouterSocket.Read();
+
     while (!mDtls.IsConnected())
     {
-        if (!mBorderRouterSocket.IsReading())
-        {
-            mBorderRouterSocket.Read();
-        }
+        SleepEx(1, TRUE);
     }
 
     // once we are connected, we don't want to read infinitely anymore, we want to send the comm_pet
@@ -107,7 +106,8 @@ HRESULT Client::Start()
 
     while (1)
     {
-        // now wait
+        wprintf(L"going to sleep!\n");
+        SleepEx(INFINITE, TRUE);
     }
 
     return S_OK;
