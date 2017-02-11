@@ -3901,8 +3901,8 @@ otLwfIoCtl_otNextNeighborInfo(
 	NTSTATUS status = STATUS_INVALID_PARAMETER;
 
 	if (InBufferLength >= sizeof(otNeighborInfoIterator) &&
-		*OutBufferLength >= sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo)) {
-
+		*OutBufferLength >= sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo)) 
+	{
 		otNeighborInfoIterator aIterator = *(otNeighborInfoIterator*)InBuffer;
 		otNeighborInfo* aInfo = (otNeighborInfo*) ((PUCHAR)OutBuffer + sizeof(otNeighborInfoIterator));
 
@@ -3916,11 +3916,13 @@ otLwfIoCtl_otNextNeighborInfo(
 
 		*OutBufferLength = sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo);
 
-		if (status == STATUS_SUCCESS) {
+		if (status == STATUS_SUCCESS) 
+		{
 			*(otNeighborInfoIterator*)OutBuffer = aIterator;
 		}
 	}
-	else {
+	else 
+	{
 		*OutBufferLength = 0;
 	}
 

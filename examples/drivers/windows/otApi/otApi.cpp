@@ -2937,7 +2937,8 @@ otGetNextNeighborInfo(
 	_Out_	otNeighborInfo			*aInfo
 	)
 {
-	if (aInstance == nullptr || aIterator == nullptr || aInfo == nullptr) {
+	if (aInstance == nullptr || aIterator == nullptr || aInfo == nullptr) 
+	{
 		return kThreadError_InvalidArgs;
 	}
 
@@ -2954,11 +2955,13 @@ otGetNextNeighborInfo(
 			)
 		);
 
-	if (aError == kThreadError_None) {
+	if (aError == kThreadError_None) 
+	{
 		memcpy(aIterator, OutBuffer, sizeof(otNeighborInfoIterator));
 		memcpy(aInfo, OutBuffer + sizeof(otNeighborInfoIterator), sizeof(otNeighborInfo));
 	}
-	else {
+	else 
+	{
 		ZeroMemory(aInfo, sizeof(otNeighborInfo));
 	}
 
