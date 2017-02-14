@@ -39,7 +39,8 @@ CatalogFile         = ottmp.cat
 %OpenThread%        = OpenThread,NT$ARCH$
 
 [OpenThread.NT$ARCH$]
-%ottmp.DeviceDesc%  = ottmp.ndi, root\ottmp ; Root enumerated
+%ottmp.DeviceDesc%  = ottmp.ndi, root\ottmp                                         ; Root enumerated
+%ottmp.DeviceDesc%  = ottmp.ndi, {B39ED6E1-F9AA-46EC-96DF-52DFFF434F23}\otUsbSer    ; USB Serial Port enumerated
 
 ;-------------------------------------------------------------------------------
 ; OpenThread Tunnel Thread Adapter

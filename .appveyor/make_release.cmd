@@ -56,6 +56,9 @@ copy build\bin\%Platform2%\%Configuration%\sys\otlwf.pdb release\symbols
 copy build\bin\%Platform2%\%Configuration%\sys\ottmp\* release
 copy build\bin\%Platform2%\%Configuration%\sys\ottmp.cer release
 copy build\bin\%Platform2%\%Configuration%\sys\ottmp.pdb release\symbols
+copy build\bin\%Platform2%\%Configuration%\sys\otusbser\* release
+copy build\bin\%Platform2%\%Configuration%\sys\otusbser.cer release
+copy build\bin\%Platform2%\%Configuration%\sys\otusbser.pdb release\symbols
 copy build\bin\%Platform2%\%Configuration%\dll\otApi.dll release
 copy build\bin\%Platform2%\%Configuration%\dll\otApi.lib release\libs
 copy build\bin\%Platform2%\%Configuration%\dll\otApi.pdb release\symbols

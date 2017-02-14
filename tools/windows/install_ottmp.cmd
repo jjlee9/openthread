@@ -29,5 +29,10 @@ REM
 REM Install the certifications to the cert stores
 certutil -addstore root ottmp.cer
 certutil -addstore TrustedPublisher ottmp.cer
+certutil -addstore root otusbser.cer
+certutil -addstore TrustedPublisher otusbser.cer
 
-devcon install ottmp.inf root\ottmp
+pnputil /add-driver otusbser.inf /install
+pnputil /add-driver ottmp.inf /install
+
+REM devcon install ottmp.inf root\ottmp

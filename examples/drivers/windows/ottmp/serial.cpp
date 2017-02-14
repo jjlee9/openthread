@@ -29,6 +29,128 @@
 #include "serial.tmh"
 
 PAGED
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+SerialInitializeFromPDO(
+    _In_ POTTMP_ADAPTER_CONTEXT     AdapterContext
+)
+{
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+
+    LogFuncEntry(DRIVER_DEFAULT);
+
+    PAGED_CODE();
+
+    do
+    {
+        WDFIOTARGET deviceTarget = WdfDeviceGetIoTarget(AdapterContext->Device);
+        if (!deviceTarget)
+        {
+            LogError(DRIVER_DEFAULT, "WdfDeviceGetIoTarget failed");
+            status = STATUS_DEVICE_ENUMERATION_ERROR;
+            break;
+        }
+
+        WCHAR wzPortName[32 + 12] = L"\\DosDevices\\"; // Maximum name length of the serial port
+        ULONG_PTR len = 0;
+        WDF_MEMORY_DESCRIPTOR outputDesc;
+        WDF_REQUEST_SEND_OPTIONS wrso = {
+            sizeof(WDF_REQUEST_SEND_OPTIONS),
+            WDF_REQUEST_SEND_OPTION_TIMEOUT | WDF_REQUEST_SEND_OPTION_SYNCHRONOUS,
+            WDF_REL_TIMEOUT_IN_SEC(1) // Nothing should take more than a second to complete
+        };
+        WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outputDesc, (PVOID)(wzPortName + 12), sizeof(WCHAR) * 32);
+        status = WdfIoTargetSendIoctlSynchronously(deviceTarget, WDF_NO_HANDLE, IOCTL_SERENUM_GET_PORT_NAME, WDF_NO_HANDLE, &outputDesc, &wrso, &len);
+        if (!NT_SUCCESS(status))
+        {
+            LogError(DRIVER_DEFAULT, "IOCTL_SERENUM_GET_PORT_NAME failed %!STATUS!", status);
+            break;
+        }
+
+#if DBG
+        LogVerbose(DRIVER_DEFAULT, "PDO Device found: %ws", wzPortName);
+#endif
+
+        // Initialize the target
+        status = SerialInitializeTarget(AdapterContext, wzPortName);
+
+    } while (false);
+
+    LogFuncExitNT(DRIVER_DEFAULT, status);
+
+    return status;
+}
+
+PAGED
+_IRQL_requires_max_(PASSIVE_LEVEL)
+NTSTATUS
+SerialInitializeFromEnum(
+    _In_ POTTMP_ADAPTER_CONTEXT     AdapterContext
+    )
+{
+    NTSTATUS status = STATUS_UNSUCCESSFUL;
+    PWSTR SymbolicLinkList = NULL;
+
+    LogFuncEntry(DRIVER_DEFAULT);
+    
+    PAGED_CODE();
+    
+    do
+    {
+        // Query the system for device with SERIAL interface
+        status =
+            IoGetDeviceInterfaces(
+                &GUID_DEVINTERFACE_COMPORT,
+                NULL,
+                0,
+                &SymbolicLinkList   // List of symbolic names; separate by NULL, EOL with NULL+NULL.
+            );
+
+        if (!NT_SUCCESS(status)) {
+            LogError(DRIVER_DEFAULT, "IoGetDeviceInterfaces failed %!STATUS!", status);
+            break;
+        }
+
+        // Make sure there is a COM port found
+        NT_ASSERT(SymbolicLinkList);
+        if (*SymbolicLinkList == NULL) {
+            status = STATUS_DEVICE_NOT_CONNECTED;
+            LogError(DRIVER_DEFAULT, "No COM ports found!");
+            break;
+        }
+
+#if DBG
+        for (PCWSTR sym = SymbolicLinkList; *sym != NULL; sym += wcslen(sym) + 1)
+        {
+            LogVerbose(DRIVER_DEFAULT, "Symbolic Name found: %ws", sym);
+        }
+#endif
+
+        // Try to open each serial port until we get that one works or we exhaust them all
+        for (PCWSTR sym = SymbolicLinkList; *sym != NULL; sym += wcslen(sym) + 1)
+        {
+            // Initialize the target
+            status = SerialInitializeTarget(AdapterContext, sym);
+
+            // Break on success
+            if (NT_SUCCESS(status)) {
+                break;
+            }
+        }
+
+    } while (false);
+
+    if (SymbolicLinkList) {
+        ExFreePool(SymbolicLinkList);
+        SymbolicLinkList = NULL;
+    }
+
+    LogFuncExitNT(DRIVER_DEFAULT, status);
+
+    return status;
+}
+
+PAGED
 _No_competing_thread_
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
@@ -52,7 +174,6 @@ Return Value:
 --*/
 {
     NTSTATUS status = STATUS_UNSUCCESSFUL;
-    PWSTR SymbolicLinkList = NULL;
 
     LogFuncEntry(DRIVER_DEFAULT);
     
@@ -108,45 +229,14 @@ Return Value:
 
         GetWdfDeviceInfo(AdapterContext->RecvWorkItem)->AdapterContext = AdapterContext;
 
-        // Query the system for device with SERIAL interface
-        status =
-            IoGetDeviceInterfaces(
-                &GUID_DEVINTERFACE_COMPORT,
-                NULL,
-                0,
-                &SymbolicLinkList   // List of symbolic names; separate by NULL, EOL with NULL+NULL.
-            );
+        // First try any PDO we are bound to
+        status = SerialInitializeFromPDO(AdapterContext);
 
-        if (!NT_SUCCESS(status)) {
-            LogError(DRIVER_DEFAULT, "IoGetDeviceInterfaces failed %!STATUS!", status);
-            break;
-        }
-
-        // Make sure there is a COM port found
-        NT_ASSERT(SymbolicLinkList);
-        if (*SymbolicLinkList == NULL) {
-            status = STATUS_DEVICE_NOT_CONNECTED;
-            LogError(DRIVER_DEFAULT, "No COM ports found!");
-            break;
-        }
-
-#if DBG
-        for (PCWSTR sym = SymbolicLinkList; *sym != NULL; sym += wcslen(sym) + 1)
+        if (!NT_SUCCESS(status))
         {
-            LogVerbose(DRIVER_DEFAULT, "Symbolic Name found: %ws", sym);
-        }
-#endif
-
-        // Try to open each serial port until we get that one works or we exhaust them all
-        for (PCWSTR sym = SymbolicLinkList; *sym != NULL; sym += wcslen(sym) + 1)
-        {
-            // Initialize the target
-            status = SerialInitializeTarget(AdapterContext, sym);
-
-            // Break on success
-            if (NT_SUCCESS(status)) {
-                break;
-            }
+            // If we don't have a PDO, then we are root enumerated. Query the system and try all
+            // serial devices found.
+            status = SerialInitializeFromEnum(AdapterContext);
         }
 
     } while (false);
@@ -154,11 +244,6 @@ Return Value:
     // Clean up on failure
     if (!NT_SUCCESS(status)) {
         SerialUninitialize(AdapterContext);
-    }
-
-    if (SymbolicLinkList) {
-        ExFreePool(SymbolicLinkList);
-        SymbolicLinkList = NULL;
     }
 
     LogFuncExitNT(DRIVER_DEFAULT, status);
