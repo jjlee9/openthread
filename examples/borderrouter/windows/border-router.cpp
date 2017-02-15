@@ -283,9 +283,9 @@ int main(int argc, char* argv[])
 BorderRouter::BorderRouter() :
     mCoapHandler(HandleCoapMessage, this),
     mApiInstance(otApiInit()),
-    mThreadLeaderCommPetSocket(AF_INET6, HandleThreadSocketReceive, this),
+    mThreadLeaderSocket(AF_INET6, HandleThreadSocketReceive, this),
     mCommissionerSocket(AF_INET, HandleCommissionerSocketReceive, this),
-    mThreadLeaderManagementSocket(AF_INET6, HandleThreadManagementSocketReceive, this)
+    mThreadJoinerRouterSocket(AF_INET6, HandleThreadManagementSocketReceive, this)
 {
     mCoap.AddResource(mCoapHandler);
 }
@@ -332,13 +332,13 @@ HRESULT BorderRouter::Start()
         return E_FAIL;
     }
 
-    hr = mThreadLeaderCommPetSocket.Initialize();
+    hr = mThreadLeaderSocket.Initialize();
     if (FAILED(hr))
     {
         return hr;
     }
 
-    hr = mThreadLeaderManagementSocket.Initialize();
+    hr = mThreadJoinerRouterSocket.Initialize();
     if (FAILED(hr))
     {
         return hr;
@@ -348,14 +348,14 @@ HRESULT BorderRouter::Start()
     RtlIpv6AddressToStringA(&sin6Addr, szIpAddress);
     printf("Attempting to bind to IPv6 adress %s\n", szIpAddress);
 
-    hr = mThreadLeaderCommPetSocket.Bind(0, &sin6Addr);
+    hr = mThreadLeaderSocket.Bind(0, &sin6Addr);
     if (FAILED(hr))
     {
         printf("bind failed 0x%x", hr);
         return hr;
     }
 
-    hr = mThreadLeaderManagementSocket.Bind(THREAD_MGMT_PORT, &sin6Addr);
+    hr = mThreadJoinerRouterSocket.Bind(THREAD_MGMT_PORT, &sin6Addr);
     if (FAILED(hr))
     {
         printf("bind 2 failed 0x%x", hr);
@@ -374,7 +374,7 @@ HRESULT BorderRouter::Start()
     mDtls.Start(false, HandleDtlsReceive, HandleDtlsSend, this);
 
     mCommissionerSocket.Read();
-    mThreadLeaderManagementSocket.Read();
+    mThreadJoinerRouterSocket.Read();
 
     while (1)
     {
@@ -421,7 +421,7 @@ void BorderRouter::HandleThreadSocketReceive(void *aContext, uint8_t *aBuf, DWOR
 
 void BorderRouter::HandleThreadSocketReceive(uint8_t* aBuf, DWORD aLength)
 {
-    printf("BorderRouter::HandleThreadSocketReceive called\n");
+    printf("BorderRouter::HandleThreadSocketReceive called with length %d\n", aLength);
     // just got something from the thread socket. it will be a reply to something
     // we sent to the leader. replies don't have coap URIs so if the message format
     // is the same, we can just forward it directly as is
@@ -430,18 +430,22 @@ void BorderRouter::HandleThreadSocketReceive(uint8_t* aBuf, DWORD aLength)
     // the commissioner
 
     //// TODO: delete debug code that is inspecting the packet
-    //OffMesh::Coap::Header receiveHeader;
-    //auto threadError = receiveHeader.FromBytes(aBuf, aLength);
-    //if (threadError == ThreadError::kThreadError_None)
-    //{
-    //    auto headerType = receiveHeader.GetType();
-    //    printf("coap header type is 0x%x\n", headerType);
-    //    printBuffer((char*)receiveHeader.GetBytes(), receiveHeader.GetLength());
-    //}
-    //else
-    //{
-    //    printf("failed to parse coap header\n");
-    //}
+    OffMesh::Coap::Header receiveHeader;
+    auto threadError = receiveHeader.FromBytes(aBuf, aLength);
+    if (threadError == ThreadError::kThreadError_None)
+    {
+        auto headerType = receiveHeader.GetType();
+        printf("coap header type is 0x%x\n", headerType);
+        printBuffer((char*)receiveHeader.GetBytes(), receiveHeader.GetLength());
+    }
+    else
+    {
+        printf("failed to parse coap header\n");
+    }
+
+    printf("the buffer is:\n");
+    printBuffer((char*)(aBuf + receiveHeader.GetLength()), aLength - receiveHeader.GetLength());
+
     mDtls.Send(aBuf, static_cast<uint16_t>(aLength));
 }
 
@@ -485,14 +489,14 @@ void BorderRouter::HandleCoapMessage(void* aContext, OffMesh::Coap::Header& aHea
 void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint8_t* aBuf,
                                      uint16_t aLength, const char* aUriPath)
 {
-    printf("BorderRouter::HandleCoapMessage called with URI %s!\n", aUriPath);
+    printf("BorderRouter::HandleCoapMessage called with URI %s, length %d!\n", aUriPath, aLength);
 
     // Most of the messages are going to go over the CommPet socket, which is
     // bound to an ephermeral port and sends to 61631, but some (RLY_*) use the
     // management socket which is bound to 61631 and sends to an ephermeral port
     // (the thread stack chooses this ephermeral port, wheras we choose the port
     // on the CommPet socket)
-    bool useManagementSocket = false;
+    bool sendToJoinerRouter = false;
 
     const char* destinationUri = nullptr;
     if (strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_PETITION) == 0)
@@ -516,19 +520,13 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     else if (strcmp(aUriPath, OPENTHREAD_URI_RELAY_TX) == 0)
     {
         // these URIs don't need to be modified, send them as is, but send
-        // them over the management socket
+        // them to the joiner router
         destinationUri = aUriPath;
-        useManagementSocket = true;
+        sendToJoinerRouter = true;
     }
     else
     {
         printf("BorderRouter::HandleCoapMessage unknown URI received: %s, ignoring", aUriPath);
-        return;
-    }
-
-    if (strcmp(aUriPath, OPENTHREAD_URI_COMMISSIONER_SET) == 0 || strcmp(aUriPath, OPENTHREAD_URI_ACTIVE_SET) == 0)
-    {
-        wprintf(L"commissioner set received:\n");
         return;
     }
 
@@ -542,7 +540,7 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     header.AppendUriPathOptions(destinationUri);
     header.Finalize();
 
-    uint8_t requiredSize = header.GetLength() + aLength;
+    uint16_t requiredSize = header.GetLength() + aLength;
     auto messageBuffer = std::unique_ptr<uint8_t[]>(new (std::nothrow) uint8_t[requiredSize]);
     if (messageBuffer == nullptr)
     {
@@ -553,8 +551,11 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
     memcpy_s(messageBuffer.get(), requiredSize, header.GetBytes(), header.GetLength());
     memcpy_s(messageBuffer.get() + header.GetLength(), aLength, aBuf, aLength);
 
-    if (!useManagementSocket)
+    if (!sendToJoinerRouter)
     {
+        printf("Sending over leader socket, destination URI is %s, header is:\n", destinationUri);
+        printBuffer((char*)header.GetBytes(), header.GetLength());
+
         sockaddr_in6 threadLeaderAddress = { 0 };
         memcpy_s(&threadLeaderAddress.sin6_addr, sizeof(threadLeaderAddress.sin6_addr), &mLeaderRloc, sizeof(IN6_ADDR));
         threadLeaderAddress.sin6_family = AF_INET6;
@@ -564,18 +565,43 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
         RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
         printf("Attempting to send to leader at IPv6 adress %s\n", szIpAddress);
 
-        mThreadLeaderCommPetSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
-        //if (!mThreadLeaderCommPetSocket.IsReading())
-        //{
-            mThreadLeaderCommPetSocket.BlockingRead();
-        //}
+        mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
+        if (!mThreadLeaderSocket.IsReading())
+        {
+            mThreadLeaderSocket.Read();
+        }
     }
     else
     {
-        printf("Sending over management socket, destination URI is %s, header is:\n", destinationUri);
+        printf("Sending over joiner router socket, destination URI is %s, header is:\n", destinationUri);
         printBuffer((char*)header.GetBytes(), header.GetLength());
+        printf("Message is:\n");
+        printBuffer((char*)aBuf, aLength);
+
+        //sockaddr_storage storage;
+        //mThreadJoinerRouterSocket.GetLastPeer(&storage);
+        //sockaddr_in6 threadLeaderAddress;
+        //memcpy(&threadLeaderAddress, &storage, sizeof(threadLeaderAddress));
+
+        //CHAR szIpAddress[46] = { 0 };
+        //RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
+        //printf("Attempting to send to someone at IPv6 adress %s\n", szIpAddress);
+        //threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
+
+        sockaddr_in6 threadLeaderAddress = { 0 };
+        memcpy_s(&threadLeaderAddress.sin6_addr, sizeof(threadLeaderAddress.sin6_addr), &mLeaderRloc, sizeof(IN6_ADDR));
+        threadLeaderAddress.sin6_family = AF_INET6;
+        threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
+
+        CHAR szIpAddress[46] = { 0 };
+        RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
+        printf("Attempting to send to leader at IPv6 adress %s\n", szIpAddress);
+
         // RLY_TX should only be send in response to a receive RLY_TX, so this socket is already hooked up. We can use
         // the reply method.
-        mThreadLeaderManagementSocket.Reply(messageBuffer.get(), requiredSize);
+        //mThreadJoinerRouterSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
+        //mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
+        mThreadJoinerRouterSocket.Reply(messageBuffer.get(), requiredSize, THREAD_MGMT_PORT);
     }
+    printf("Done handling coap message\n");
 }

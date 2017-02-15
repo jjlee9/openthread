@@ -98,10 +98,10 @@ private:
     BRSocket mCommissionerSocket;
     // this socket sends/listens from an ephermeral port to thread leader port MM, as per section 8.4.2.1 of Thread Spec 1.1
     // it is used when the commissioner wants to send something to the leader
-    BRSocket mThreadLeaderCommPetSocket;
+    BRSocket mThreadLeaderSocket;
     // this socket sends/listens from port MM, as per section 8.4.4.5 of Thread Spec 1.1
     // it is used when a Joiner is trying to join
-    BRSocket mThreadLeaderManagementSocket;
+    BRSocket mThreadJoinerRouterSocket;
 
     OffMesh::Coap::Server mCoap;
     OffMesh::Coap::Resource mCoapHandler;
