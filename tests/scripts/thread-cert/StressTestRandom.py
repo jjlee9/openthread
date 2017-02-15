@@ -37,14 +37,14 @@ from NodeGraph import Graph
 import node
 
 LEADER = 0
-NUM_OF_STEPS = 300
+NUM_OF_STEPS = 30
 START_N_OF_NODES = 10
 RAND_SEED = 981203746
 
 MAXIMUM_ROUTERS = 63    # there cannot be more than 63 routers
 MAXIMUM_NODES = 512
 
-START_TRIES = 10
+START_TRIES = 30
 START_SLEEP_TIME = 3
 CHILD_TIMEOUT = 3
 
@@ -87,7 +87,6 @@ class StressTestRandom(unittest.TestCase):
             mode = Mode.ROUTER \
                 if (node_id == LEADER or random.randrange(2) == 1) and self.router_cnt < MAXIMUM_ROUTERS \
                 else Mode.SED
-        # mode = Mode.ROUTER
         print("Setting mode", mode)
         self.modes[node_id] = mode
         cur_node.set_mode(mode)
@@ -176,13 +175,13 @@ class StressTestRandom(unittest.TestCase):
                 print("Running devices:", self.running_ns)
 
                 print("Await some reconfigurations of the network to complete...")
-                time.sleep(15)
+                time.sleep(20)
 
                 # running nodes must participate in the network
                 print("Checking states of running nodes")
                 for node_id in self.running_ns:
                     self.states[node_id] = self.nodes[node_id].get_state()
-                    # TODO: sometimes 'offline' device appears
+                    # TODO: sometimes 'offline' device appears (or even 'detached')
                     self.assertFalse(self.states[node_id] in State.OFFLINE_STATES)
 
                 num_leaders = sum(self.states[x] == State.LEADER for x in self.running_ns)
@@ -199,11 +198,15 @@ class StressTestRandom(unittest.TestCase):
 
                 print("Nodes pinging one another")
                 for node_id in self.running_ns:
+                    # TODO: multicast ping as for now only works with routers
+                    if self.states[node_id] in State.ROUTER_STATES:
+                        self.check_broad_ping(node_id, num_routers, num_seds)
+
                     for other_n in self.running_ns:
                         if other_n != node_id and g.connected_id(node_id, other_n):
+                            # TODO: still fails on bigger topologies
                             self.check_connectivity(node_id, other_n)
 
-                    # self.check_broad_ping(node_id, num_routers, num_seds)
             else:
                 print("Unsupported action ", rand_action)
 
@@ -212,9 +215,7 @@ class StressTestRandom(unittest.TestCase):
             cur_node.get_addrs()
 
     def check_connectivity(self, node_fr, node_to):
-        success_cnt = 0
-        tries = 0
-        for addr in self.nodes[node_fr].get_addrs():
+        for addr in self.nodes[node_to].get_addrs():
             if addr[:4] != 'fe80':
                 print("%s %d [part=%d] pinging %s %d [part=%d] on %s"
                       % (self.states[node_fr], node_fr,
@@ -222,15 +223,10 @@ class StressTestRandom(unittest.TestCase):
                          self.states[node_to], node_to,
                          self.nodes[node_to].get_partition_id(), addr))
 
-                success_cnt += self.nodes[node_fr].ping(addr)
-                tries += 1
-
-        print("Ping success: %d/%d" % (success_cnt, tries))
-        # TODO: maybe ping should succeed on all addresses
-        self.assertGreater(success_cnt, 0)
+                self.assertTrue(self.nodes[node_fr].ping(addr))
 
     def check_broad_ping(self, node_id, num_routers, num_seds):
-        # TODO: carefully calculate number of respondents
+        print("%s %d performing broad ping" % (self.states[node_id], node_id))
         # Ping realm-local all-nodes
         self.assertTrue(self.nodes[node_id].ping(
             'ff03::1',
@@ -241,7 +237,7 @@ class StressTestRandom(unittest.TestCase):
             'ff03::2',
             num_responses=num_routers-(self.states[node_id] in State.ROUTER_STATES),
             size=256))
-        # TODO: doesn't seem to be working...
+        # Ping realm-local special address
         self.assertTrue(self.nodes[node_id].ping(
             'ff33:0040:fdde:ad00:beef:0:0:1',
             num_responses=len(self.running_ns)-1,
