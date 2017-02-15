@@ -47,6 +47,7 @@ MAXIMUM_NODES = 512
 START_TRIES = 30
 START_SLEEP_TIME = 3
 CHILD_TIMEOUT = 3
+LEADER_REELECT_TL = 60
 
 RTR_SEL_JITTER = 1
 RTR_UPGRADE_THR = MAXIMUM_ROUTERS    # default = 16
@@ -121,7 +122,7 @@ class StressTestRandom(unittest.TestCase):
         #                                           else State.CHILD_STATES))
         self.assertFalse(self.states[node_id] in State.OFFLINE_STATES)
 
-        # TODO: sometimes router remains a 'child'
+        # TODO: sometimes router remains a 'child' (after a restart)
         # self.assertTrue(self.states[node_id] in
         #                 (State.ROUTER_STATES if self.modes[node_id] == Mode.ROUTER else State.CHILD_STATES))
 
@@ -130,6 +131,8 @@ class StressTestRandom(unittest.TestCase):
 
     def stop_node(self, node_id):
         print("Stopping node", node_id)
+        if self.states[node_id] == State.LEADER:
+            self.leader_down_t = time.time()
         self.nodes[node_id].stop()
         self.running_ns.remove(node_id)
         self.stopped_ns.add(node_id)
@@ -144,6 +147,7 @@ class StressTestRandom(unittest.TestCase):
         self.stopped_ns = set()
         self.router_cnt = 0
         self.node_cnt = 0
+        self.leader_down_t = time.time()
         for i in range(START_N_OF_NODES):
             self.add_new_node(i)
 
@@ -178,20 +182,7 @@ class StressTestRandom(unittest.TestCase):
                 time.sleep(20)
 
                 # running nodes must participate in the network
-                print("Checking states of running nodes")
-                for node_id in self.running_ns:
-                    self.states[node_id] = self.nodes[node_id].get_state()
-                    # TODO: sometimes 'offline' device appears (or even 'detached')
-                    self.assertFalse(self.states[node_id] in State.OFFLINE_STATES)
-
-                num_leaders = sum(self.states[x] == State.LEADER for x in self.running_ns)
-                num_routers = sum(self.states[x] in State.ROUTER_STATES for x in self.running_ns)
-                num_seds = sum(self.modes[x] == Mode.SED for x in self.running_ns)
-
-                self.assertLessEqual(num_leaders, 1)
-                # No more than one leader. As for now allow absence of leader.
-                # TODO: Maybe there should always be a leader provided there's a router
-                self.assertGreaterEqual(num_leaders, min(num_routers, 1, 0))
+                num_routers, num_seds = self.check_states()
 
                 g = Graph(self.nodes)
                 print(g)
@@ -213,6 +204,25 @@ class StressTestRandom(unittest.TestCase):
         for cur_node in list(self.nodes.values()):
             cur_node.get_state()
             cur_node.get_addrs()
+
+    def check_states(self):
+        print("Checking states of running nodes")
+        for node_id in self.running_ns:
+            self.states[node_id] = self.nodes[node_id].get_state()
+
+        num_offline = sum(self.states[x] in State.OFFLINE_STATES for x in self.running_ns)
+        num_leaders = sum(self.states[x] == State.LEADER for x in self.running_ns)
+        num_routers = sum(self.states[x] in State.ROUTER_STATES for x in self.running_ns)
+        num_seds = sum(self.modes[x] == Mode.SED for x in self.running_ns)
+
+        # All devices should be online unless there's no router/REED to attach to
+        self.assertTrue((num_routers == 0 and num_seds == self.running_ns) or num_offline == 0)
+
+        # Should be no more than one leader. Also shouldn't be none for more that LEADER_REELECT_TL secs
+        self.assertLessEqual(num_leaders, 1)
+        self.assertTrue(num_leaders > 0 or (time.time() - self.leader_down_t) < LEADER_REELECT_TL)
+
+        return num_routers, num_seds
 
     def check_connectivity(self, node_fr, node_to):
         for addr in self.nodes[node_to].get_addrs():
