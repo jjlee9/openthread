@@ -52,13 +52,7 @@
 
 #define DEFAULT_MESHCOP_PORT 49191
 
-// Known as :MM in the Thread Spec 1.1 section 10.13, the border router should send to this port.
-//
-// Thread Spec 1.1 also says:
-// This specification defines no mechanisms to change the port number :MM to another, non-default, value.
-#define THREAD_MGMT_PORT 61631
-
-void getPSKc(const char* passPhrase, const char* networkName, const char* const xPanId, uint8_t* derivedKeyOut);
+HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char* const xPanId, uint8_t* derivedKeyOut);
 
 class BorderRouter
 {
@@ -67,7 +61,7 @@ public:
     BorderRouter();
     ~BorderRouter();
 
-    HRESULT Start();
+    HRESULT Start(const char* passPhrase, const char* networkName);
     void Stop();
 
 private:
@@ -82,13 +76,6 @@ private:
 
     static void HandleThreadSocketReceive(void *aContext, uint8_t *aBuf, DWORD aLength);
     void HandleThreadSocketReceive(uint8_t *aBuf, DWORD aLength);
-
-    static void HandleThreadManagementSocketReceive(void *aContext, uint8_t *aBuf, DWORD aLength)
-    {
-        // this functions exists just to provide a unique place to log something, remove later
-        wprintf(L"!!! HandleThreadManagementSocketReceive called!\n");
-        HandleThreadSocketReceive(aContext, aBuf, aLength);
-    }
 
     // coap handlers
     static void HandleCoapMessage(void *aContext, OffMesh::Coap::Header & aHeader, uint8_t *aMessage, uint16_t aLength, const char* aUriPath);

@@ -45,9 +45,9 @@ public:
     // of timing is desired, can be called manually
     void Uninitialize();
     HRESULT Bind(unsigned short port, PIN6_ADDR sin6Addr);
-    //HRESULT BlockingRead();
     HRESULT Read();
     bool IsReading();
+    // If port is 0, will reply to the port last received from. If specified, will send to that port.
     HRESULT Reply(const uint8_t* aBuf, uint16_t aLength, unsigned short port = 0);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in6* peerToSendTo);
     HRESULT SendTo(const uint8_t* aBuf, uint16_t aLength, sockaddr_in* peerToSendTo);

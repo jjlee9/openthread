@@ -30,11 +30,10 @@
 #include <mbedtls/memory_buffer_alloc.h>
 #include <common/message.hpp>
 #include <thread/thread_uris.hpp>
+#include <thread/thread_tlvs.hpp>
 #include <crypto/mbedtls.hpp>
 #include <memory>
 #include "border-router.hpp"
-#include "client.hpp"
-#include "fake-leader.hpp"
 
 #ifdef OPENTHREAD_CONFIG_FILE
 #include OPENTHREAD_CONFIG_FILE
@@ -45,10 +44,14 @@
 #include <openthread-core-config.h>
 #include <openthread.h>
 
-#define MBED_MEMORY_BUF_SIZE  (2048 * sizeof(void*))
-
-extern "C" void otSignalTaskletPending(otInstance *)
+extern "C" void *otPlatCAlloc(size_t aNum, size_t aSize)
 {
+    return calloc(aNum, aSize);
+}
+
+extern "C" void otPlatFree(void *aPtr)
+{
+    free(aPtr);
 }
 
 inline uint8_t _str1ToHex(const char charTuple) {
@@ -83,78 +86,89 @@ void printBuffer(char* buffer, int len)
     printf("\n");
 }
 
-void getPSKc(const char* passPhrase, const char* networkName, const char* const xPanId, uint8_t* derivedKeyOut) {
+HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char* const xPanIdAsHex, uint8_t* derivedKeyOut)
+{
+    HRESULT hr = S_OK;
+
     const char* saltPrefix = "Thread";
-    const size_t preLen = strlen(saltPrefix);
-    const size_t xpiLen = xPanId ? strlen(xPanId) / 2 : 0;
-    const size_t nwLen = strlen(networkName);
-    size_t saltLen = preLen + xpiLen + nwLen;
+    BCRYPT_ALG_HANDLE hKeyPbkdf2AlgoProv = nullptr;
+    BCRYPT_ALG_HANDLE hKeyAesCmacAlgoProv = nullptr;
+    BCRYPT_HASH_HANDLE  hHash = nullptr;
+    BCRYPT_KEY_HANDLE hKeySymmetricKey = nullptr;
 
-    uint8_t* salt = new uint8_t[saltLen];
-    memset(salt, 0, saltLen);
+    const size_t prefixLen = strlen(saltPrefix);
+    const size_t panIdLen = strlen(xPanIdAsHex) / 2;
+    const size_t networkLen = strlen(networkName);
+    size_t saltLen = prefixLen + panIdLen + networkLen;
 
-    memcpy_s((char*)salt, saltLen, saltPrefix, preLen);
-
-    size_t  i;
-    for (i = 0; i < xpiLen; i++) {
-        uint8_t byteVal = _str2ToHex(xPanId + (2 * i));
-        salt[preLen + i] = byteVal;
+    // prepare the salt
+    auto salt = std::unique_ptr<uint8_t[]>(new (std::nothrow) uint8_t[saltLen]);
+    if (salt == nullptr)
+    {
+        hr = E_OUTOFMEMORY;
+        goto exit;
     }
 
-    memcpy_s((char*)(salt + preLen + xpiLen), nwLen, networkName, nwLen);
+    memset(salt.get(), 0, saltLen);
+    memcpy_s(salt.get(), saltLen, saltPrefix, prefixLen);
+
+    size_t  i;
+    for (i = 0; i < panIdLen; i++) {
+        uint8_t byteVal = _str2ToHex(xPanIdAsHex + (2 * i));
+        salt[prefixLen + i] = byteVal;
+    }
+
+    memcpy_s((char*)(salt.get() + prefixLen + panIdLen), networkLen, networkName, networkLen);
 
     // Get a handle to the algorithm provider
-    BCRYPT_ALG_HANDLE hKeyPbkdf2AlgoProv = nullptr;
     NTSTATUS ntStatus = BCryptOpenAlgorithmProvider(
         &hKeyPbkdf2AlgoProv,
         BCRYPT_PBKDF2_ALGORITHM,
         nullptr,
         0);
-
     if (!BCRYPT_SUCCESS(ntStatus))
     {
-        printf("open algorithm provider failed, 0x%x!\n", ntStatus);
-        return;
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("BCryptOpenAlgorithmProvider for BCRYPT_PBKDF2_ALGORITHM failed, 0x%x!\n", hr);
+        goto exit;
     }
-
-    BCRYPT_ALG_HANDLE hKeyAesCmacAlgoProv = nullptr;
+        
     ntStatus = BCryptOpenAlgorithmProvider(
         &hKeyAesCmacAlgoProv,
         BCRYPT_AES_CMAC_ALGORITHM,
         nullptr,
         0);
-
-
-    BCRYPT_HASH_HANDLE  hHash = nullptr;
+    if (!BCRYPT_SUCCESS(ntStatus))
+    {
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("BCryptOpenAlgorithmProvider for BCRYPT_AES_CMAC_ALGORITHM failed, 0x%x!\n", hr);
+        goto exit;
+    }
+        
     uint8_t zeroKey[16] = {};
     ntStatus = BCryptCreateHash(hKeyAesCmacAlgoProv, &hHash, nullptr, 0, zeroKey, sizeof(zeroKey), 0);
     if (!BCRYPT_SUCCESS(ntStatus))
     {
-        printf("BCryptCreateHash failed, 0x%x!\n", ntStatus);
-        return;
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("BCryptCreateHash failed, 0x%x!\n", hr);
+        goto exit;
     }
 
     ntStatus = BCryptHashData(hHash, (PUCHAR)passPhrase, (ULONG)strlen(passPhrase), 0);
     if (!BCRYPT_SUCCESS(ntStatus))
     {
-        printf("BCryptHashData failed, 0x%x!\n", ntStatus);
-        return;
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("BCryptHashData failed, 0x%x!\n", hr);
+        goto exit;
     }
 
-    BYTE    res1[128];
-    ULONG   rlen = 16;
-    ntStatus = BCryptFinishHash(hHash, res1, rlen, 0);
+    BYTE res1[16];
+    ntStatus = BCryptFinishHash(hHash, res1, sizeof(res1), 0);
     if (!BCRYPT_SUCCESS(ntStatus))
     {
-        printf("BCryptFinishHash failed, 0x%x!\n", ntStatus);
-        return;
-    }
-
-    ntStatus = BCryptDestroyHash(hHash);
-    if (!BCRYPT_SUCCESS(ntStatus))
-    {
-        printf("BCryptFinishHash failed, 0x%x!\n", ntStatus);
-        return;
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("BCryptFinishHash failed, 0x%x!\n", hr);
+        goto exit;
     }
 
     BCryptBufferDesc    ParamList;
@@ -171,26 +185,26 @@ void getPSKc(const char* passPhrase, const char* networkName, const char* const 
 
     pParamBuffer[2].BufferType = KDF_SALT;
     pParamBuffer[2].cbBuffer = (ULONG)saltLen;
-    pParamBuffer[2].pvBuffer = salt;
+    pParamBuffer[2].pvBuffer = salt.get();
 
     ParamList.cBuffers = 3;
     ParamList.pBuffers = pParamBuffer;
     ParamList.ulVersion = BCRYPTBUFFER_VERSION;
 
-    BCRYPT_KEY_HANDLE hKeySymmetricKey;
     ntStatus = BCryptGenerateSymmetricKey(
         hKeyPbkdf2AlgoProv,
         &hKeySymmetricKey,
         nullptr,
         0,
         res1,
-        16,
+        sizeof(res1),
         0);
 
     if (!BCRYPT_SUCCESS(ntStatus))
     {
-        printf("gen symmetrickey failed, 0x%x\n", ntStatus);
-        return;
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("gen symmetrickey failed, 0x%x\n", hr);
+        goto exit;
     }
 
     DWORD cbResult = 0;
@@ -202,20 +216,39 @@ void getPSKc(const char* passPhrase, const char* networkName, const char* const 
         0
     );
 
-
     if (!BCRYPT_SUCCESS(ntStatus))
     {
-        printf("Derivekey failed, 0x%x\n", ntStatus);
-        return;
+        hr = HRESULT_FROM_NT(ntStatus);
+        printf("Derivekey failed, 0x%x\n", hr);
+        goto exit;
     }
-
-    BCryptCloseAlgorithmProvider(hKeyPbkdf2AlgoProv, 0);
-    BCryptCloseAlgorithmProvider(hKeyAesCmacAlgoProv, 0);
-
-    delete[] salt;
 
     printf("PSKc Stretched Key:\n");
     printBuffer((char*)derivedKeyOut, 16);
+
+exit:
+
+    if (hKeyPbkdf2AlgoProv)
+    {
+        BCryptCloseAlgorithmProvider(hKeyPbkdf2AlgoProv, 0);
+    }
+
+    if (hKeyAesCmacAlgoProv)
+    {
+        BCryptCloseAlgorithmProvider(hKeyAesCmacAlgoProv, 0);
+    }
+
+    if (hHash)
+    {
+        BCryptDestroyHash(hHash);
+    }
+
+    if (hKeySymmetricKey)
+    {
+        BCryptDestroyKey(hKeySymmetricKey);
+    }
+
+    return hr;
 }
 
 extern "C" ThreadError otPlatRandomSecureGet(uint16_t aInputLength, uint8_t *aOutput, uint16_t *aOutputLength)
@@ -257,27 +290,16 @@ bool GetRlocAddr(_In_ otInstance* aInstance, _Out_ PIN6_ADDR addr)
     return true;
 }
 
-static unsigned char sMemoryBuf[Thread::Crypto::MbedTls::kMemorySize];
-
 int main(int argc, char* argv[])
 {
-    mbedtls_memory_buffer_alloc_init(sMemoryBuf, sizeof(sMemoryBuf));
+    if (argc != 3)
+    {
+        printf("Usage: border-router.exe <passphrase> <network name>\n");
+        return E_INVALIDARG;
+    }
 
-    if (argc < 2)
-    {
-        BorderRouter router;
-        router.Start();
-    }
-    //else if (argc > 2)
-    //{
-    //    FakeLeader leader;
-    //    leader.Start();
-    //}
-    else
-    {
-        Client client;
-        client.Start();
-    }
+    BorderRouter router;
+    router.Start(argv[1], argv[2]);
 }
 
 BorderRouter::BorderRouter() :
@@ -285,7 +307,7 @@ BorderRouter::BorderRouter() :
     mApiInstance(otApiInit()),
     mThreadLeaderSocket(AF_INET6, HandleThreadSocketReceive, this),
     mCommissionerSocket(AF_INET, HandleCommissionerSocketReceive, this),
-    mThreadJoinerRouterSocket(AF_INET6, HandleThreadManagementSocketReceive, this)
+    mThreadJoinerRouterSocket(AF_INET6, HandleThreadSocketReceive, this)
 {
     mCoap.AddResource(mCoapHandler);
 }
@@ -295,7 +317,7 @@ BorderRouter::~BorderRouter()
     otApiFinalize(mApiInstance);
 }
 
-HRESULT BorderRouter::Start()
+HRESULT BorderRouter::Start(const char* passPhrase, const char* networkName)
 {
     WSADATA wsa;
     HRESULT hr = HRESULT_FROM_WIN32(WSAStartup(MAKEWORD(2, 2), &wsa));
@@ -315,7 +337,6 @@ HRESULT BorderRouter::Start()
 
     if (ThreadError::kThreadError_None != otGetLeaderRloc(deviceInstance, &mLeaderRloc))
     {
-        // TODO: translate ???
         return E_FAIL;
     }
 
@@ -328,7 +349,7 @@ HRESULT BorderRouter::Start()
     IN6_ADDR sin6Addr;
     if (!GetRlocAddr(deviceInstance, &sin6Addr))
     {
-        printf("getrlocaddr failed\n");
+        printf("GetRlocAddr failed\n");
         return E_FAIL;
     }
 
@@ -351,25 +372,31 @@ HRESULT BorderRouter::Start()
     hr = mThreadLeaderSocket.Bind(0, &sin6Addr);
     if (FAILED(hr))
     {
-        printf("bind failed 0x%x", hr);
+        printf("mThreadLeaderSocket bind failed 0x%x\n", hr);
         return hr;
     }
 
-    hr = mThreadJoinerRouterSocket.Bind(THREAD_MGMT_PORT, &sin6Addr);
+    hr = mThreadJoinerRouterSocket.Bind(Thread::kCoapUdpPort, &sin6Addr);
     if (FAILED(hr))
     {
-        printf("bind 2 failed 0x%x", hr);
+        printf("mThreadJoinerRouterSocket bind failed 0x%x\n", hr);
         return hr;
     }
 
     hr = mCommissionerSocket.Bind(DEFAULT_MESHCOP_PORT, nullptr);
     if (FAILED(hr))
     {
+        printf("mCommissionerSocket bind failed 0x%x\n", hr);
         return hr;
     }
 
     uint8_t derivedKey[16];
-    getPSKc("12SECRETPASSWORD34", "TestNetwork1", "0001020304050607", derivedKey);
+    hr = GeneratePSKc(passPhrase, networkName, "0001020304050607", derivedKey);
+    if (FAILED(hr))
+    {
+        printf("getPSKc failed 0x%x\n", hr);
+    }
+
     mDtls.SetPsk(derivedKey, sizeof(derivedKey));
     mDtls.Start(false, HandleDtlsReceive, HandleDtlsSend, this);
 
@@ -378,11 +405,8 @@ HRESULT BorderRouter::Start()
 
     while (1)
     {
-        wprintf(L"going to sleep!\n");
         SleepEx(INFINITE, TRUE);
     }
-
-    wprintf(L"oops we stopped sleeping\n");
 
     return S_OK;
 }
@@ -422,30 +446,8 @@ void BorderRouter::HandleThreadSocketReceive(void *aContext, uint8_t *aBuf, DWOR
 void BorderRouter::HandleThreadSocketReceive(uint8_t* aBuf, DWORD aLength)
 {
     printf("BorderRouter::HandleThreadSocketReceive called with length %d\n", aLength);
-    // just got something from the thread socket. it will be a reply to something
-    // we sent to the leader. replies don't have coap URIs so if the message format
-    // is the same, we can just forward it directly as is
-    //
-    // currently, all responses are the same, so we just forward over DTLS to
-    // the commissioner
-
-    //// TODO: delete debug code that is inspecting the packet
-    OffMesh::Coap::Header receiveHeader;
-    auto threadError = receiveHeader.FromBytes(aBuf, aLength);
-    if (threadError == ThreadError::kThreadError_None)
-    {
-        auto headerType = receiveHeader.GetType();
-        printf("coap header type is 0x%x\n", headerType);
-        printBuffer((char*)receiveHeader.GetBytes(), receiveHeader.GetLength());
-    }
-    else
-    {
-        printf("failed to parse coap header\n");
-    }
-
-    printf("the buffer is:\n");
-    printBuffer((char*)(aBuf + receiveHeader.GetLength()), aLength - receiveHeader.GetLength());
-
+    // there is current no message that needs inspection by the border-router -- all messages
+    // can be forwarded directly to the commissioner as is
     mDtls.Send(aBuf, static_cast<uint16_t>(aLength));
 }
 
@@ -559,7 +561,7 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
         sockaddr_in6 threadLeaderAddress = { 0 };
         memcpy_s(&threadLeaderAddress.sin6_addr, sizeof(threadLeaderAddress.sin6_addr), &mLeaderRloc, sizeof(IN6_ADDR));
         threadLeaderAddress.sin6_family = AF_INET6;
-        threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
+        threadLeaderAddress.sin6_port = htons(Thread::kCoapUdpPort);
 
         CHAR szIpAddress[46] = { 0 };
         RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
@@ -578,30 +580,6 @@ void BorderRouter::HandleCoapMessage(OffMesh::Coap::Header& aRequestHeader, uint
         printf("Message is:\n");
         printBuffer((char*)aBuf, aLength);
 
-        //sockaddr_storage storage;
-        //mThreadJoinerRouterSocket.GetLastPeer(&storage);
-        //sockaddr_in6 threadLeaderAddress;
-        //memcpy(&threadLeaderAddress, &storage, sizeof(threadLeaderAddress));
-
-        //CHAR szIpAddress[46] = { 0 };
-        //RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
-        //printf("Attempting to send to someone at IPv6 adress %s\n", szIpAddress);
-        //threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
-
-        sockaddr_in6 threadLeaderAddress = { 0 };
-        memcpy_s(&threadLeaderAddress.sin6_addr, sizeof(threadLeaderAddress.sin6_addr), &mLeaderRloc, sizeof(IN6_ADDR));
-        threadLeaderAddress.sin6_family = AF_INET6;
-        threadLeaderAddress.sin6_port = htons(THREAD_MGMT_PORT);
-
-        CHAR szIpAddress[46] = { 0 };
-        RtlIpv6AddressToStringA(&threadLeaderAddress.sin6_addr, szIpAddress);
-        printf("Attempting to send to leader at IPv6 adress %s\n", szIpAddress);
-
-        // RLY_TX should only be send in response to a receive RLY_TX, so this socket is already hooked up. We can use
-        // the reply method.
-        //mThreadJoinerRouterSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
-        //mThreadLeaderSocket.SendTo(messageBuffer.get(), requiredSize, &threadLeaderAddress);
-        mThreadJoinerRouterSocket.Reply(messageBuffer.get(), requiredSize, THREAD_MGMT_PORT);
+        mThreadJoinerRouterSocket.Reply(messageBuffer.get(), requiredSize, Thread::kCoapUdpPort);
     }
-    printf("Done handling coap message\n");
 }
