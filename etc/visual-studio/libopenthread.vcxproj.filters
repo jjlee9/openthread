@@ -168,9 +168,6 @@
     <ClCompile Include="..\..\src\core\thread\network_data_local.cpp">
       <Filter>Source Files\thread</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\thread\network_diag.cpp">
-      <Filter>Source Files\thread</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\core\thread\panid_query_server.cpp">
       <Filter>Source Files\thread</Filter>
     </ClCompile>
@@ -225,9 +222,6 @@
     <ClCompile Include="..\..\src\core\crypto\hmac_sha256.cpp">
       <Filter>Source Files\crypto</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\crypto\mbedtls.cpp">
-      <Filter>Source Files\crypto</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\core\crypto\sha256.cpp">
       <Filter>Source Files\crypto</Filter>
     </ClCompile>
@@ -246,6 +240,7 @@
     <ClCompile Include="..\..\src\core\common\crc16.cpp">
       <Filter>Source Files\common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\core\thread\network_diagnostic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\core\openthreadcontext.h">
@@ -401,12 +396,6 @@
     <ClInclude Include="..\..\src\core\thread\network_data_tlvs.hpp">
       <Filter>Header Files\thread</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\thread\network_diag.hpp">
-      <Filter>Header Files\thread</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\thread\network_diag_tlvs.hpp">
-      <Filter>Header Files\thread</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\core\thread\panid_query_server.hpp">
       <Filter>Header Files\thread</Filter>
     </ClInclude>
@@ -488,5 +477,7 @@
     <ClInclude Include="..\..\src\core\common\crc16.hpp">
       <Filter>Header Files\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\core\thread\network_diagnostic.hpp" />
+    <ClInclude Include="..\..\src\core\thread\network_diagnostic_tlvs.hpp" />
   </ItemGroup>
 </Project>
