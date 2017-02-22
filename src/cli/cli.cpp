@@ -67,6 +67,7 @@ namespace Cli {
 const struct Command Interpreter::sCommands[] =
 {
     { "help", &Interpreter::ProcessHelp },
+    { "autostart", &Interpreter::ProcessAutoStart },
     { "blacklist", &Interpreter::ProcessBlacklist },
     { "bufferinfo", &Interpreter::ProcessBufferInfo },
     { "channel", &Interpreter::ProcessChannel },
@@ -79,6 +80,7 @@ const struct Command Interpreter::sCommands[] =
     { "contextreusedelay", &Interpreter::ProcessContextIdReuseDelay },
     { "counter", &Interpreter::ProcessCounters },
     { "dataset", &Interpreter::ProcessDataset },
+    { "delaytimermin", &Interpreter::ProcessDelayTimerMin},
 #if OPENTHREAD_ENABLE_DIAG
     { "diag", &Interpreter::ProcessDiag },
 #endif
@@ -246,6 +248,37 @@ void Interpreter::ProcessHelp(int argc, char *argv[])
     (void)argv;
 }
 
+void Interpreter::ProcessAutoStart(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        if (otThreadGetAutoStart(mInstance))
+        {
+            sServer->OutputFormat("true\r\n");
+        }
+        else
+        {
+            sServer->OutputFormat("false\r\n");
+        }
+    }
+    else if (strcmp(argv[0], "true") == 0)
+    {
+        error = otThreadSetAutoStart(mInstance, true);
+    }
+    else if (strcmp(argv[0], "false") == 0)
+    {
+        error = otThreadSetAutoStart(mInstance, false);
+    }
+    else
+    {
+        error = kThreadError_InvalidArgs;
+    }
+
+    AppendResult(error);
+}
+
 void Interpreter::ProcessBlacklist(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
@@ -356,6 +389,7 @@ void Interpreter::ProcessChild(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
     otChildInfo childInfo;
+    uint8_t maxChildren;
     long value;
     bool isTable = false;
 
@@ -369,7 +403,9 @@ void Interpreter::ProcessChild(int argc, char *argv[])
             sServer->OutputFormat("+-----+--------+------------+------------+--------+------+-+-+-+-+------------------+\r\n");
         }
 
-        for (uint8_t i = 0; ; i++)
+        maxChildren = otGetMaxAllowedChildren(mInstance);
+
+        for (uint8_t i = 0; i < maxChildren ; i++)
         {
             if (otGetChildInfoByIndex(mInstance, i, &childInfo) != kThreadError_None)
             {
@@ -562,6 +598,29 @@ void Interpreter::ProcessDataset(int argc, char *argv[])
 {
     ThreadError error;
     error = Dataset::Process(mInstance, argc, argv, *sServer);
+    AppendResult(error);
+}
+
+void Interpreter::ProcessDelayTimerMin(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        sServer->OutputFormat("%d\r\n", (otGetDelayTimerMinimal(mInstance) / 1000));
+    }
+    else if (argc == 1)
+    {
+        unsigned long value;
+        SuccessOrExit(error = ParseUnsignedLong(argv[0], value));
+        SuccessOrExit(error = otSetDelayTimerMinimal(mInstance, static_cast<uint32_t>(value * 1000)));
+    }
+    else
+    {
+        error = kThreadError_InvalidArgs;
+    }
+
+exit:
     AppendResult(error);
 }
 
@@ -1007,6 +1066,7 @@ void Interpreter::ProcessLinkQuality(int argc, char *argv[])
     uint8_t linkQuality;
     long value;
 
+    VerifyOrExit(argc > 0, error = kThreadError_InvalidArgs);
     VerifyOrExit(Hex2Bin(argv[0], extAddress, OT_EXT_ADDRESS_SIZE) >= 0, error = kThreadError_Parse);
 
     if (argc == 1)

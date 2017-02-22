@@ -141,6 +141,7 @@ private:
     void OutputBytes(const uint8_t *aBytes, uint8_t aLength);
 
     void ProcessHelp(int argc, char *argv[]);
+    void ProcessAutoStart(int argc, char *argv[]);
     void ProcessBufferInfo(int argc, char *argv[]);
     void ProcessBlacklist(int argc, char *argv[]);
     void ProcessChannel(int argc, char *argv[]);
@@ -153,6 +154,7 @@ private:
     void ProcessContextIdReuseDelay(int argc, char *argv[]);
     void ProcessCounters(int argc, char *argv[]);
     void ProcessDataset(int argc, char *argv[]);
+    void ProcessDelayTimerMin(int argc, char *argv[]);
 #if OPENTHREAD_ENABLE_DIAG
     void ProcessDiag(int argc, char *argv[]);
 #endif  // OPENTHREAD_ENABLE_DIAG

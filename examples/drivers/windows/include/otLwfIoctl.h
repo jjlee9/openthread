@@ -677,9 +677,14 @@ typedef struct otCommissionConfig
 #define IOCTL_OTLWF_OT_FACTORY_RESET \
     OTLWF_CTL_CODE(192, METHOD_BUFFERED, FILE_WRITE_DATA)
     // GUID - InterfaceGuid
+    
+#define IOCTL_OTLWF_OT_THREAD_AUTO_START \
+    OTLWF_CTL_CODE(193, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
+    // GUID - InterfaceGuid
+    // BOOLEAN - aAutoStart
 
 #define IOCTL_OTLWF_OT_NEXT_NEIGHBOR_INFO \
-	OTLWF_CTL_CODE(193, METHOD_BUFFERED, FILE_READ_DATA)
+	OTLWF_CTL_CODE(194, METHOD_BUFFERED, FILE_READ_DATA)
 	// GUID - InterfaceGuid
 	// otNeighborInfoIterator - aIterator (input)
 	// otNeighborInfoIterator - aNewIterator (output)
@@ -687,6 +692,6 @@ typedef struct otCommissionConfig
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
-#define MAX_OTLWF_IOCTL_FUNC_CODE 193
+#define MAX_OTLWF_IOCTL_FUNC_CODE 194
 
 #endif //__OTLWFIOCTL_H__

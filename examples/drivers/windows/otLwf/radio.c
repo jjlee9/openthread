@@ -56,26 +56,48 @@ otPlatReset(
 {
     NT_ASSERT(otCtx);
     PMS_FILTER pFilter = otCtxToFilter(otCtx);
-    NTSTATUS status;
+
+    LogFuncEntry(DRIVER_DEFAULT);
 
     LogInfo(DRIVER_DEFAULT, "Interface %!GUID! resetting...", &pFilter->InterfaceGuid);
 
     // Indicate to the miniport
-    status =
-        otLwfCmdSendAsync(
-            pFilter,
-            NULL,
-            NULL,
-            NULL,
-            SPINEL_CMD_RESET,
-            0,
-            0,
-            NULL
-        );
-    if (!NT_SUCCESS(status))
-    {
-        LogError(DRIVER_DEFAULT, "Send SPINEL_CMD_RESET failed, %!STATUS!", status);
-    }
+    (void)otLwfCmdResetDevice(pFilter, TRUE);
+
+    // Finalize previous OpenThread instance
+    otInstanceFinalize(pFilter->otCtx);
+    pFilter->otCtx = NULL;
+
+    // Reset radio layer
+    pFilter->otPhyState = kStateDisabled;
+    pFilter->otCurrentListenChannel = 0xFF;
+    pFilter->otPromiscuous = false;
+    pFilter->otPendingMacOffloadEnabled = FALSE;
+    pFilter->otPendingShortAddressCount = 0;
+    pFilter->otPendingExtendedAddressCount = 0;
+
+    // Reinitialize the OpenThread library
+    pFilter->otCachedRole = kDeviceRoleDisabled;
+    pFilter->otCtx = otInstanceInit(pFilter->otInstanceBuffer + sizeof(PMS_FILTER), &pFilter->otInstanceSize);
+    ASSERT(pFilter->otCtx);
+
+    // Make sure our helper function returns the right pointer for the filter, given the openthread instance
+    NT_ASSERT(otCtxToFilter(pFilter->otCtx) == pFilter);
+
+    // Disable Icmp (ping) handling
+    otSetIcmpEchoEnabled(pFilter->otCtx, FALSE);
+
+    // Register callbacks with OpenThread
+    otSetStateChangedCallback(pFilter->otCtx, otLwfStateChangedCallback, pFilter);
+    otSetReceiveIp6DatagramCallback(pFilter->otCtx, otLwfReceiveIp6DatagramCallback, pFilter);
+
+    // Query the current addresses from TCPIP and cache them
+    (void)otLwfInitializeAddresses(pFilter);
+
+    // Initialze media connect state to disconnected
+    otLwfIndicateLinkState(pFilter, MediaConnectStateDisconnected);
+
+    LogFuncExit(DRIVER_DEFAULT);
 }
 
 otPlatResetReason 
@@ -84,8 +106,8 @@ otPlatGetResetReason(
     )
 {
     NT_ASSERT(otCtx);
-    UNREFERENCED_PARAMETER(otCtx); // TODO - Cache from last status for RESET
-    return kPlatResetReason_PowerOn;
+    PMS_FILTER pFilter = otCtxToFilter(otCtx);
+    return pFilter->cmdResetReason;
 }
 
 VOID 
