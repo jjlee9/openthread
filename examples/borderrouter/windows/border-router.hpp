@@ -52,7 +52,7 @@
 
 #define DEFAULT_MESHCOP_PORT 49191
 
-HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char* const xPanId, uint8_t* derivedKeyOut);
+HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const uint8_t* const extPanId, uint8_t* derivedKeyOut);
 
 class BorderRouter
 {

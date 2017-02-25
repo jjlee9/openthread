@@ -54,25 +54,6 @@ extern "C" void otPlatFree(void *aPtr)
     free(aPtr);
 }
 
-inline uint8_t _str1ToHex(const char charTuple) {
-    if ('0' <= charTuple && charTuple <= '9') {
-        return (uint8_t)(charTuple - '0');
-    }
-    else if ('A' <= charTuple && charTuple <= 'F') {
-        return (uint8_t)(10 + (charTuple - 'A'));
-    }
-    else if ('a' <= charTuple && charTuple <= 'f') {
-        return (uint8_t)(10 + (charTuple - 'a'));
-    }
-    return 0;
-}
-
-inline uint8_t _str2ToHex(const char hexByte[2]) {
-    const char hi = hexByte[0];
-    const char lo = hexByte[1];
-    return (_str1ToHex(hi) * 16) + _str1ToHex(lo);
-}
-
 void printBuffer(char* buffer, int len)
 {
     for (int i = 0; i < len; i++)
@@ -86,7 +67,7 @@ void printBuffer(char* buffer, int len)
     printf("\n");
 }
 
-HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char* const xPanIdAsHex, uint8_t* derivedKeyOut)
+HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const uint8_t* extPanId, uint8_t* derivedKeyOut)
 {
     HRESULT hr = S_OK;
 
@@ -97,9 +78,8 @@ HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char
     BCRYPT_KEY_HANDLE hKeySymmetricKey = nullptr;
 
     const size_t prefixLen = strlen(saltPrefix);
-    const size_t panIdLen = strlen(xPanIdAsHex) / 2;
     const size_t networkLen = strlen(networkName);
-    size_t saltLen = prefixLen + panIdLen + networkLen;
+    size_t saltLen = prefixLen + OT_EXT_PAN_ID_SIZE + networkLen;
 
     // prepare the salt
     auto salt = std::unique_ptr<uint8_t[]>(new (std::nothrow) uint8_t[saltLen]);
@@ -112,13 +92,11 @@ HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char
     memset(salt.get(), 0, saltLen);
     memcpy_s(salt.get(), saltLen, saltPrefix, prefixLen);
 
-    size_t  i;
-    for (i = 0; i < panIdLen; i++) {
-        uint8_t byteVal = _str2ToHex(xPanIdAsHex + (2 * i));
-        salt[prefixLen + i] = byteVal;
+    for (size_t i = 0; i < OT_EXT_PAN_ID_SIZE; i++) {
+        salt[prefixLen + i] = extPanId[i];
     }
 
-    memcpy_s((char*)(salt.get() + prefixLen + panIdLen), networkLen, networkName, networkLen);
+    memcpy_s(salt.get() + prefixLen + OT_EXT_PAN_ID_SIZE, networkLen, networkName, networkLen);
 
     // Get a handle to the algorithm provider
     NTSTATUS ntStatus = BCryptOpenAlgorithmProvider(
@@ -203,7 +181,7 @@ HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char
     if (!BCRYPT_SUCCESS(ntStatus))
     {
         hr = HRESULT_FROM_NT(ntStatus);
-        printf("gen symmetrickey failed, 0x%x\n", hr);
+        printf("BCryptGenerateSymmetricKey failed, 0x%x\n", hr);
         goto exit;
     }
 
@@ -219,7 +197,7 @@ HRESULT GeneratePSKc(const char* passPhrase, const char* networkName, const char
     if (!BCRYPT_SUCCESS(ntStatus))
     {
         hr = HRESULT_FROM_NT(ntStatus);
-        printf("Derivekey failed, 0x%x\n", hr);
+        printf("BCryptKeyDerivation failed, 0x%x\n", hr);
         goto exit;
     }
 
@@ -391,10 +369,10 @@ HRESULT BorderRouter::Start(const char* passPhrase, const char* networkName)
     }
 
     uint8_t derivedKey[16];
-    hr = GeneratePSKc(passPhrase, networkName, "0001020304050607", derivedKey);
+    hr = GeneratePSKc(passPhrase, networkName, otGetExtendedPanId(deviceInstance), derivedKey);
     if (FAILED(hr))
     {
-        printf("getPSKc failed 0x%x\n", hr);
+        printf("GeneratePSKc failed 0x%x\n", hr);
     }
 
     mDtls.SetPsk(derivedKey, sizeof(derivedKey));
