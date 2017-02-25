@@ -179,7 +179,7 @@ public:
     explicit Dhcp6Client(ThreadNetif &aThreadNetif);
 
     /**
-     * This function update addresses that shall be automatically created using DHCP.
+     * This method update addresses that shall be automatically created using DHCP.
      *
      * @param[in]     aInstance     A pointer to openThread instance.
      * @param[inout]  aAddresses    A pointer to an array containing addresses created by this module.
@@ -224,8 +224,6 @@ private:
     TrickleTimer mTrickleTimer;
 
     Ip6::UdpSocket mSocket;
-    Mle::MleRouter &mMle;
-    Mac::Mac &mMac;
     ThreadNetif &mNetif;
 
     uint8_t mTransactionId[kTransactionIdSize];

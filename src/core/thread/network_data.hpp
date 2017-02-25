@@ -100,6 +100,12 @@ public:
     NetworkData(ThreadNetif &aThreadNetif, bool aLocal);
 
     /**
+     * This method clears the network data.
+     *
+     */
+    void Clear(void);
+
+    /**
      * This method provides a full or stable copy of the Thread Network Data.
      *
      * @param[in]     aStable      TRUE when copying the stable version, FALSE when copying the full version.
@@ -339,7 +345,7 @@ protected:
     uint8_t mTlvs[kMaxSize];  ///< The Network Data buffer.
     uint8_t mLength;          ///< The number of valid bytes in @var mTlvs.
 
-    Mle::MleRouter &mMle;
+    ThreadNetif &mNetif;
 
 private:
     enum
@@ -350,8 +356,6 @@ private:
     const bool      mLocal;
     bool            mLastAttemptWait;
     uint32_t        mLastAttempt;
-
-    Coap::Client &mCoapClient;
 };
 
 }  // namespace NetworkData

@@ -149,16 +149,6 @@ OTAPI void OTCALL otApiFinalize(otApiInstance *aApiInstance);
 OTAPI void OTCALL otFreeMemory(const void *aMem);
 
 /**
- * This function pointer is called to notify addition and removal of OpenThread devices.
- *
- * @param[in]  aAdded       A flag indicating if the device was added or removed.
- * @param[in]  aDeviceGuid  A GUID indicating which device state changed.
- * @param[in]  aContext     A pointer to application-specific context.
- *
- */
-typedef void (OTCALL *otDeviceAvailabilityChangedCallback)(bool aAdded, const GUID *aDeviceGuid, void *aContext);
-
-/**
  * This function registers a callback to indicate OpenThread devices come and go.
  *
  * @param[in]  aApiInstance     The OpenThread api instance.
@@ -326,6 +316,27 @@ OTAPI ThreadError OTCALL otThreadStart(otInstance *aInstance);
 OTAPI ThreadError OTCALL otThreadStop(otInstance *aInstance);
 
 /**
+ * This function configures the Thread stack to automatically start on reinitialization.
+ * It has no effect on the current Thread state.
+ *
+ * @param[in] aInstance             A pointer to an OpenThread instance.
+ * @param[in] aStartAutomatically   TRUE to automatically start; FALSE to not automatically start.
+ *
+ */
+OTAPI ThreadError OTCALL otThreadSetAutoStart(otInstance *aInstance, bool aStartAutomatically);
+
+/**
+ * This function queries if the Thread stack is configured to automatically start on reinitialization.
+ *
+ * @param[in] aInstance A pointer to an OpenThread instance.
+ *
+ * @retval TRUE   It is configured to automatically start.
+ * @retval FALSE  It is not configured to automatically start.
+ *
+ */
+OTAPI bool OTCALL otThreadGetAutoStart(otInstance *aInstance);
+
+/**
  * This function indicates whether a node is the only router on the network.
  *
  * @param[in] aInstance A pointer to an OpenThread instance.
@@ -335,16 +346,6 @@ OTAPI ThreadError OTCALL otThreadStop(otInstance *aInstance);
  *
  */
 OTAPI bool OTCALL otIsSingleton(otInstance *aInstance);
-
-/**
- * This function pointer is called during an IEEE 802.15.4 Active Scan when an IEEE 802.15.4 Beacon is received or
- * the scan completes.
- *
- * @param[in]  aResult   A valid pointer to the beacon information or NULL when the active scan completes.
- * @param[in]  aContext  A pointer to application-specific context.
- *
- */
-typedef void (OTCALL *otHandleActiveScanResult)(otActiveScanResult *aResult, void *aContext);
 
 /**
  * This function starts an IEEE 802.15.4 Active Scan
@@ -370,16 +371,6 @@ OTAPI ThreadError OTCALL otActiveScan(otInstance *aInstance, uint32_t aScanChann
  * @returns true if an IEEE 802.15.4 Active Scan is in progress, false otherwise.
  */
 OTAPI bool OTCALL otIsActiveScanInProgress(otInstance *aInstance);
-
-/**
- * This function pointer is called during an IEEE 802.15.4 Energy Scan when the result for a channel is ready or the
- * scan completes.
- *
- * @param[in]  aResult   A valid pointer to the energy scan result information or NULL when the energy scan completes.
- * @param[in]  aContext  A pointer to application-specific context.
- *
- */
-typedef void (OTCALL *otHandleEnergyScanResult)(otEnergyScanResult *aResult, void *aContext);
 
 /**
  * This function starts an IEEE 802.15.4 Energy Scan
@@ -488,12 +479,34 @@ OTAPI uint8_t OTCALL otGetChannel(otInstance *aInstance);
  * @param[in]  aInstance A pointer to an OpenThread instance.
  * @param[in]  aChannel  The IEEE 802.15.4 channel.
  *
- * @retval  kThreadErrorNone         Successfully set the channel.
- * @retval  kThreadErrorInvalidArgs  If @p aChnanel is not in the range [11, 26].
+ * @retval  kThreadError_None         Successfully set the channel.
+ * @retval  kThreadError_InvalidArgs  If @p aChannel is not in the range [11, 26].
  *
  * @sa otGetChannel
  */
 OTAPI ThreadError OTCALL otSetChannel(otInstance *aInstance, uint8_t aChannel);
+
+/**
+ * Set minimal delay timer.
+ *
+ * @param[in]  aInstance           A pointer to an OpenThread instance.
+ * @param[in]  aDelayTimerMinimal  The value of minimal delay timer (in ms).
+ *
+ * @retval  kThreadError_None         Successfully set minimal delay timer.
+ * @retval  kThreadError_InvalidArgs  If @p aDelayTimerMinimal is not valid.
+ *
+ */
+OTAPI ThreadError OTCALL otSetDelayTimerMinimal(otInstance *aInstance, uint32_t aDelayTimerMinimal);
+
+/**
+ * Get minimal delay timer.
+ *
+ * @param[in]  aInstance A pointer to an OpenThread instance.
+ *
+ * @retval the value of minimal delay timer (in ms).
+ *
+ */
+OTAPI uint32_t OTCALL otGetDelayTimerMinimal(otInstance *aInstance);
 
 /**
  * Get the maximum number of children currently allowed.
@@ -872,15 +885,6 @@ OTAPI ThreadError OTCALL otAddUnicastAddress(otInstance *aInstance, const otNeti
 OTAPI ThreadError OTCALL otRemoveUnicastAddress(otInstance *aInstance, const otIp6Address *aAddress);
 
 /**
- * This function pointer is called to notify certain configuration or state changes within OpenThread.
- *
- * @param[in]  aFlags    A bit-field indicating specific state that has changed.
- * @param[in]  aContext  A pointer to application-specific context.
- *
- */
-typedef void (OTCALL *otStateChangedCallback)(uint32_t aFlags, void *aContext);
-
-/**
  * This function registers a callback to indicate when certain configuration or state changes within OpenThread.
  *
  * @param[in]  aInstance  A pointer to an OpenThread instance.
@@ -929,6 +933,16 @@ OTAPI ThreadError OTCALL otGetActiveDataset(otInstance *aInstance, otOperational
  *
  */
 OTAPI ThreadError OTCALL otSetActiveDataset(otInstance *aInstance, const otOperationalDataset *aDataset);
+
+/**
+ * This function indicates whether a valid network is present in the Active Operational Dataset or not.
+ *
+ * @param[in]  aInstance A pointer to an OpenThread instance.
+ *
+ * @returns TRUE if a valid network is present in the Active Operational Dataset, FALSE otherwise.
+ *
+ */
+OTAPI bool OTCALL otIsNodeCommissioned(otInstance *aInstance);
 
 /**
  * This function gets the Pending Operational Dataset.
@@ -1017,6 +1031,9 @@ OTAPI ThreadError OTCALL otSendPendingSet(otInstance *aInstance, const otOperati
 
 /**
  * Get the data poll period of sleepy end device.
+ *
+ * @note This function updates only poll period of sleepy end device. To update child timeout the function
+ *       otGetChildTimeout() shall be called.
  *
  * @param[in]  aInstance A pointer to an OpenThread instance.
  *
@@ -1772,6 +1789,10 @@ OTAPI void OTCALL otSetRouterSelectionJitter(otInstance *aInstance, uint8_t aRou
  * @param[in]   aChildId    The Child ID or RLOC16 for the attached child.
  * @param[out]  aChildInfo  A pointer to where the child information is placed.
  *
+ * @retavl kThreadError_None         @p aChildInfo was successfully updated with the info for the given ID.
+ * @retval kThreadError_NotFound     No valid child with this Child ID.
+ * @retavl kThreadError_InvalidArgs  If @p aChildInfo is NULL.
+ *
  */
 OTAPI ThreadError OTCALL otGetChildInfoById(otInstance *aInstance, uint16_t aChildId, otChildInfo *aChildInfo);
 
@@ -1781,6 +1802,13 @@ OTAPI ThreadError OTCALL otGetChildInfoById(otInstance *aInstance, uint16_t aChi
  * @param[in]   aInstance    A pointer to an OpenThread instance.
  * @param[in]   aChildIndex  The table index.
  * @param[out]  aChildInfo   A pointer to where the child information is placed.
+ *
+ * @retavl kThreadError_None            @p aChildInfo was successfully updated with the info for the given index.
+ * @retval kThreadError_NotFound        No valid child at this index.
+ * @retavl kThreadError_InvalidArgs     Either @p aChildInfo is NULL, or @p aChildIndex is out of range (higher
+ *                                      than max table index).
+ *
+ * @sa otGetMaxAllowedChildren
  *
  */
 OTAPI ThreadError OTCALL otGetChildInfoByIndex(otInstance *aInstance, uint8_t aChildIndex, otChildInfo *aChildInfo);
@@ -1905,13 +1933,22 @@ OTAPI uint8_t OTCALL otGetRouterIdSequence(otInstance *aInstance);
 OTAPI ThreadError OTCALL otGetRouterInfo(otInstance *aInstance, uint16_t aRouterId, otRouterInfo *aRouterInfo);
 
 /**
- * The function retains diagnostic information for a Thread Router as parent.
+ * The function retrieves diagnostic information for a Thread Router as parent.
  *
  * @param[in]   aInstance    A pointer to an OpenThread instance.
  * @param[out]  aParentInfo  A pointer to where the parent router information is placed.
  *
  */
 OTAPI ThreadError OTCALL otGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo);
+
+/**
+ * The function retrieves the average RSSI for the Thread Parent.
+ *
+ * @param[in]   aInstance    A pointer to an OpenThread instance.
+ * @param[out]  aParentInfo  A pointer to where the parent rssi should be placed.
+ *
+ */
+OTAPI ThreadError OTCALL otGetParentAverageRssi(otInstance *aInstance, int8_t *aParentRssi);
 
 /**
  * Get the Stable Network Data Version.
@@ -1921,18 +1958,6 @@ OTAPI ThreadError OTCALL otGetParentInfo(otInstance *aInstance, otRouterInfo *aP
  * @returns The Stable Network Data Version.
  */
 OTAPI uint8_t OTCALL otGetStableNetworkDataVersion(otInstance *aInstance);
-
-/**
- * This function pointer is called when Network Diagnostic Get response is received.
- *
- * @param[in]  aMessage      A pointer to the message buffer containing the received Network Diagnostic
- *                           Get response payload.
- * @param[in]  aMessageInfo  A pointer to the message info for @p aMessage.
- * @param[in]  aContext      A pointer to application-specific context.
- *
- */
-typedef void (*otReceiveDiagnosticGetCallback)(otMessage aMessage, const otMessageInfo *aMessageInfo,
-                                               void *aContext);
 
 /**
  * This function registers a callback to provide received raw Network Diagnostic Get response payload.

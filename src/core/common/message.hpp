@@ -215,6 +215,7 @@ public:
         kSubTypeMleDiscoverResponse = 3,  ///< MLE Discover Response
         kSubTypeJoinerEntrust       = 4,  ///< Joiner Entrust
         kSubTypeMplRetransmission   = 5,  ///< MPL next retranmission message
+        kSubTypeMleGeneral          = 6,  ///< General MLE
     };
 
     enum
@@ -319,6 +320,15 @@ public:
      *
      */
     void SetSubType(uint8_t aSubType);
+
+    /**
+     * This method returns whether or not the message is of MLE subtype.
+     *
+     * @retval TRUE   If message is of MLE subtype.
+     * @retval FLASE  If message is not of MLE subtype.
+     *
+     */
+    bool IsSubTypeMle(void) const;
 
     /**
      * This method returns the message priority level.
@@ -1091,7 +1101,11 @@ public:
      * @returns The number of free buffers.
      *
      */
-    uint16_t GetFreeBufferCount(void) const { return static_cast<uint16_t>(mNumFreeBuffers); }
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+    uint16_t GetFreeBufferCount(void) const { return otPlatMessagePoolNumFreeBuffers(); }
+#else
+    uint16_t GetFreeBufferCount(void) const { return mNumFreeBuffers; }
+#endif
 
 private:
     enum
@@ -1104,9 +1118,11 @@ private:
     ThreadError ReclaimBuffers(int aNumBuffers);
     PriorityQueue *GetAllMessagesQueue(void) { return &mAllQueue; }
 
-    int mNumFreeBuffers;
-    Buffer mBuffers[kNumBuffers];
-    Buffer *mFreeBuffers;
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT == 0
+    uint16_t mNumFreeBuffers;
+    Buffer   mBuffers[kNumBuffers];
+    Buffer   *mFreeBuffers;
+#endif
     PriorityQueue mAllQueue;
 };
 

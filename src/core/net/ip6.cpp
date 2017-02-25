@@ -375,7 +375,9 @@ ThreadError Ip6::SendDatagram(Message &message, MessageInfo &messageInfo, IpProt
     header.SetNextHeader(ipproto);
     header.SetHopLimit(messageInfo.mHopLimit ? messageInfo.mHopLimit : static_cast<uint8_t>(kDefaultHopLimit));
 
-    if (messageInfo.GetSockAddr().IsUnspecified())
+    if (messageInfo.GetSockAddr().IsUnspecified() ||
+        messageInfo.GetSockAddr().IsAnycastRoutingLocator() ||
+        messageInfo.GetSockAddr().IsMulticast())
     {
         VerifyOrExit((source = SelectSourceAddress(messageInfo)) != NULL,
                      error = kThreadError_Error);
@@ -470,6 +472,13 @@ ThreadError Ip6::HandleOptions(Message &message, Header &header, bool &forward)
     {
         VerifyOrExit(message.Read(message.GetOffset(), sizeof(optionHeader), &optionHeader) == sizeof(optionHeader),
                      error = kThreadError_Drop);
+
+        if (optionHeader.GetType() == OptionPad1::kType)
+        {
+            message.MoveOffset(sizeof(OptionPad1));
+            continue;
+        }
+
         VerifyOrExit(message.GetOffset() + sizeof(optionHeader) + optionHeader.GetLength() <= endOffset,
                      error = kThreadError_Drop);
 
@@ -501,15 +510,7 @@ ThreadError Ip6::HandleOptions(Message &message, Header &header, bool &forward)
             break;
         }
 
-        if (optionHeader.GetType() == OptionPad1::kType)
-        {
-            message.MoveOffset(sizeof(OptionPad1));
-        }
-        else
-        {
-            message.MoveOffset(sizeof(optionHeader) + optionHeader.GetLength());
-        }
-
+        message.MoveOffset(sizeof(optionHeader) + optionHeader.GetLength());
     }
 
 exit:
@@ -616,7 +617,7 @@ ThreadError Ip6::ProcessReceiveCallback(const Message &aMessage, const MessageIn
                 aMessage.Read(aMessage.GetOffset(), sizeof(icmp), &icmp);
 
                 // do not pass ICMP Echo Request messages
-                VerifyOrExit(icmp.GetType() != IcmpHeader::kTypeEchoRequest, error = kThreadError_NoRoute);
+                VerifyOrExit(icmp.GetType() != kIcmp6TypeEchoRequest, error = kThreadError_NoRoute);
             }
 
             break;
@@ -979,6 +980,12 @@ const NetifUnicastAddress *Ip6::SelectSourceAddress(MessageInfo &aMessageInfo)
                 {
                     continue;
                 }
+            }
+
+            if (candidateAddr->IsAnycastRoutingLocator())
+            {
+                // Don't use anycast address as source address.
+                continue;
             }
 
             if (rvalAddr == NULL)

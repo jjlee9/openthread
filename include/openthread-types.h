@@ -245,7 +245,10 @@ typedef struct otMeshLocalPrefix
     uint8_t m8[OT_MESH_LOCAL_PREFIX_SIZE];
 } otMeshLocalPrefix;
 
-#define OT_PSKC_MAX_SIZE           16  ///< Maximum size of the PSKc (bytes)
+#define OT_PSKC_MAX_SIZE                             16  ///< Maximum size of the PSKc (bytes)
+
+#define OT_COMMISSIONING_PASSPHRASE_MIN_SIZE         6   ///< Minimum size of the Commissioning Passphrase
+#define OT_COMMISSIONING_PASSPHRASE_MAX_SIZE         255 ///< Maximum size of the Commissioning Passphrase
 
 /**
   * This structure represents PSKc.
@@ -267,7 +270,7 @@ typedef struct otSecurityPolicy
 } otSecurityPolicy;
 
 /**
- * This enumeration represents flags that indicate security related behaviours within OpenThread.
+ * This enumeration defines the Security Policy TLV flags.
  *
  */
 enum
@@ -325,6 +328,21 @@ struct otIp6Address
 } OT_TOOL_PACKED_END;
 
 typedef struct otIp6Address otIp6Address;
+
+
+/**
+ * This structure represents the local and peer IPv6 socket addresses.
+ */
+typedef struct otMessageInfo
+{
+    otIp6Address mSockAddr;     ///< The local IPv6 address.
+    otIp6Address mPeerAddr;     ///< The peer IPv6 address.
+    uint16_t     mSockPort;     ///< The local transport-layer port.
+    uint16_t     mPeerPort;     ///< The peer transport-layer port.
+    int8_t       mInterfaceId;  ///< An IPv6 interface identifier.
+    uint8_t      mHopLimit;     ///< The IPv6 Hop Limit.
+    const void  *mLinkInfo;     ///< A pointer to link-specific information.
+} otMessageInfo;
 
 /**
  * @addtogroup commands  Commands
@@ -691,8 +709,9 @@ typedef struct otExternalRouteConfig
 typedef enum otMleAttachFilter
 {
     kMleAttachAnyPartition    = 0,  ///< Attach to any Thread partition.
-    kMleAttachSamePartition   = 1,  ///< Attach to the same Thread partition.
-    kMleAttachBetterPartition = 2,  ///< Attach to a better (i.e. higher weight/partition id) Thread partition.
+    kMleAttachSamePartition1  = 1,  ///< Attach to the same Thread partition (attempt 1).
+    kMleAttachSamePartition2  = 2,  ///< Attach to the same Thread partition (attempt 2).
+    kMleAttachBetterPartition = 3,  ///< Attach to a better (i.e. higher weight/partition id) Thread partition.
 } otMleAttachFilter;
 
 /**
@@ -855,6 +874,7 @@ typedef struct otMacCounters
     uint32_t mTxOther;                ///< The number of transmitted other types of frames.
     uint32_t mTxRetry;                ///< The number of retransmission times.
     uint32_t mTxErrCca;               ///< The number of CCA failure times.
+    uint32_t mTxErrAbort;             ///< The number of frame transmission failures due to abort error.
     uint32_t mRxTotal;                ///< The total number of received packets.
     uint32_t mRxUnicast;              ///< The total number of unicast packets received.
     uint32_t mRxBroadcast;            ///< The total number of broadcast packets received.
@@ -983,6 +1003,86 @@ typedef struct
  */
 
 /**
+ * @addtogroup icmp6  ICMPv6
+ *
+ * @brief
+ *   This module includes functions that control ICMPv6 communication.
+ *
+ * @{
+ *
+ */
+
+/**
+ * ICMPv6 Message Types
+ *
+*/
+typedef enum otIcmp6Type
+{
+    kIcmp6TypeDstUnreach  = 1,     ///< Destination Unreachable
+    kIcmp6TypeEchoRequest = 128,   ///< Echo Request
+    kIcmp6TypeEchoReply   = 129,   ///< Echo Reply
+} otIcmp6Type;
+
+/**
+ * ICMPv6 Message Codes
+ *
+ */
+typedef enum otIcmp6Code
+{
+    kIcmp6CodeDstUnreachNoRoute = 0,  ///< Destination Unreachable No Route
+} otIcmp6Code;
+
+#define OT_ICMP6_HEADER_DATA_SIZE  4   ///< Size of an message specific data of ICMPv6 Header.
+
+/**
+ * This structure represents an ICMPv6 header.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+struct otIcmp6Header
+{
+    uint8_t      mType;      ///< Type
+    uint8_t      mCode;      ///< Code
+    uint16_t     mChecksum;  ///< Checksum
+    union
+    {
+        uint8_t  m8[OT_ICMP6_HEADER_DATA_SIZE / sizeof(uint8_t)];
+        uint16_t m16[OT_ICMP6_HEADER_DATA_SIZE / sizeof(uint16_t)];
+        uint32_t m32[OT_ICMP6_HEADER_DATA_SIZE / sizeof(uint32_t)];
+    } mData;                 ///< Message-specific data
+} OT_TOOL_PACKED_END;
+
+typedef struct otIcmp6Header otIcmp6Header;
+
+/**
+ * This callback allows OpenThread to inform the application of a received ICMPv6 message.
+ *
+ * @param[in]  aContext      A pointer to arbitrary context information.
+ * @param[in]  aMessage      A pointer to the received message.
+ * @param[in]  aMessageInfo  A pointer to message information associated with @p aMessage.
+ * @param[in]  aIcmpHeader   A pointer to the received ICMPv6 header.
+ *
+ */
+typedef void (*otIcmp6ReceiveCallback)(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo,
+                                       const otIcmp6Header *aIcmpHeader);
+
+/**
+ * This structure implements ICMPv6 message handler.
+ *
+ */
+typedef struct otIcmp6Handler
+{
+    otIcmp6ReceiveCallback  mReceiveCallback;
+    void                   *mContext;
+    struct otIcmp6Handler  *mNext;
+} otIcmp6Handler;
+
+/**
+ * @}
+ *
+ */
+
+/**
  * @addtogroup udp  UDP
  *
  * @brief
@@ -1003,20 +1103,6 @@ typedef struct otSockAddr
 } otSockAddr;
 
 /**
- * This structure represents the local and peer IPv6 socket addresses.
- */
-typedef struct otMessageInfo
-{
-    otIp6Address mSockAddr;     ///< The local IPv6 address.
-    otIp6Address mPeerAddr;     ///< The peer IPv6 address.
-    uint16_t     mSockPort;     ///< The local transport-layer port.
-    uint16_t     mPeerPort;     ///< The peer transport-layer port.
-    int8_t       mInterfaceId;  ///< An IPv6 interface identifier.
-    uint8_t      mHopLimit;     ///< The IPv6 Hop Limit.
-    const void  *mLinkInfo;     ///< A pointer to link-specific information.
-} otMessageInfo;
-
-/**
  * This callback allows OpenThread to inform the application of a received UDP message.
  */
 typedef void (*otUdpReceive)(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo);
@@ -1033,6 +1119,61 @@ typedef struct otUdpSocket
     void                *mTransport; ///< A pointer to the transport object (internal use only).
     struct otUdpSocket  *mNext;      ///< A pointer to the next UDP socket (internal use only).
 } otUdpSocket;
+
+#ifdef OTDLL
+
+/**
+ * This function pointer is called to notify addition and removal of OpenThread devices.
+ *
+ * @param[in]  aAdded       A flag indicating if the device was added or removed.
+ * @param[in]  aDeviceGuid  A GUID indicating which device state changed.
+ * @param[in]  aContext     A pointer to application-specific context.
+ *
+ */
+typedef void (OTCALL *otDeviceAvailabilityChangedCallback)(bool aAdded, const GUID *aDeviceGuid, void *aContext);
+
+#endif // OTDLL
+
+/**
+ * This function pointer is called during an IEEE 802.15.4 Active Scan when an IEEE 802.15.4 Beacon is received or
+ * the scan completes.
+ *
+ * @param[in]  aResult   A valid pointer to the beacon information or NULL when the active scan completes.
+ * @param[in]  aContext  A pointer to application-specific context.
+ *
+ */
+typedef void (OTCALL *otHandleActiveScanResult)(otActiveScanResult *aResult, void *aContext);
+
+/**
+ * This function pointer is called during an IEEE 802.15.4 Energy Scan when the result for a channel is ready or the
+ * scan completes.
+ *
+ * @param[in]  aResult   A valid pointer to the energy scan result information or NULL when the energy scan completes.
+ * @param[in]  aContext  A pointer to application-specific context.
+ *
+ */
+typedef void (OTCALL *otHandleEnergyScanResult)(otEnergyScanResult *aResult, void *aContext);
+
+/**
+ * This function pointer is called to notify certain configuration or state changes within OpenThread.
+ *
+ * @param[in]  aFlags    A bit-field indicating specific state that has changed.
+ * @param[in]  aContext  A pointer to application-specific context.
+ *
+ */
+typedef void (OTCALL *otStateChangedCallback)(uint32_t aFlags, void *aContext);
+
+/**
+ * This function pointer is called when Network Diagnostic Get response is received.
+ *
+ * @param[in]  aMessage      A pointer to the message buffer containing the received Network Diagnostic
+ *                           Get response payload.
+ * @param[in]  aMessageInfo  A pointer to the message info for @p aMessage.
+ * @param[in]  aContext      A pointer to application-specific context.
+ *
+ */
+typedef void (*otReceiveDiagnosticGetCallback)(otMessage aMessage, const otMessageInfo *aMessageInfo,
+                                               void *aContext);
 
 /**
  * @}

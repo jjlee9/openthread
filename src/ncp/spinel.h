@@ -105,6 +105,7 @@ typedef enum
     SPINEL_STATUS_CCA_FAILURE       = 18, ///< The packet was not sent due to a CCA failure.
     SPINEL_STATUS_ALREADY           = 19, ///< The operation is already in progress.
     SPINEL_STATUS_ITEM_NOT_FOUND    = 20, ///< The given item could not be found.
+    SPINEL_STATUS_INVALID_COMMAND_FOR_PROP = 21, ///< The given command cannot be performed on this property.
 
     SPINEL_STATUS_JOIN__BEGIN       = 104,
 
@@ -286,6 +287,10 @@ enum
     SPINEL_CMD_PEEK_RET             = 19,
     SPINEL_CMD_POKE                 = 20,
 
+    SPINEL_CMD_PROP_VALUE_MULTI_GET = 21,
+    SPINEL_CMD_PROP_VALUE_MULTI_SET = 22,
+    SPINEL_CMD_PROP_VALUES_ARE      = 23,
+
     SPINEL_CMD_NEST__BEGIN          = 15296,
     SPINEL_CMD_NEST__END            = 15360,
 
@@ -311,6 +316,7 @@ enum
     SPINEL_CAP_WRITABLE_RAW_STREAM   = 8,
     SPINEL_CAP_GPIO                  = 9,
     SPINEL_CAP_TRNG                  = 10,
+    SPINEL_CAP_CMD_MULTI             = 11,
 
     SPINEL_CAP_802_15_4__BEGIN        = 16,
     SPINEL_CAP_802_15_4_2003          = (SPINEL_CAP_802_15_4__BEGIN + 0),
@@ -337,6 +343,7 @@ enum
 
     SPINEL_CAP_OPENTHREAD__BEGIN     = 512,
     SPINEL_CAP_MAC_WHITELIST         = (SPINEL_CAP_OPENTHREAD__BEGIN + 0),
+    SPINEL_CAP_MAC_RAW               = (SPINEL_CAP_OPENTHREAD__BEGIN + 1),
     SPINEL_CAP_OPENTHREAD__END       = 640,
 
     SPINEL_CAP_NEST__BEGIN           = 15296,
@@ -762,6 +769,18 @@ typedef enum
      */
     SPINEL_PROP_THREAD_CHILD_COUNT_MAX = SPINEL_PROP_THREAD_EXT__BEGIN + 12,
 
+    /// Leader network data
+    /** Format: `D` - Read only
+     */
+    SPINEL_PROP_THREAD_LEADER_NETWORK_DATA
+                                       = SPINEL_PROP_THREAD_EXT__BEGIN + 13,
+
+    /// Stable leader network data
+    /** Format: `D` - Read only
+     */
+    SPINEL_PROP_THREAD_STABLE_LEADER_NETWORK_DATA
+                                       = SPINEL_PROP_THREAD_EXT__BEGIN + 14,
+
     SPINEL_PROP_THREAD_EXT__END        = 0x1600,
 
     SPINEL_PROP_IPV6__BEGIN          = 0x60,
@@ -903,6 +922,10 @@ typedef enum
     /** Format: `L` (Read-only) */
     SPINEL_PROP_CNTR_TX_PKT_BROADCAST  = SPINEL_PROP_CNTR__BEGIN + 13,
 
+    /// The number of frame transmission failures due to abort error.
+    /** Format: `L` (Read-only) */
+    SPINEL_PROP_CNTR_TX_ERR_ABORT      = SPINEL_PROP_CNTR__BEGIN + 14,
+
     /// The total number of received packets.
     /** Format: `L` (Read-only) */
     SPINEL_PROP_CNTR_RX_PKT_TOTAL      = SPINEL_PROP_CNTR__BEGIN + 100,
@@ -1007,7 +1030,10 @@ typedef enum
     /** Format: `L` (Read-only) */
     SPINEL_PROP_CNTR_RX_SPINEL_ERR     = SPINEL_PROP_CNTR__BEGIN + 302,
 
-
+    /// Number of out of order received spinel frames (tid increase by more than 1).
+    /** Format: `L` (Read-only) */
+    SPINEL_PROP_CNTR_RX_SPINEL_OUT_OF_ORDER_TID
+                                       = SPINEL_PROP_CNTR__BEGIN + 303,
 
     /// The message buffer counter info
     /** Format: `T(SSSSSSSSSSSSSSSS)` (Read-only)

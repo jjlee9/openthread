@@ -44,6 +44,7 @@
 #include <openthread.h>
 #include <openthread-instance.h>
 #include <openthread-diag.h>
+#include <openthread-icmp6.h>
 #include <commissioning/commissioner.h>
 #include <commissioning/joiner.h>
 #include <dhcp6/dhcp6_server.h>
@@ -67,6 +68,7 @@ namespace Cli {
 const struct Command Interpreter::sCommands[] =
 {
     { "help", &Interpreter::ProcessHelp },
+    { "autostart", &Interpreter::ProcessAutoStart },
     { "blacklist", &Interpreter::ProcessBlacklist },
     { "bufferinfo", &Interpreter::ProcessBufferInfo },
     { "channel", &Interpreter::ProcessChannel },
@@ -79,6 +81,7 @@ const struct Command Interpreter::sCommands[] =
     { "contextreusedelay", &Interpreter::ProcessContextIdReuseDelay },
     { "counter", &Interpreter::ProcessCounters },
     { "dataset", &Interpreter::ProcessDataset },
+    { "delaytimermin", &Interpreter::ProcessDelayTimerMin},
 #if OPENTHREAD_ENABLE_DIAG
     { "diag", &Interpreter::ProcessDiag },
 #endif
@@ -142,9 +145,12 @@ Interpreter::Interpreter(otInstance *aInstance):
     mInstance(aInstance)
 {
     memset(mSlaacAddresses, 0, sizeof(mSlaacAddresses));
-    mInstance->mIp6.mIcmp.SetEchoReplyHandler(&s_HandleEchoResponse, this);
     otSetStateChangedCallback(mInstance, &Interpreter::s_HandleNetifStateChanged, this);
     otSetReceiveDiagnosticGetCallback(mInstance, &Interpreter::s_HandleDiagnosticGetResponse, this);
+
+    mIcmpHandler.mReceiveCallback = Interpreter::s_HandleIcmpReceive;
+    mIcmpHandler.mContext         = this;
+    otIcmp6RegisterHandler(mInstance, &mIcmpHandler);
 
 #if OPENTHREAD_ENABLE_DHCP6_CLIENT
     memset(mDhcpAddresses, 0, sizeof(mDhcpAddresses));
@@ -244,6 +250,37 @@ void Interpreter::ProcessHelp(int argc, char *argv[])
 
     (void)argc;
     (void)argv;
+}
+
+void Interpreter::ProcessAutoStart(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        if (otThreadGetAutoStart(mInstance))
+        {
+            sServer->OutputFormat("true\r\n");
+        }
+        else
+        {
+            sServer->OutputFormat("false\r\n");
+        }
+    }
+    else if (strcmp(argv[0], "true") == 0)
+    {
+        error = otThreadSetAutoStart(mInstance, true);
+    }
+    else if (strcmp(argv[0], "false") == 0)
+    {
+        error = otThreadSetAutoStart(mInstance, false);
+    }
+    else
+    {
+        error = kThreadError_InvalidArgs;
+    }
+
+    AppendResult(error);
 }
 
 void Interpreter::ProcessBlacklist(int argc, char *argv[])
@@ -356,6 +393,7 @@ void Interpreter::ProcessChild(int argc, char *argv[])
 {
     ThreadError error = kThreadError_None;
     otChildInfo childInfo;
+    uint8_t maxChildren;
     long value;
     bool isTable = false;
 
@@ -369,7 +407,9 @@ void Interpreter::ProcessChild(int argc, char *argv[])
             sServer->OutputFormat("+-----+--------+------------+------------+--------+------+-+-+-+-+------------------+\r\n");
         }
 
-        for (uint8_t i = 0; ; i++)
+        maxChildren = otGetMaxAllowedChildren(mInstance);
+
+        for (uint8_t i = 0; i < maxChildren ; i++)
         {
             if (otGetChildInfoByIndex(mInstance, i, &childInfo) != kThreadError_None)
             {
@@ -562,6 +602,29 @@ void Interpreter::ProcessDataset(int argc, char *argv[])
 {
     ThreadError error;
     error = Dataset::Process(mInstance, argc, argv, *sServer);
+    AppendResult(error);
+}
+
+void Interpreter::ProcessDelayTimerMin(int argc, char *argv[])
+{
+    ThreadError error = kThreadError_None;
+
+    if (argc == 0)
+    {
+        sServer->OutputFormat("%d\r\n", (otGetDelayTimerMinimal(mInstance) / 1000));
+    }
+    else if (argc == 1)
+    {
+        unsigned long value;
+        SuccessOrExit(error = ParseUnsignedLong(argv[0], value));
+        SuccessOrExit(error = otSetDelayTimerMinimal(mInstance, static_cast<uint32_t>(value * 1000)));
+    }
+    else
+    {
+        error = kThreadError_InvalidArgs;
+    }
+
+exit:
     AppendResult(error);
 }
 
@@ -1007,6 +1070,7 @@ void Interpreter::ProcessLinkQuality(int argc, char *argv[])
     uint8_t linkQuality;
     long value;
 
+    VerifyOrExit(argc > 0, error = kThreadError_InvalidArgs);
     VerifyOrExit(Hex2Bin(argv[0], extAddress, OT_EXT_ADDRESS_SIZE) >= 0, error = kThreadError_Parse);
 
     if (argc == 1)
@@ -1210,17 +1274,20 @@ exit:
     AppendResult(error);
 }
 
-void Interpreter::s_HandleEchoResponse(void *aContext, Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Interpreter::s_HandleIcmpReceive(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo,
+                                      const otIcmp6Header *aIcmpHeader)
 {
-    static_cast<Interpreter *>(aContext)->HandleEchoResponse(aMessage, aMessageInfo);
+    static_cast<Interpreter *>(aContext)->HandleIcmpReceive(*static_cast<Message *>(aMessage),
+                                                            *static_cast<const Ip6::MessageInfo *>(aMessageInfo),
+                                                            *static_cast<const Ip6::IcmpHeader *>(aIcmpHeader));
 }
 
-void Interpreter::HandleEchoResponse(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Interpreter::HandleIcmpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo,
+                                    const Ip6::IcmpHeader &aIcmpHeader)
 {
-    Ip6::IcmpHeader icmp6Header;
     uint32_t timestamp = 0;
 
-    aMessage.Read(aMessage.GetOffset(), sizeof(icmp6Header), &icmp6Header);
+    VerifyOrExit(aIcmpHeader.GetType() == kIcmp6TypeEchoReply, ;);
 
     sServer->OutputFormat("%d bytes from ", aMessage.GetLength() - aMessage.GetOffset());
     sServer->OutputFormat("%x:%x:%x:%x:%x:%x:%x:%x",
@@ -1232,15 +1299,18 @@ void Interpreter::HandleEchoResponse(Message &aMessage, const Ip6::MessageInfo &
                           HostSwap16(aMessageInfo.GetPeerAddr().mFields.m16[5]),
                           HostSwap16(aMessageInfo.GetPeerAddr().mFields.m16[6]),
                           HostSwap16(aMessageInfo.GetPeerAddr().mFields.m16[7]));
-    sServer->OutputFormat(": icmp_seq=%d hlim=%d", icmp6Header.GetSequence(), aMessageInfo.mHopLimit);
+    sServer->OutputFormat(": icmp_seq=%d hlim=%d", aIcmpHeader.GetSequence(), aMessageInfo.mHopLimit);
 
-    if (aMessage.Read(aMessage.GetOffset() + sizeof(icmp6Header), sizeof(uint32_t), &timestamp) >=
+    if (aMessage.Read(aMessage.GetOffset(), sizeof(uint32_t), &timestamp) >=
         static_cast<int>(sizeof(uint32_t)))
     {
         sServer->OutputFormat(" time=%dms", Timer::GetNow() - HostSwap32(timestamp));
     }
 
     sServer->OutputFormat("\r\n");
+
+exit:
+    return;
 }
 
 void Interpreter::ProcessPing(int argc, char *argv[])
@@ -1303,20 +1373,22 @@ void Interpreter::HandlePingTimer()
 {
     ThreadError error = kThreadError_None;
     uint32_t timestamp = HostSwap32(Timer::GetNow());
-    Message *message;
 
-    VerifyOrExit((message = mInstance->mIp6.mIcmp.NewMessage(0)) != NULL, error = kThreadError_NoBufs);
-    SuccessOrExit(error = message->Append(&timestamp, sizeof(timestamp)));
-    SuccessOrExit(error = message->SetLength(sLength));
+    otMessage message;
+    const otMessageInfo *messageInfo = static_cast<const otMessageInfo *>(&sMessageInfo);
 
-    SuccessOrExit(error = mInstance->mIp6.mIcmp.SendEchoRequest(*message, sMessageInfo));
+    VerifyOrExit((message = otNewIp6Message(mInstance, true)) != NULL, error = kThreadError_NoBufs);
+    SuccessOrExit(error = otAppendMessage(message, &timestamp, sizeof(timestamp)));
+    SuccessOrExit(error = otSetMessageLength(message, sLength));
+    SuccessOrExit(error = otIcmp6SendEchoRequest(mInstance, message, messageInfo, 1));
+
     sCount--;
 
 exit:
 
     if (error != kThreadError_None && message != NULL)
     {
-        message->Free();
+        otFreeMessage(message);
     }
 
     if (sCount)
@@ -1961,6 +2033,7 @@ void Interpreter::ProcessRouterSelectionJitter(int argc, char *argv[])
     else
     {
         SuccessOrExit(error = ParseLong(argv[0], value));
+        VerifyOrExit(0 < value && value < 256, error = kThreadError_InvalidArgs);
         otSetRouterSelectionJitter(mInstance, static_cast<uint8_t>(value));
     }
 
@@ -2100,7 +2173,7 @@ void Interpreter::ProcessState(int argc, char *argv[])
         }
         else if (strcmp(argv[0], "child") == 0)
         {
-            SuccessOrExit(error = otBecomeChild(mInstance, kMleAttachSamePartition));
+            SuccessOrExit(error = otBecomeChild(mInstance, kMleAttachSamePartition1));
         }
         else if (strcmp(argv[0], "router") == 0)
         {

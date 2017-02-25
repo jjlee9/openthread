@@ -141,6 +141,7 @@ private:
     void OutputBytes(const uint8_t *aBytes, uint8_t aLength);
 
     void ProcessHelp(int argc, char *argv[]);
+    void ProcessAutoStart(int argc, char *argv[]);
     void ProcessBufferInfo(int argc, char *argv[]);
     void ProcessBlacklist(int argc, char *argv[]);
     void ProcessChannel(int argc, char *argv[]);
@@ -153,6 +154,7 @@ private:
     void ProcessContextIdReuseDelay(int argc, char *argv[]);
     void ProcessCounters(int argc, char *argv[]);
     void ProcessDataset(int argc, char *argv[]);
+    void ProcessDelayTimerMin(int argc, char *argv[]);
 #if OPENTHREAD_ENABLE_DIAG
     void ProcessDiag(int argc, char *argv[]);
 #endif  // OPENTHREAD_ENABLE_DIAG
@@ -216,7 +218,8 @@ private:
     void ProcessVersion(int argc, char *argv[]);
     void ProcessWhitelist(int argc, char *argv[]);
 
-    static void s_HandleEchoResponse(void *aContext, Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    static void s_HandleIcmpReceive(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo,
+                                    const otIcmp6Header *aIcmpHeader);
     static void s_HandlePingTimer(void *aContext);
     static void s_HandleActiveScanResult(otActiveScanResult *aResult, void *aContext);
     static void s_HandleNetifStateChanged(uint32_t aFlags, void *aContext);
@@ -227,7 +230,8 @@ private:
     static void s_HandleDiagnosticGetResponse(otMessage aMessage, const otMessageInfo *aMessageInfo, void *aContext);
     static void s_HandleJoinerCallback(ThreadError aError, void *aContext);
 
-    void HandleEchoResponse(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleIcmpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo,
+                           const Ip6::IcmpHeader &aIcmpHeader);
     void HandlePingTimer();
     void HandleActiveScanResult(otActiveScanResult *aResult);
     void HandleNetifStateChanged(uint32_t aFlags);
@@ -240,6 +244,7 @@ private:
     static const struct Command sCommands[];
 
     Ip6::MessageInfo sMessageInfo;
+
     Server *sServer;
     uint16_t sLength;
     uint16_t sCount;
@@ -251,6 +256,7 @@ private:
     otDhcpAddress  mDhcpAddresses[OPENTHREAD_CONFIG_NUM_DHCP_PREFIXES];
 #endif // OPENTHREAD_ENABLE_DHCP6_CLIENT
 
+    otIcmp6Handler mIcmpHandler;
     otInstance *mInstance;
 };
 

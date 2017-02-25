@@ -183,6 +183,14 @@ public:
     void SetDiscoverParameters(uint32_t aScanChannels, uint16_t aScanDuration);
 
     /**
+     * This method frees any indirect messages queued for a specific child.
+     *
+     * @param[in]  aChild  A reference to a child whom messages shall be removed.
+     *
+     */
+    void ClearChildIndirectMessages(Child &aChild);
+
+    /**
      * This method frees any indirect messages queued for children that are no longer attached.
      *
      */
@@ -215,8 +223,8 @@ public:
 private:
     enum
     {
-        kStateUpdatePeriod    = 1000,  ///< State update period in milliseconds.
-        kDataRequstRetryDelay = 1000,  ///< Retry delay in milliseconds.
+        kStateUpdatePeriod     = 1000,  ///< State update period in milliseconds.
+        kDataRequestRetryDelay = 200,   ///< Retry delay in milliseconds (for sending data request if no buffer).
     };
 
     ThreadError CheckReachability(uint8_t *aFrame, uint8_t aFrameLength,
@@ -225,6 +233,7 @@ private:
     ThreadError GetMacSourceAddress(const Ip6::Address &aIp6Addr, Mac::Address &aMacAddr);
     Message *GetDirectTransmission(void);
     Message *GetIndirectTransmission(const Child &aChild);
+    void PrepareIndirectTransmission(const Message &aMessage, const Child &aChild);
     void HandleMesh(uint8_t *aFrame, uint8_t aPayloadLength, const Mac::Address &aMacSource,
                     const ThreadMessageInfo &aMessageInfo);
     void HandleFragment(uint8_t *aFrame, uint8_t aPayloadLength,
@@ -296,14 +305,10 @@ private:
     uint16_t mScanDuration;
     uint8_t mScanChannel;
     uint8_t mRestoreChannel;
+    uint16_t mRestorePanId;
     bool mScanning;
 
     ThreadNetif &mNetif;
-    AddressResolver &mAddressResolver;
-    Lowpan::Lowpan &mLowpan;
-    Mac::Mac &mMac;
-    Mle::MleRouter &mMle;
-    NetworkData::Leader &mNetworkData;
 
     bool mSrcMatchEnabled;
 };

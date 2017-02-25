@@ -43,6 +43,7 @@
 #include <common/tlvs.hpp>
 #include <meshcop/timestamp.hpp>
 
+using Thread::Encoding::Reverse32;
 using Thread::Encoding::BigEndian::HostSwap16;
 using Thread::Encoding::BigEndian::HostSwap32;
 
@@ -574,6 +575,26 @@ public:
     void Set(void) { memset(mSteeringData, 0xff, GetLength()); }
 
     /**
+     * Ths method indicates whether or not the SteeringData allows all Joiners.
+     *
+     * @retval TRUE   If the SteeringData allows all Joiners.
+     * @retval FALSE  If the SteeringData doesn't allow any Joiner.
+     *
+     */
+    bool DoesAllowAny(void) {
+        bool rval = true;
+
+        for (uint8_t i = 0; i < GetLength(); i++) {
+            if (mSteeringData[i] != 0xff) {
+                rval = false;
+                break;
+            }
+        }
+
+        return rval;
+    }
+
+    /**
      * This method returns the number of bits in the Bloom Filter.
      *
      * @returns The number of bits in the Bloom Filter.
@@ -695,6 +716,7 @@ public:
     void SetCommissionerId(const char *aCommissionerId) {
         size_t length = strnlen(aCommissionerId, sizeof(mCommissionerId));
         memcpy(mCommissionerId, aCommissionerId, length);
+        SetLength(static_cast<uint8_t>(length));
     }
 
 private:
@@ -1133,8 +1155,9 @@ public:
 
     enum
     {
-        kMaxDelayTimer = 259200,  ///< maximum delay timer value for a Pending Dataset in seconds
-        kMinDelayTimer = 28800,   ///< minimum delay timer value for a Pending Dataset in seconds
+        kMaxDelayTimer     = 259200,  ///< maximum delay timer value for a Pending Dataset in seconds
+        kDelayTimerMinimal = 30000,   ///< Minimum Delay Timer value for a Pending Operational Dataset (ms)
+        kDelayTimerDefault = 300000,  ///< Default Delay Timer value for a Pending Operational Dataset (ms)
     };
 
 private:
@@ -1189,7 +1212,7 @@ public:
      */
     void ClearChannel(uint8_t aChannel) {
         uint8_t *mask = reinterpret_cast<uint8_t *>(this) + sizeof(*this);
-        mask[aChannel / 8] &= ~(1 << (aChannel % 8));
+        mask[aChannel / 8] &= ~(0x80 >> (aChannel % 8));
     }
 
     /**
@@ -1200,7 +1223,7 @@ public:
      */
     void SetChannel(uint8_t aChannel) {
         uint8_t *mask = reinterpret_cast<uint8_t *>(this) + sizeof(*this);
-        mask[aChannel / 8] |= 1 << (aChannel % 8);
+        mask[aChannel / 8] |= 0x80 >> (aChannel % 8);
     }
 
     /**
@@ -1211,7 +1234,7 @@ public:
      */
     bool IsChannelSet(uint8_t aChannel) const {
         const uint8_t *mask = reinterpret_cast<const uint8_t *>(this) + sizeof(*this);
-        return (aChannel < (mMaskLength * 8)) ? ((mask[aChannel / 8] & (1 << (aChannel % 8))) != 0) : false;
+        return (aChannel < (mMaskLength * 8)) ? ((mask[aChannel / 8] & (0x80 >> (aChannel % 8))) != 0) : false;
     }
 
 private:
@@ -1282,7 +1305,7 @@ public:
      * @returns The Channel Mask value.
      *
      */
-    uint32_t GetMask(void) const { return Thread::Encoding::LittleEndian::HostSwap32(mMask); }
+    uint32_t GetMask(void) const { return Reverse32(HostSwap32(mMask)); }
 
     /**
      * This method sets the Channel Mask value.
@@ -1290,7 +1313,7 @@ public:
      * @param[in]  aMask  The Channel Mask value.
      *
      */
-    void SetMask(uint32_t aMask) { mMask = Thread::Encoding::LittleEndian::HostSwap32(aMask); }
+    void SetMask(uint32_t aMask) { mMask = HostSwap32(Reverse32(aMask)); }
 
 private:
     uint32_t mMask;

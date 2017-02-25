@@ -44,22 +44,21 @@ namespace Thread {
 MessagePool::MessagePool(void) :
     mAllQueue()
 {
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+    // Initialize Platform buffer pool management.
+    otPlatMessagePoolInit(kNumBuffers, sizeof(Buffer));
+#else
     memset(mBuffers, 0, sizeof(mBuffers));
 
     mFreeBuffers = mBuffers;
 
-    for (int i = 0; i < kNumBuffers - 1; i++)
+    for (uint16_t i = 0; i < kNumBuffers - 1; i++)
     {
         mBuffers[i].SetNextBuffer(&mBuffers[i + 1]);
     }
 
     mBuffers[kNumBuffers - 1].SetNextBuffer(NULL);
     mNumFreeBuffers = kNumBuffers;
-
-#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
-    // Pass the list of free buffers and a pointer to the count of free buffers
-    // to the platform for management.
-    otPlatMessagePoolInit(static_cast<BufferHeader *>(mFreeBuffers), &mNumFreeBuffers, sizeof(Buffer));
 #endif
 }
 
@@ -109,7 +108,7 @@ Buffer *MessagePool::NewBuffer(void)
         otLogInfoMac("No available message buffer\n");
     }
 
-#else // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+#else
 
     if (mFreeBuffers == NULL)
     {
@@ -121,7 +120,7 @@ Buffer *MessagePool::NewBuffer(void)
     mFreeBuffers = mFreeBuffers->GetNextBuffer();
     buffer->SetNextBuffer(NULL);
     mNumFreeBuffers--;
-#endif // OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+#endif
 
 exit:
     return buffer;
@@ -149,7 +148,25 @@ ThreadError MessagePool::FreeBuffers(Buffer *aBuffer)
 
 ThreadError MessagePool::ReclaimBuffers(int aNumBuffers)
 {
-    return (aNumBuffers <= mNumFreeBuffers) ? kThreadError_None : kThreadError_NoBufs;
+    uint16_t numFreeBuffers;
+
+#if OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+    numFreeBuffers = otPlatMessagePoolNumFreeBuffers();
+#else
+    numFreeBuffers = mNumFreeBuffers;
+#endif
+
+    //First comparison is to get around issues with comparing
+    //signed and unsigned numbers, if aNumBuffers is negative then
+    //the second comparison wont be attempted.
+    if (aNumBuffers < 0 || aNumBuffers <= numFreeBuffers)
+    {
+        return kThreadError_None;
+    }
+    else
+    {
+        return kThreadError_NoBufs;
+    }
 }
 
 Message *MessagePool::Iterator::Next(void) const
@@ -363,6 +380,21 @@ uint8_t Message::GetSubType(void) const
 void Message::SetSubType(uint8_t aSubType)
 {
     mInfo.mSubType = aSubType;
+}
+
+bool Message::IsSubTypeMle(void) const
+{
+    bool rval = false;
+
+    if (mInfo.mSubType == kSubTypeMleAnnounce ||
+        mInfo.mSubType == kSubTypeMleDiscoverRequest ||
+        mInfo.mSubType == kSubTypeMleDiscoverResponse ||
+        mInfo.mSubType == kSubTypeMleGeneral)
+    {
+        rval = true;
+    }
+
+    return rval;
 }
 
 uint8_t Message::GetPriority(void) const

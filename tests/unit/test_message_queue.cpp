@@ -193,7 +193,7 @@ void TestMessageQueueOtApis(void)
     otMessage message;
 
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
-    uint64_t otInstanceBufferLength = 0;
+    size_t otInstanceBufferLength = 0;
     uint8_t *otInstanceBuffer = NULL;
 
     // Call to query the buffer size
@@ -268,9 +268,9 @@ void TestMessageQueueOtApis(void)
     SuccessOrQuit(otMessageQueueDequeue(&queue, msg[2]), "Failed to dequeue a message from otMessageQueue.\n");
     VerifyMessageQueueContentUsingOtApi(&queue, 0);
 
-     otInstanceFinalize(instance);
+    otInstanceFinalize(instance);
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
-     free(otInstanceBuffer);
+    free(otInstanceBuffer);
 #endif
 }
 

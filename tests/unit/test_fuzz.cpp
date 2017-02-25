@@ -37,6 +37,11 @@ uint8_t g_TransmitPsdu[128];
 RadioPacket g_TransmitRadioPacket;
 bool g_fTransmit = false;
 
+bool testFuzzRadioIsEnabled(otInstance *)
+{
+    return g_fRadioEnabled;
+}
+
 ThreadError testFuzzRadioEnable(otInstance *)
 {
 #ifdef DBG_FUZZ
@@ -85,6 +90,7 @@ void TestFuzz(uint32_t aSeconds)
 
     // Set the platform function pointers
     g_TransmitRadioPacket.mPsdu = g_TransmitPsdu;
+    g_testPlatRadioIsEnabled = testFuzzRadioIsEnabled;
     g_testPlatRadioEnable = testFuzzRadioEnable;
     g_testPlatRadioDisable = testFuzzRadioDisable;
     g_testPlatRadioReceive = testFuzzRadioReceive;
@@ -104,7 +110,7 @@ void TestFuzz(uint32_t aSeconds)
 #endif
 
 #ifdef OPENTHREAD_MULTIPLE_INSTANCE
-    uint64_t otInstanceBufferLength = 0;
+    size_t otInstanceBufferLength = 0;
     uint8_t *otInstanceBuffer = NULL;
 
     // Call to query the buffer size
@@ -113,7 +119,7 @@ void TestFuzz(uint32_t aSeconds)
     // Call to allocate the buffer
     otInstanceBuffer = (uint8_t *)malloc(otInstanceBufferLength);
     VerifyOrQuit(otInstanceBuffer != NULL, "Failed to allocate otInstance");
-    memset(&otInstanceBuffer, 0, otInstanceBufferLength);
+    memset(otInstanceBuffer, 0, otInstanceBufferLength);
 
     // Initialize Openthread with the buffer
     aInstance = otInstanceInit(otInstanceBuffer, &otInstanceBufferLength);

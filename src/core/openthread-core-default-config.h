@@ -549,4 +549,54 @@
 #define OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE                   1500
 #endif  // OPENTHREAD_CONFIG_NCP_SPI_BUFFER_SIZE
 
+/**
+ * @def OPENTHREAD_CONFIG_PLATFORM_ASSERT_MANAGEMENT
+ *
+ * The assert is managed by platform defined logic when this flag is set.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_PLATFORM_ASSERT_MANAGEMENT
+#define OPENTHREAD_CONFIG_PLATFORM_ASSERT_MANAGEMENT            0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ACK_TIMEOUT
+ *
+ * Define to 1 if you want to enable software ACK timeout logic.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ACK_TIMEOUT
+#define OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ACK_TIMEOUT           0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_ENABLE_SOFTWARE_RETRANSMIT
+ *
+ * Define to 1 if you want to enable software retransmission logic.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_ENABLE_SOFTWARE_RETRANSMIT
+#define OPENTHREAD_CONFIG_ENABLE_SOFTWARE_RETRANSMIT            0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN
+ *
+ * Define to 1 if you want to enable software energy scanning logic.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN
+#define OPENTHREAD_CONFIG_ENABLE_SOFTWARE_ENERGY_SCAN           0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_ENABLE_AUTO_START_SUPPORT
+ *
+ * Define to 1 if you want to enable auto start logic.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_ENABLE_AUTO_START_SUPPORT
+#define OPENTHREAD_CONFIG_ENABLE_AUTO_START_SUPPORT             1
+#endif
+
 #endif  // OPENTHREAD_CORE_DEFAULT_CONFIG_H_

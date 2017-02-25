@@ -41,10 +41,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef _WIN32
+#include <libgen.h>
+#include <syslog.h>
+#endif
+
 #include <openthread.h>
 #include <openthread-tasklet.h>
 #include <platform/alarm.h>
-#include <platform/uart.h>
 
 uint32_t NODE_ID = 1;
 uint32_t WELLKNOWN_NODE_ID = 34;
@@ -57,6 +61,11 @@ void PlatformInit(int argc, char *argv[])
     {
         exit(EXIT_FAILURE);
     }
+
+#ifndef _WIN32
+    openlog(basename(argv[0]), LOG_PID, LOG_USER);
+    setlogmask(setlogmask(0) & LOG_UPTO(LOG_NOTICE));
+#endif
 
     NODE_ID = (uint32_t)strtol(argv[1], &endptr, 0);
 
@@ -71,8 +80,6 @@ void PlatformInit(int argc, char *argv[])
     platformRandomInit();
 }
 
-bool UartInitialized = false;
-
 void PlatformProcessDrivers(otInstance *aInstance)
 {
     fd_set read_fds;
@@ -81,12 +88,6 @@ void PlatformProcessDrivers(otInstance *aInstance)
     int max_fd = -1;
     struct timeval timeout;
     int rval;
-
-    if (!UartInitialized)
-    {
-        UartInitialized = true;
-        otPlatUartEnable();
-    }
 
     FD_ZERO(&read_fds);
     FD_ZERO(&write_fds);
@@ -111,4 +112,3 @@ void PlatformProcessDrivers(otInstance *aInstance)
     platformRadioProcess(aInstance);
     platformAlarmProcess(aInstance);
 }
-

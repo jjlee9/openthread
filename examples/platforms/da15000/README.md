@@ -5,7 +5,9 @@ This directory contains example platform drivers for the [Dialog Semiconductor D
 [da15000]: https://support.dialog-semiconductor.com/connectivity/product/openthread-sandbox
 
 **NOTE:** Each Thread node requires a unique EUI-64.  
-Please make sure all Thread nodes in your network have a unique EUI-64 by setting NODE_ID in radio.c to a unique value.
+Please make sure all Thread nodes in your network have a unique EUI-64 by setting HARDCODED_NODE_ID in radio.c to a unique value.
+
+**NOTE:** Current version works only with DA15000 rev. BA
 
 ## Build Examples (How to build and flash):
 ```bash
@@ -36,7 +38,7 @@ Flash Binaries:
 2. Return to previous terminal window and execute a command in order to flash the board:
 
    ```bash
-   $ ./cli_programmer -b uartboot.bin gdbserver write_qspi 0x0 ../../../output/bin/arm-none-eabi-ot-cli-ftd.img
+   $ ./cli_programmer gdbserver write_qspi_exec ../../../output/bin/arm-none-eabi-ot-cli-ftd.bin
    ```
 
 ## Interact:
@@ -110,6 +112,15 @@ Board will indicate state of device according to LED blink speed.
    16 bytes from fdde:ad00:beef:0:92f5:9844:67ad:a0c9: icmp_seq=2 hlim=64 time=359ms
    ```
 
+## Remarks
+* Validation
+
+   The DA15000 example has been validated by Dialog Semiconductor with commit d250105 included.
+  
+* Build environment
+
+   The DA15000 example code and all required dependencies have been complied with gcc version 5.4.0 (20160609).
+   
 ## Troubleshooting 
 * Why can’t I see the VCOM port?
    
@@ -117,3 +128,4 @@ Board will indicate state of device according to LED blink speed.
    driver properly installed but the VCOM not showing up in the device manager, it’s probably disabled
    by software. To re-enable it you have to run JLinkExe and issue the command ` vcom enable`.It is
    required to power cycle the device to apply the change. 
+ 
