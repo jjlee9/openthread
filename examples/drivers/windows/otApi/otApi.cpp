@@ -1419,6 +1419,32 @@ otSetChannel(
     return DwordToThreadError(SetIOCTL(aInstance, IOCTL_OTLWF_OT_CHANNEL, aChannel));
 }
 
+OTAPI
+ThreadError
+OTCALL
+otSetDelayTimerMinimal(
+    _In_ otInstance *aInstance,
+    uint32_t aDelayTimerMinimal
+    )
+{
+    if (aInstance == nullptr) return kThreadError_InvalidArgs;
+    // TODO
+    UNREFERENCED_PARAMETER(aDelayTimerMinimal);
+    return kThreadError_NotImplemented;
+}
+
+OTAPI
+uint32_t
+OTCALL
+otGetDelayTimerMinimal(
+    _In_ otInstance *aInstance
+    )
+{
+    if (aInstance == nullptr) return 0;
+    // TODO
+    return 0;
+}
+
 OTAPI 
 uint8_t 
 OTCALL

@@ -906,7 +906,32 @@ ThreadError otGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo)
 
     parent = aInstance->mThreadNetif.GetMle().GetParent();
     memcpy(aParentInfo->mExtAddress.m8, parent->mMacAddr.m8, OT_EXT_ADDRESS_SIZE);
-    aParentInfo->mRloc16 = parent->mValid.mRloc16;
+
+    aParentInfo->mRloc16          = parent->mValid.mRloc16;
+    aParentInfo->mRouterId        = Mle::Mle::GetRouterId(parent->mValid.mRloc16);
+    aParentInfo->mNextHop         = parent->mNextHop;
+    aParentInfo->mPathCost        = parent->mCost;
+    aParentInfo->mLinkQualityIn   = parent->mLinkInfo.GetLinkQuality(aInstance->mThreadNetif.GetMac().GetNoiseFloor());
+    aParentInfo->mLinkQualityOut  = parent->mLinkQualityOut;
+    aParentInfo->mAge             = static_cast<uint8_t>(Timer::MsecToSec(Timer::GetNow() - parent->mLastHeard));
+    aParentInfo->mAllocated       = parent->mAllocated;
+    aParentInfo->mLinkEstablished = parent->mState == Neighbor::kStateValid;
+
+exit:
+    return error;
+}
+
+ThreadError otGetParentAverageRssi(otInstance *aInstance, int8_t *aParentRssi)
+{
+    ThreadError error = kThreadError_None;
+    Router *parent;
+
+    VerifyOrExit(aParentRssi != NULL, error = kThreadError_InvalidArgs);
+
+    parent = aInstance->mThreadNetif.GetMle().GetParent();
+    *aParentRssi = parent->mLinkInfo.GetAverageRss();
+
+    VerifyOrExit(*aParentRssi != LinkQualityInfo::kUnknownRss, error = kThreadError_Failed);
 
 exit:
     return error;
@@ -1727,14 +1752,27 @@ ThreadError otSendUdp(otUdpSocket *aSocket, otMessage aMessage, const otMessageI
                           *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
-bool otIsIcmpEchoEnabled(otInstance *aInstance)
+bool otIcmp6IsEchoEnabled(otInstance *aInstance)
 {
     return aInstance->mIp6.mIcmp.IsEchoEnabled();
 }
 
-void otSetIcmpEchoEnabled(otInstance *aInstance, bool aEnabled)
+void otIcmp6SetEchoEnabled(otInstance *aInstance, bool aEnabled)
 {
     aInstance->mIp6.mIcmp.SetEchoEnabled(aEnabled);
+}
+
+ThreadError otIcmp6RegisterHandler(otInstance *aInstance, otIcmp6Handler *aHandler)
+{
+    return aInstance->mIp6.mIcmp.RegisterHandler(*static_cast<Ip6::IcmpHandler *>(aHandler));
+}
+
+ThreadError otIcmp6SendEchoRequest(otInstance *aInstance, otMessage aMessage,
+                                   const otMessageInfo *aMessageInfo, uint16_t aIdentifier)
+{
+    return aInstance->mIp6.mIcmp.SendEchoRequest(*static_cast<Message *>(aMessage),
+                                                 *static_cast<const Ip6::MessageInfo *>(aMessageInfo),
+                                                 aIdentifier);
 }
 
 uint8_t otIp6PrefixMatch(const otIp6Address *aFirst, const otIp6Address *aSecond)
@@ -1949,9 +1987,24 @@ ThreadError otCoapHeaderAppendOption(otCoapHeader *aHeader, const otCoapOption *
     return static_cast<Coap::Header *>(aHeader)->AppendOption(*static_cast<const Coap::Header::Option *>(aOption));
 }
 
+ThreadError otCoapHeaderAppendObserveOption(otCoapHeader *aHeader, uint32_t aObserve)
+{
+    return static_cast<Coap::Header *>(aHeader)->AppendObserveOption(aObserve);
+}
+
 ThreadError otCoapHeaderAppendUriPathOptions(otCoapHeader *aHeader, const char *aUriPath)
 {
     return static_cast<Coap::Header *>(aHeader)->AppendUriPathOptions(aUriPath);
+}
+
+ThreadError otCoapHeaderAppendMaxAgeOption(otCoapHeader *aHeader, uint32_t aMaxAge)
+{
+    return static_cast<Coap::Header *>(aHeader)->AppendMaxAgeOption(aMaxAge);
+}
+
+ThreadError otCoapHeaderAppendUriQueryOption(otCoapHeader *aHeader, const char *aUriQuery)
+{
+    return static_cast<Coap::Header *>(aHeader)->AppendUriQueryOption(aUriQuery);
 }
 
 void otCoapHeaderSetPayloadMarker(otCoapHeader *aHeader)
