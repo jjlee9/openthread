@@ -36,14 +36,15 @@
 #include <openthread-config.h>
 #endif
 
-#include <assert.h>
 #include <stdlib.h>
 #include <common/code_utils.hpp>
+ #include <common/debug.hpp>
 #include <ncp/ncp.h>
 #include <ncp/ncp_base.hpp>
 #include <net/ip6.hpp>
 #include <openthread.h>
 #include <openthread-diag.h>
+#include <openthread-icmp6.h>
 #if OPENTHREAD_ENABLE_JAM_DETECTION
 #include <openthread-jam-detection.h>
 #endif
@@ -108,6 +109,7 @@ const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
     { SPINEL_PROP_PHY_CHAN_SUPPORTED, &NcpBase::GetPropertyHandler_PHY_CHAN_SUPPORTED },
     { SPINEL_PROP_PHY_CHAN, &NcpBase::GetPropertyHandler_PHY_CHAN },
     { SPINEL_PROP_PHY_RSSI, &NcpBase::GetPropertyHandler_PHY_RSSI },
+    { SPINEL_PROP_PHY_TX_POWER, &NcpBase::GetPropertyHandler_PHY_TX_POWER },
 
     { SPINEL_PROP_MAC_SCAN_STATE, &NcpBase::GetPropertyHandler_MAC_SCAN_STATE },
     { SPINEL_PROP_MAC_SCAN_MASK, &NcpBase::GetPropertyHandler_MAC_SCAN_MASK },
@@ -143,8 +145,8 @@ const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
     { SPINEL_PROP_THREAD_STABLE_NETWORK_DATA_VERSION, &NcpBase::GetPropertyHandler_THREAD_STABLE_NETWORK_DATA_VERSION },
     { SPINEL_PROP_THREAD_LEADER_NETWORK_DATA, &NcpBase::GetPropertyHandler_THREAD_LEADER_NETWORK_DATA },
     { SPINEL_PROP_THREAD_STABLE_LEADER_NETWORK_DATA, &NcpBase::GetPropertyHandler_THREAD_STABLE_LEADER_NETWORK_DATA },
-    { SPINEL_PROP_THREAD_LOCAL_ROUTES, &NcpBase::NcpBase::GetPropertyHandler_THREAD_LOCAL_ROUTES },
-    { SPINEL_PROP_THREAD_ASSISTING_PORTS, &NcpBase::NcpBase::GetPropertyHandler_THREAD_ASSISTING_PORTS },
+    { SPINEL_PROP_THREAD_LOCAL_ROUTES, &NcpBase::GetPropertyHandler_THREAD_LOCAL_ROUTES },
+    { SPINEL_PROP_THREAD_ASSISTING_PORTS, &NcpBase::GetPropertyHandler_THREAD_ASSISTING_PORTS },
     { SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE, &NcpBase::GetPropertyHandler_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE },
     { SPINEL_PROP_THREAD_ROUTER_ROLE_ENABLED, &NcpBase::GetPropertyHandler_THREAD_ROUTER_ROLE_ENABLED },
 
@@ -158,7 +160,7 @@ const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
     { SPINEL_PROP_THREAD_ROUTER_DOWNGRADE_THRESHOLD, &NcpBase::GetPropertyHandler_THREAD_ROUTER_DOWNGRADE_THRESHOLD },
     { SPINEL_PROP_THREAD_CONTEXT_REUSE_DELAY, &NcpBase::GetPropertyHandler_THREAD_CONTEXT_REUSE_DELAY },
     { SPINEL_PROP_THREAD_NETWORK_ID_TIMEOUT, &NcpBase::GetPropertyHandler_THREAD_NETWORK_ID_TIMEOUT },
-    { SPINEL_PROP_THREAD_ON_MESH_NETS, &NcpBase::NcpBase::GetPropertyHandler_THREAD_ON_MESH_NETS },
+    { SPINEL_PROP_THREAD_ON_MESH_NETS, &NcpBase::GetPropertyHandler_THREAD_ON_MESH_NETS },
     { SPINEL_PROP_NET_REQUIRE_JOIN_EXISTING, &NcpBase::GetPropertyHandler_NET_REQUIRE_JOIN_EXISTING },
     { SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, &NcpBase::GetPropertyHandler_THREAD_ROUTER_SELECTION_JITTER },
 
@@ -224,6 +226,7 @@ const NcpBase::GetPropertyHandlerEntry NcpBase::mGetPropertyHandlerTable[] =
     { SPINEL_PROP_CNTR_RX_SPINEL_ERR, &NcpBase::GetPropertyHandler_NCP_CNTR },
 
     { SPINEL_PROP_MSG_BUFFER_COUNTERS, &NcpBase::GetPropertyHandler_MSG_BUFFER_COUNTERS },
+    { SPINEL_PROP_DEBUG_TEST_ASSERT, &NcpBase::GetPropertyHandler_DEBUG_TEST_ASSERT },
 
 #if OPENTHREAD_ENABLE_LEGACY
     { SPINEL_PROP_NEST_LEGACY_ULA_PREFIX, &NcpBase::GetPropertyHandler_NEST_LEGACY_ULA_PREFIX },
@@ -236,6 +239,7 @@ const NcpBase::SetPropertyHandlerEntry NcpBase::mSetPropertyHandlerTable[] =
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
     { SPINEL_PROP_PHY_ENABLED, &NcpBase::SetPropertyHandler_PHY_ENABLED },
+    { SPINEL_PROP_MAC_15_4_SADDR, &NcpBase::SetPropertyHandler_MAC_15_4_SADDR },
     { SPINEL_PROP_STREAM_RAW, &NcpBase::SetPropertyHandler_STREAM_RAW },
 #endif // OPENTHREAD_ENABLE_RAW_LINK_API
     { SPINEL_PROP_PHY_TX_POWER, &NcpBase::SetPropertyHandler_PHY_TX_POWER },
@@ -246,6 +250,7 @@ const NcpBase::SetPropertyHandlerEntry NcpBase::mSetPropertyHandlerTable[] =
     { SPINEL_PROP_MAC_SCAN_STATE, &NcpBase::SetPropertyHandler_MAC_SCAN_STATE },
     { SPINEL_PROP_MAC_SCAN_PERIOD, &NcpBase::SetPropertyHandler_MAC_SCAN_PERIOD },
     { SPINEL_PROP_MAC_15_4_PANID, &NcpBase::SetPropertyHandler_MAC_15_4_PANID },
+    { SPINEL_PROP_MAC_15_4_LADDR, &NcpBase::SetPropertyHandler_MAC_15_4_LADDR },
     { SPINEL_PROP_MAC_RAW_STREAM_ENABLED, &NcpBase::SetPropertyHandler_MAC_RAW_STREAM_ENABLED },
 
     { SPINEL_PROP_NET_IF_UP, &NcpBase::SetPropertyHandler_NET_IF_UP },
@@ -272,6 +277,11 @@ const NcpBase::SetPropertyHandlerEntry NcpBase::mSetPropertyHandlerTable[] =
 
     { SPINEL_PROP_MAC_WHITELIST, &NcpBase::SetPropertyHandler_MAC_WHITELIST },
     { SPINEL_PROP_MAC_WHITELIST_ENABLED, &NcpBase::SetPropertyHandler_MAC_WHITELIST_ENABLED },
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+    { SPINEL_PROP_MAC_SRC_MATCH_ENABLED, &NcpBase::SetPropertyHandler_MAC_SRC_MATCH_ENABLED },
+    { SPINEL_PROP_MAC_SRC_MATCH_SHORT_ADDRESSES, &NcpBase::SetPropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES },
+    { SPINEL_PROP_MAC_SRC_MATCH_EXTENDED_ADDRESSES, &NcpBase::SetPropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES },
+#endif
     { SPINEL_PROP_THREAD_MODE, &NcpBase::SetPropertyHandler_THREAD_MODE },
     { SPINEL_PROP_THREAD_CHILD_COUNT_MAX, &NcpBase::SetPropertyHandler_THREAD_CHILD_COUNT_MAX },
     { SPINEL_PROP_THREAD_CHILD_TIMEOUT, &NcpBase::SetPropertyHandler_THREAD_CHILD_TIMEOUT },
@@ -300,10 +310,14 @@ const NcpBase::SetPropertyHandlerEntry NcpBase::mSetPropertyHandlerTable[] =
 
 const NcpBase::InsertPropertyHandlerEntry NcpBase::mInsertPropertyHandlerTable[] =
 {
-    { SPINEL_PROP_IPV6_ADDRESS_TABLE, &NcpBase::NcpBase::InsertPropertyHandler_IPV6_ADDRESS_TABLE },
-    { SPINEL_PROP_THREAD_LOCAL_ROUTES, &NcpBase::NcpBase::InsertPropertyHandler_THREAD_LOCAL_ROUTES },
-    { SPINEL_PROP_THREAD_ON_MESH_NETS, &NcpBase::NcpBase::InsertPropertyHandler_THREAD_ON_MESH_NETS },
-    { SPINEL_PROP_THREAD_ASSISTING_PORTS, &NcpBase::NcpBase::InsertPropertyHandler_THREAD_ASSISTING_PORTS },
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+    { SPINEL_PROP_MAC_SRC_MATCH_SHORT_ADDRESSES, &NcpBase::InsertPropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES },
+    { SPINEL_PROP_MAC_SRC_MATCH_EXTENDED_ADDRESSES, &NcpBase::InsertPropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES },
+#endif
+    { SPINEL_PROP_IPV6_ADDRESS_TABLE, &NcpBase::InsertPropertyHandler_IPV6_ADDRESS_TABLE },
+    { SPINEL_PROP_THREAD_LOCAL_ROUTES, &NcpBase::InsertPropertyHandler_THREAD_LOCAL_ROUTES },
+    { SPINEL_PROP_THREAD_ON_MESH_NETS, &NcpBase::InsertPropertyHandler_THREAD_ON_MESH_NETS },
+    { SPINEL_PROP_THREAD_ASSISTING_PORTS, &NcpBase::InsertPropertyHandler_THREAD_ASSISTING_PORTS },
 
     { SPINEL_PROP_CNTR_RESET, &NcpBase::SetPropertyHandler_CNTR_RESET },
 
@@ -312,10 +326,14 @@ const NcpBase::InsertPropertyHandlerEntry NcpBase::mInsertPropertyHandlerTable[]
 
 const NcpBase::RemovePropertyHandlerEntry NcpBase::mRemovePropertyHandlerTable[] =
 {
-    { SPINEL_PROP_IPV6_ADDRESS_TABLE, &NcpBase::NcpBase::RemovePropertyHandler_IPV6_ADDRESS_TABLE },
-    { SPINEL_PROP_THREAD_LOCAL_ROUTES, &NcpBase::NcpBase::RemovePropertyHandler_THREAD_LOCAL_ROUTES },
-    { SPINEL_PROP_THREAD_ON_MESH_NETS, &NcpBase::NcpBase::RemovePropertyHandler_THREAD_ON_MESH_NETS },
-    { SPINEL_PROP_THREAD_ASSISTING_PORTS, &NcpBase::NcpBase::RemovePropertyHandler_THREAD_ASSISTING_PORTS },
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+    { SPINEL_PROP_MAC_SRC_MATCH_SHORT_ADDRESSES, &NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES },
+    { SPINEL_PROP_MAC_SRC_MATCH_EXTENDED_ADDRESSES, &NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES },
+#endif
+    { SPINEL_PROP_IPV6_ADDRESS_TABLE, &NcpBase::RemovePropertyHandler_IPV6_ADDRESS_TABLE },
+    { SPINEL_PROP_THREAD_LOCAL_ROUTES, &NcpBase::RemovePropertyHandler_THREAD_LOCAL_ROUTES },
+    { SPINEL_PROP_THREAD_ON_MESH_NETS, &NcpBase::RemovePropertyHandler_THREAD_ON_MESH_NETS },
+    { SPINEL_PROP_THREAD_ASSISTING_PORTS, &NcpBase::RemovePropertyHandler_THREAD_ASSISTING_PORTS },
     { SPINEL_PROP_MAC_WHITELIST, &NcpBase::RemovePropertyHandler_MAC_WHITELIST },
     { SPINEL_PROP_THREAD_ACTIVE_ROUTER_IDS, &NcpBase::RemovePropertyHandler_THREAD_ACTIVE_ROUTER_IDS },
 };
@@ -473,6 +491,7 @@ static uint8_t BorderRouterConfigToFlagByte(const otBorderRouterConfig &config)
 
 NcpBase::NcpBase(otInstance *aInstance):
     mInstance(aInstance),
+    mTxFrameBuffer(mTxBuffer, sizeof(mTxBuffer)),
     mLastStatus(SPINEL_STATUS_OK),
     mSupportedChannelMask(kPhySupportedChannelMask),
     mChannelMask(kPhySupportedChannelMask),
@@ -514,7 +533,7 @@ NcpBase::NcpBase(otInstance *aInstance):
     otSetStateChangedCallback(mInstance, &NcpBase::HandleNetifStateChanged, this);
     otSetReceiveIp6DatagramCallback(mInstance, &NcpBase::HandleDatagramFromStack, this);
     otSetLinkPcapCallback(mInstance, &NcpBase::HandleRawFrame, static_cast<void*>(this));
-    otSetIcmpEchoEnabled(mInstance, false);
+    otIcmp6SetEchoEnabled(mInstance, false);
     otSetReceiveIp6DatagramFilterEnabled(mInstance, true);
 
     mUpdateChangedPropsTask.Post();
@@ -524,6 +543,30 @@ NcpBase::NcpBase(otInstance *aInstance):
     mLegacyHandlers = NULL;
     memset(mLegacyUlaPrefix, 0, sizeof(mLegacyUlaPrefix));
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// MARK: Outbound Frame methods
+// ----------------------------------------------------------------------------
+
+ThreadError NcpBase::OutboundFrameBegin(void)
+{
+    return mTxFrameBuffer.InFrameBegin();
+}
+
+ThreadError NcpBase::OutboundFrameFeedData(const uint8_t *aDataBuffer, uint16_t aDataBufferLength)
+{
+    return mTxFrameBuffer.InFrameFeedData(aDataBuffer, aDataBufferLength);
+}
+
+ThreadError NcpBase::OutboundFrameFeedMessage(otMessage aMessage)
+{
+    return mTxFrameBuffer.InFrameFeedMessage(aMessage);
+}
+
+ThreadError NcpBase::OutboundFrameEnd(void)
+{
+    return mTxFrameBuffer.InFrameEnd();
 }
 
 // ----------------------------------------------------------------------------
@@ -1832,6 +1875,17 @@ ThreadError NcpBase::GetPropertyHandler_PHY_RSSI(uint8_t header, spinel_prop_key
            );
 }
 
+ThreadError NcpBase::GetPropertyHandler_PHY_TX_POWER(uint8_t header, spinel_prop_key_t key)
+{
+    return SendPropertyUpdate(
+               header,
+               SPINEL_CMD_PROP_VALUE_IS,
+               key,
+               SPINEL_DATATYPE_INT8_S,
+               otGetMaxTransmitPower(mInstance)
+           );
+}
+
 ThreadError NcpBase::GetPropertyHandler_MAC_SCAN_STATE(uint8_t header, spinel_prop_key_t key)
 {
     ThreadError errorCode = kThreadError_None;
@@ -2328,7 +2382,7 @@ ThreadError NcpBase::GetPropertyHandler_THREAD_CHILD_TABLE(uint8_t header, spine
 {
     ThreadError errorCode = kThreadError_None;
     otChildInfo childInfo;
-    uint8_t index;
+    uint8_t maxChildren;
     uint8_t modeFlags;
 
     mDisableStreamWrite = true;
@@ -2336,58 +2390,60 @@ ThreadError NcpBase::GetPropertyHandler_THREAD_CHILD_TABLE(uint8_t header, spine
     SuccessOrExit(errorCode = OutboundFrameBegin());
     SuccessOrExit(errorCode = OutboundFrameFeedPacked("Cii", header, SPINEL_CMD_PROP_VALUE_IS, key));
 
-    index = 0;
+    maxChildren = otGetMaxAllowedChildren(mInstance);
 
-    while (otGetChildInfoByIndex(mInstance, index, &childInfo) == kThreadError_None)
+    for (uint8_t index = 0; index < maxChildren; index++)
     {
-        if (childInfo.mTimeout > 0)
+        errorCode = otGetChildInfoByIndex(mInstance, index, &childInfo);
+
+        if (errorCode != kThreadError_None)
         {
-            modeFlags = 0;
-
-            if (childInfo.mRxOnWhenIdle)
-            {
-                modeFlags |= kThreadMode_RxOnWhenIdle;
-            }
-
-            if (childInfo.mSecureDataRequest)
-            {
-                modeFlags |= kThreadMode_SecureDataRequest;
-            }
-
-            if (childInfo.mFullFunction)
-            {
-                modeFlags |= kThreadMode_FullFunctionDevice;
-            }
-
-            if (childInfo.mFullNetworkData)
-            {
-                modeFlags |= kThreadMode_FullNetworkData;
-            }
-
-            SuccessOrExit(
-                errorCode = OutboundFrameFeedPacked(
-                    "T("
-                        SPINEL_DATATYPE_EUI64_S         // EUI64 Address
-                        SPINEL_DATATYPE_UINT16_S        // Rloc16
-                        SPINEL_DATATYPE_UINT32_S        // Timeout
-                        SPINEL_DATATYPE_UINT32_S        // Age
-                        SPINEL_DATATYPE_UINT8_S         // Network Data Version
-                        SPINEL_DATATYPE_UINT8_S         // Link Quality In
-                        SPINEL_DATATYPE_INT8_S          // Average RSS
-                        SPINEL_DATATYPE_UINT8_S         // Mode (flags)
-                    ")",
-                    childInfo.mExtAddress.m8,
-                    childInfo.mRloc16,
-                    childInfo.mTimeout,
-                    childInfo.mAge,
-                    childInfo.mNetworkDataVersion,
-                    childInfo.mLinkQualityIn,
-                    childInfo.mAverageRssi,
-                    modeFlags
-            ));
+            continue;
         }
 
-        index++;
+        modeFlags = 0;
+
+        if (childInfo.mRxOnWhenIdle)
+        {
+            modeFlags |= kThreadMode_RxOnWhenIdle;
+        }
+
+        if (childInfo.mSecureDataRequest)
+        {
+            modeFlags |= kThreadMode_SecureDataRequest;
+        }
+
+        if (childInfo.mFullFunction)
+        {
+            modeFlags |= kThreadMode_FullFunctionDevice;
+        }
+
+        if (childInfo.mFullNetworkData)
+        {
+            modeFlags |= kThreadMode_FullNetworkData;
+        }
+
+        SuccessOrExit(
+            errorCode = OutboundFrameFeedPacked(
+                "T("
+                    SPINEL_DATATYPE_EUI64_S         // EUI64 Address
+                    SPINEL_DATATYPE_UINT16_S        // Rloc16
+                    SPINEL_DATATYPE_UINT32_S        // Timeout
+                    SPINEL_DATATYPE_UINT32_S        // Age
+                    SPINEL_DATATYPE_UINT8_S         // Network Data Version
+                    SPINEL_DATATYPE_UINT8_S         // Link Quality In
+                    SPINEL_DATATYPE_INT8_S          // Average RSS
+                    SPINEL_DATATYPE_UINT8_S         // Mode (flags)
+                ")",
+                childInfo.mExtAddress.m8,
+                childInfo.mRloc16,
+                childInfo.mTimeout,
+                childInfo.mAge,
+                childInfo.mNetworkDataVersion,
+                childInfo.mLinkQualityIn,
+                childInfo.mAverageRssi,
+                modeFlags
+        ));
     }
 
     SuccessOrExit(errorCode = OutboundFrameSend());
@@ -2697,7 +2753,7 @@ ThreadError NcpBase::GetPropertyHandler_IPV6_ICMP_PING_OFFLOAD(uint8_t header, s
                SPINEL_CMD_PROP_VALUE_IS,
                key,
                SPINEL_DATATYPE_BOOL_S,
-               otIsIcmpEchoEnabled(mInstance)
+               otIcmp6IsEchoEnabled(mInstance)
            );
 }
 
@@ -3054,6 +3110,24 @@ exit:
     return errorCode;
 }
 
+ThreadError NcpBase::GetPropertyHandler_DEBUG_TEST_ASSERT(uint8_t header, spinel_prop_key_t key)
+{
+    assert(false);
+
+    // We only get to this point if `assert(false)`
+    // does not cause an NCP reset on the platform.
+    // In such a case we return `false` as the
+    // property value to inidicate this.
+
+    return SendPropertyUpdate(
+               header,
+               SPINEL_CMD_PROP_VALUE_IS,
+               key,
+               SPINEL_DATATYPE_BOOL_S,
+               false
+            );
+}
+
 ThreadError NcpBase::GetPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key)
 {
     otMacWhitelistEntry entry;
@@ -3325,12 +3399,29 @@ ThreadError NcpBase::SetPropertyHandler_PHY_ENABLED(uint8_t header, spinel_prop_
 ThreadError NcpBase::SetPropertyHandler_PHY_TX_POWER(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
                                                      uint16_t value_len)
 {
-    // TODO: Implement PHY_TX_POWER
-    (void)key;
-    (void)value_ptr;
-    (void)value_len;
+    int8_t value = 0;
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
 
-    return SendLastStatus(header, SPINEL_STATUS_UNIMPLEMENTED);
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_INT8_S,
+                       &value
+                   );
+
+    if (parsedLength > 0)
+    {
+        otSetMaxTransmitPower(mInstance, value);
+
+        errorCode = HandleCommandPropertyGet(header, key);
+    }
+    else
+    {
+        errorCode = SendLastStatus(header, SPINEL_STATUS_PARSE_ERROR);
+    }
+
+    return errorCode;
 }
 
 ThreadError NcpBase::SetPropertyHandler_PHY_CHAN(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
@@ -3387,8 +3478,8 @@ ThreadError NcpBase::SetPropertyHandler_PHY_CHAN(uint8_t header, spinel_prop_key
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_MAC_PROMISCUOUS_MODE(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
-                                                        uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_MAC_PROMISCUOUS_MODE(uint8_t header, spinel_prop_key_t key,
+                                                             const uint8_t *value_ptr, uint16_t value_len)
 {
     uint8_t i = 0;
     spinel_ssize_t parsedLength;
@@ -3497,8 +3588,8 @@ ThreadError NcpBase::SetPropertyHandler_MAC_SCAN_PERIOD(uint8_t header, spinel_p
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_NET_REQUIRE_JOIN_EXISTING(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
-                                                        uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_NET_REQUIRE_JOIN_EXISTING(uint8_t header, spinel_prop_key_t key,
+                                                                  const uint8_t *value_ptr, uint16_t value_len)
 {
     bool tmp(mRequireJoinExistingNetwork);
     spinel_ssize_t parsedLength;
@@ -3692,7 +3783,43 @@ ThreadError NcpBase::SetPropertyHandler_MAC_15_4_PANID(uint8_t header, spinel_pr
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_MAC_RAW_STREAM_ENABLED(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_MAC_15_4_LADDR(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
+                                                       uint16_t value_len)
+{
+    otExtAddress *tmp;
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_EUI64_S,
+                       &tmp
+                   );
+
+    if (parsedLength > 0)
+    {
+        errorCode = otSetExtendedAddress(mInstance, tmp);
+
+        if (errorCode == kThreadError_None)
+        {
+            errorCode = HandleCommandPropertyGet(header, key);
+        }
+        else
+        {
+            errorCode = SendLastStatus(header, ThreadErrorToSpinelStatus(errorCode));
+        }
+    }
+    else
+    {
+        errorCode = SendLastStatus(header, SPINEL_STATUS_PARSE_ERROR);
+    }
+
+    return errorCode;
+}
+
+ThreadError NcpBase::SetPropertyHandler_MAC_RAW_STREAM_ENABLED(uint8_t header, spinel_prop_key_t key,
+                                                               const uint8_t *value_ptr,uint16_t value_len)
 {
     bool value = false;
     spinel_ssize_t parsedLength;
@@ -3740,6 +3867,41 @@ ThreadError NcpBase::SetPropertyHandler_MAC_RAW_STREAM_ENABLED(uint8_t header, s
 }
 
 #if OPENTHREAD_ENABLE_RAW_LINK_API
+
+ThreadError NcpBase::SetPropertyHandler_MAC_15_4_SADDR(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
+                                                       uint16_t value_len)
+{
+    uint16_t tmp;
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_UINT16_S,
+                       &tmp
+                   );
+
+    if (parsedLength > 0)
+    {
+        errorCode = otLinkRawSetShortAddress(mInstance, tmp);
+
+        if (errorCode == kThreadError_None)
+        {
+            errorCode = HandleCommandPropertyGet(header, key);
+        }
+        else
+        {
+            errorCode = SendLastStatus(header, ThreadErrorToSpinelStatus(errorCode));
+        }
+    }
+    else
+    {
+        errorCode = SendLastStatus(header, SPINEL_STATUS_PARSE_ERROR);
+    }
+
+    return errorCode;
+}
 
 ThreadError NcpBase::SetPropertyHandler_STREAM_RAW(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
                                                    uint16_t value_len)
@@ -4331,7 +4493,8 @@ ThreadError NcpBase::SetPropertyHandler_IPV6_ML_PREFIX(uint8_t header, spinel_pr
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_IPV6_ICMP_PING_OFFLOAD(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_IPV6_ICMP_PING_OFFLOAD(uint8_t header, spinel_prop_key_t key,
+                                                               const uint8_t *value_ptr, uint16_t value_len)
 {
     bool isEnabled(false);
     spinel_ssize_t parsedLength;
@@ -4346,7 +4509,7 @@ ThreadError NcpBase::SetPropertyHandler_IPV6_ICMP_PING_OFFLOAD(uint8_t header, s
 
     if (parsedLength > 0)
     {
-        otSetIcmpEchoEnabled(mInstance, isEnabled);
+        otIcmp6SetEchoEnabled(mInstance, isEnabled);
 
         errorCode = HandleCommandPropertyGet(header, key);
     }
@@ -4358,7 +4521,8 @@ ThreadError NcpBase::SetPropertyHandler_IPV6_ICMP_PING_OFFLOAD(uint8_t header, s
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_RLOC16_DEBUG_PASSTHRU(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_RLOC16_DEBUG_PASSTHRU(uint8_t header, spinel_prop_key_t key,
+                                                                     const uint8_t *value_ptr, uint16_t value_len)
 {
     bool isEnabled(false);
     spinel_ssize_t parsedLength;
@@ -4574,7 +4738,8 @@ ThreadError NcpBase::SetPropertyHandler_CNTR_RESET(uint8_t header, spinel_prop_k
     return SendLastStatus(header, ThreadErrorToSpinelStatus(errorCode));
 }
 
-ThreadError NcpBase::SetPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
+                                                      uint16_t value_len)
 {
     ThreadError errorCode = kThreadError_None;
     spinel_ssize_t parsedLength = 1;
@@ -4646,7 +4811,8 @@ ThreadError NcpBase::SetPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_pro
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_MAC_WHITELIST_ENABLED(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_MAC_WHITELIST_ENABLED(uint8_t header, spinel_prop_key_t key,
+                                                              const uint8_t *value_ptr, uint16_t value_len)
 {
     bool isEnabled;
     spinel_ssize_t parsedLength;
@@ -4680,7 +4846,160 @@ ThreadError NcpBase::SetPropertyHandler_MAC_WHITELIST_ENABLED(uint8_t header, sp
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_MODE(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+
+ThreadError NcpBase::SetPropertyHandler_MAC_SRC_MATCH_ENABLED(uint8_t header, spinel_prop_key_t key,
+                                                              const uint8_t *value_ptr, uint16_t value_len)
+{
+    bool isEnabled;
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_BOOL_S,
+                       &isEnabled
+                   );
+
+    if (parsedLength > 0)
+    {
+        errorCode = otLinkRawSrcMatchEnable(mInstance, isEnabled);
+        if (errorCode == kThreadError_None)
+        {
+            errorCode = HandleCommandPropertyGet(header, key);
+        }
+        else
+        {
+            errorCode = SendLastStatus(header, ThreadErrorToSpinelStatus(errorCode));
+        }
+    }
+    else
+    {
+        errorCode = SendLastStatus(header, SPINEL_STATUS_PARSE_ERROR);
+    }
+
+    return errorCode;
+}
+
+ThreadError NcpBase::SetPropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES(uint8_t header, spinel_prop_key_t key,
+                                                                      const uint8_t *value_ptr, uint16_t value_len)
+{
+    ThreadError errorCode = kThreadError_None;
+    spinel_status_t errorStatus = SPINEL_STATUS_OK;
+    const uint8_t *data = value_ptr;
+    uint16_t data_len = value_len;
+
+    // Clear the list first
+    errorCode = otLinkRawSrcMatchClearShortEntries(mInstance);
+
+    VerifyOrExit(errorCode == kThreadError_None,
+        errorStatus = ThreadErrorToSpinelStatus(errorCode));
+
+    // Loop through the addresses and add them
+    while (data_len >= sizeof(uint16_t))
+    {
+        spinel_ssize_t parsedLength;
+        uint16_t short_address;
+
+        parsedLength = spinel_datatype_unpack(
+            data,
+            data_len,
+            SPINEL_DATATYPE_UINT16_S,
+            &short_address
+        );
+
+        VerifyOrExit(parsedLength > 0, errorStatus = SPINEL_STATUS_PARSE_ERROR);
+
+        data += parsedLength;
+        data_len -= (uint16_t)parsedLength;
+
+        errorCode = otLinkRawSrcMatchAddShortEntry(mInstance, short_address);
+
+        VerifyOrExit(errorCode == kThreadError_None,
+            errorStatus = ThreadErrorToSpinelStatus(errorCode));
+    }
+
+    errorCode =
+        SendPropertyUpdate(
+            header,
+            SPINEL_CMD_PROP_VALUE_IS,
+            key,
+            value_ptr,
+            value_len
+        );
+
+exit:
+
+    if (errorStatus != SPINEL_STATUS_OK)
+    {
+        errorCode = SendLastStatus(header, errorStatus);
+    }
+
+    return errorCode;
+}
+
+ThreadError NcpBase::SetPropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES(uint8_t header, spinel_prop_key_t key,
+                                                                         const uint8_t *value_ptr, uint16_t value_len)
+{
+    ThreadError errorCode = kThreadError_None;
+    spinel_status_t errorStatus = SPINEL_STATUS_OK;
+    const uint8_t *data = value_ptr;
+    uint16_t data_len = value_len;
+
+    // Clear the list first
+    errorCode = otLinkRawSrcMatchClearExtEntries(mInstance);
+
+    VerifyOrExit(errorCode == kThreadError_None,
+        errorStatus = ThreadErrorToSpinelStatus(errorCode));
+
+    // Loop through the addresses and add them
+    while (data_len >= sizeof(otExtAddress))
+    {
+        spinel_ssize_t parsedLength;
+        uint8_t *ext_address;
+
+        parsedLength = spinel_datatype_unpack(
+            data,
+            data_len,
+            SPINEL_DATATYPE_EUI64_S,
+            &ext_address
+        );
+
+        VerifyOrExit(parsedLength > 0, errorStatus = SPINEL_STATUS_PARSE_ERROR);
+
+        data += parsedLength;
+        data_len -= (uint16_t)parsedLength;
+
+        errorCode = otLinkRawSrcMatchAddExtEntry(mInstance, ext_address);
+
+        VerifyOrExit(errorCode == kThreadError_None,
+            errorStatus = ThreadErrorToSpinelStatus(errorCode));
+    }
+
+    errorCode =
+        SendPropertyUpdate(
+            header,
+            SPINEL_CMD_PROP_VALUE_IS,
+            key,
+            value_ptr,
+            value_len
+        );
+
+exit:
+
+    if (errorStatus != SPINEL_STATUS_OK)
+    {
+        errorCode = SendLastStatus(header, errorStatus);
+    }
+
+    return errorCode;
+}
+
+#endif
+
+ThreadError NcpBase::SetPropertyHandler_THREAD_MODE(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
+                                                    uint16_t value_len)
 {
     uint8_t numeric_mode = 0;
     otLinkModeConfig mode_config;
@@ -4697,7 +5016,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_MODE(uint8_t header, spinel_prop_
     if (parsedLength > 0)
     {
         mode_config.mRxOnWhenIdle = ((numeric_mode & kThreadMode_RxOnWhenIdle) == kThreadMode_RxOnWhenIdle);
-        mode_config.mSecureDataRequests = ((numeric_mode & kThreadMode_SecureDataRequest) == kThreadMode_SecureDataRequest);
+        mode_config.mSecureDataRequests =
+            ((numeric_mode & kThreadMode_SecureDataRequest) == kThreadMode_SecureDataRequest);
         mode_config.mDeviceType = ((numeric_mode & kThreadMode_FullFunctionDevice) == kThreadMode_FullFunctionDevice);
         mode_config.mNetworkData = ((numeric_mode & kThreadMode_FullNetworkData) == kThreadMode_FullNetworkData);
 
@@ -4720,7 +5040,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_MODE(uint8_t header, spinel_prop_
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_CHILD_COUNT_MAX(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_CHILD_COUNT_MAX(uint8_t header, spinel_prop_key_t key,
+                                                               const uint8_t *value_ptr, uint16_t value_len)
 {
     uint8_t n = 0;
     spinel_ssize_t parsedLength;
@@ -4747,7 +5068,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_CHILD_COUNT_MAX(uint8_t header, s
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_CHILD_TIMEOUT(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_CHILD_TIMEOUT(uint8_t header, spinel_prop_key_t key,
+                                                             const uint8_t *value_ptr, uint16_t value_len)
 {
     uint32_t i = 0;
     spinel_ssize_t parsedLength;
@@ -4774,7 +5096,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_CHILD_TIMEOUT(uint8_t header, spi
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_UPGRADE_THRESHOLD(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_UPGRADE_THRESHOLD(uint8_t header, spinel_prop_key_t key,
+                                                                        const uint8_t *value_ptr, uint16_t value_len)
 {
     uint8_t i = 0;
     spinel_ssize_t parsedLength;
@@ -4801,7 +5124,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_UPGRADE_THRESHOLD(uint8_t 
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_DOWNGRADE_THRESHOLD(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_DOWNGRADE_THRESHOLD(uint8_t header, spinel_prop_key_t key,
+                                                                          const uint8_t *value_ptr, uint16_t value_len)
 {
     uint8_t i = 0;
     spinel_ssize_t parsedLength;
@@ -4828,7 +5152,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_DOWNGRADE_THRESHOLD(uint8_
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_SELECTION_JITTER(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_ROUTER_SELECTION_JITTER(uint8_t header, spinel_prop_key_t key,
+                                                                       const uint8_t *value_ptr, uint16_t value_len)
 {
     uint8_t i = 0;
     spinel_ssize_t parsedLength;
@@ -4896,7 +5221,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_PREFERRED_ROUTER_ID(uint8_t heade
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_CONTEXT_REUSE_DELAY(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_CONTEXT_REUSE_DELAY(uint8_t header, spinel_prop_key_t key,
+                                                                   const uint8_t *value_ptr, uint16_t value_len)
 {
     uint32_t i = 0;
     spinel_ssize_t parsedLength;
@@ -4923,7 +5249,8 @@ ThreadError NcpBase::SetPropertyHandler_THREAD_CONTEXT_REUSE_DELAY(uint8_t heade
     return errorCode;
 }
 
-ThreadError NcpBase::SetPropertyHandler_THREAD_NETWORK_ID_TIMEOUT(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_THREAD_NETWORK_ID_TIMEOUT(uint8_t header, spinel_prop_key_t key,
+                                                                  const uint8_t *value_ptr, uint16_t value_len)
 {
     uint8_t i = 0;
     spinel_ssize_t parsedLength;
@@ -5121,7 +5448,8 @@ void NcpBase::HandleJamStateChange(bool aJamState)
 #endif // OPENTHREAD_ENABLE_JAM_DETECTION
 
 #if OPENTHREAD_ENABLE_DIAG
-ThreadError NcpBase::SetPropertyHandler_NEST_STREAM_MFG(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::SetPropertyHandler_NEST_STREAM_MFG(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr,
+                                                        uint16_t value_len)
 {
     char *string(NULL);
     char *output(NULL);
@@ -5202,6 +5530,91 @@ ThreadError NcpBase::SetPropertyHandler_NEST_LEGACY_ULA_PREFIX(uint8_t header, s
 // MARK: Individual Property Inserters
 // ----------------------------------------------------------------------------
 
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+
+ThreadError NcpBase::InsertPropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES(uint8_t header, spinel_prop_key_t key,
+                                                                         const uint8_t *value_ptr, uint16_t value_len)
+{
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+    spinel_status_t errorStatus = SPINEL_STATUS_OK;
+    uint16_t short_address;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_UINT16_S,
+                       &short_address
+                   );
+
+    VerifyOrExit(parsedLength > 0, errorStatus = SPINEL_STATUS_PARSE_ERROR);
+
+    errorCode = otLinkRawSrcMatchAddShortEntry(mInstance, short_address);
+
+    VerifyOrExit(errorCode == kThreadError_None,
+                 errorStatus = ThreadErrorToSpinelStatus(errorCode));
+
+    errorCode =
+        SendPropertyUpdate(
+            header,
+            SPINEL_CMD_PROP_VALUE_INSERTED,
+            key,
+            value_ptr,
+            value_len
+        );
+
+exit:
+
+    if (errorStatus != SPINEL_STATUS_OK)
+    {
+        errorCode = SendLastStatus(header, errorStatus);
+    }
+
+    return errorCode;
+}
+
+ThreadError NcpBase::InsertPropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES(uint8_t header, spinel_prop_key_t key,
+                                                                            const uint8_t *value_ptr, uint16_t value_len)
+{
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+    spinel_status_t errorStatus = SPINEL_STATUS_OK;
+    uint8_t *ext_address = NULL;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_EUI64_S,
+                       &ext_address
+                   );
+
+    VerifyOrExit(parsedLength > 0, errorStatus = SPINEL_STATUS_PARSE_ERROR);
+
+    errorCode = otLinkRawSrcMatchAddExtEntry(mInstance, ext_address);
+
+    VerifyOrExit(errorCode == kThreadError_None,
+                 errorStatus = ThreadErrorToSpinelStatus(errorCode));
+
+    errorCode =
+        SendPropertyUpdate(
+            header,
+            SPINEL_CMD_PROP_VALUE_INSERTED,
+            key,
+            value_ptr,
+            value_len
+        );
+
+exit:
+
+    if (errorStatus != SPINEL_STATUS_OK)
+    {
+        errorCode = SendLastStatus(header, errorStatus);
+    }
+
+    return errorCode;
+}
+
+#endif
 
 ThreadError NcpBase::InsertPropertyHandler_IPV6_ADDRESS_TABLE(uint8_t header, spinel_prop_key_t key,
                                                               const uint8_t *value_ptr, uint16_t value_len)
@@ -5435,7 +5848,8 @@ ThreadError NcpBase::InsertPropertyHandler_THREAD_ASSISTING_PORTS(uint8_t header
     return errorCode;
 }
 
-ThreadError NcpBase::InsertPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::InsertPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key,
+                                                         const uint8_t *value_ptr, uint16_t value_len)
 {
     ThreadError errorCode = kThreadError_None;
     spinel_ssize_t parsedLength;
@@ -5501,6 +5915,91 @@ ThreadError NcpBase::InsertPropertyHandler_MAC_WHITELIST(uint8_t header, spinel_
 // MARK: Individual Property Removers
 // ----------------------------------------------------------------------------
 
+#if OPENTHREAD_ENABLE_RAW_LINK_API
+
+ThreadError NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_SHORT_ADDRESSES(uint8_t header, spinel_prop_key_t key,
+                                                                         const uint8_t *value_ptr, uint16_t value_len)
+{
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+    uint16_t short_address;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_UINT16_S,
+                       &short_address
+                   );
+
+    if (parsedLength > 0)
+    {
+        errorCode = otLinkRawSrcMatchClearShortEntry(mInstance, short_address);
+
+        if (errorCode == kThreadError_None)
+        {
+            errorCode = SendPropertyUpdate(
+                            header,
+                            SPINEL_CMD_PROP_VALUE_REMOVED,
+                            key,
+                            value_ptr,
+                            value_len
+                        );
+        }
+        else
+        {
+            errorCode = SendLastStatus(header, ThreadErrorToSpinelStatus(errorCode));
+        }
+    }
+    else
+    {
+        errorCode = SendLastStatus(header, SPINEL_STATUS_PARSE_ERROR);
+    }
+
+    return errorCode;
+}
+
+ThreadError NcpBase::RemovePropertyHandler_MAC_SRC_MATCH_EXTENDED_ADDRESSES(uint8_t header, spinel_prop_key_t key,
+                                                                            const uint8_t *value_ptr, uint16_t value_len)
+{
+    spinel_ssize_t parsedLength;
+    ThreadError errorCode = kThreadError_None;
+    uint8_t *ext_address;
+
+    parsedLength = spinel_datatype_unpack(
+                       value_ptr,
+                       value_len,
+                       SPINEL_DATATYPE_EUI64_S,
+                       &ext_address
+                   );
+
+    if (parsedLength > 0)
+    {
+        errorCode = otLinkRawSrcMatchClearExtEntry(mInstance, ext_address);
+
+        if (errorCode == kThreadError_None)
+        {
+            errorCode = SendPropertyUpdate(
+                            header,
+                            SPINEL_CMD_PROP_VALUE_REMOVED,
+                            key,
+                            value_ptr,
+                            value_len
+                        );
+        }
+        else
+        {
+            errorCode = SendLastStatus(header, ThreadErrorToSpinelStatus(errorCode));
+        }
+    }
+    else
+    {
+        errorCode = SendLastStatus(header, SPINEL_STATUS_PARSE_ERROR);
+    }
+
+    return errorCode;
+}
+
+#endif
 
 ThreadError NcpBase::RemovePropertyHandler_IPV6_ADDRESS_TABLE(uint8_t header, spinel_prop_key_t key,
                                                               const uint8_t *value_ptr, uint16_t value_len)
@@ -5729,7 +6228,8 @@ ThreadError NcpBase::RemovePropertyHandler_THREAD_ACTIVE_ROUTER_IDS(uint8_t head
     return errorCode;
 }
 
-ThreadError NcpBase::RemovePropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key, const uint8_t *value_ptr, uint16_t value_len)
+ThreadError NcpBase::RemovePropertyHandler_MAC_WHITELIST(uint8_t header, spinel_prop_key_t key,
+                                                         const uint8_t *value_ptr, uint16_t value_len)
 {
     ThreadError errorCode = kThreadError_None;
     spinel_ssize_t parsedLength;

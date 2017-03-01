@@ -78,6 +78,10 @@ typedef enum otCoapCode
     kCoapRequestPost     = 0x02,  ///< Post
     kCoapRequestPut      = 0x03,  ///< Put
     kCoapRequestDelete   = 0x04,  ///< Delete
+    kCoapResponseCodeMin = 0x40,  ///< 2.00
+    kCoapResponseCreated = 0x41,  ///< Created
+    kCoapResponseDeleted = 0x42,  ///< Deleted
+    kCoapResponseValid   = 0x43,  ///< Valid
     kCoapResponseChanged = 0x44,  ///< Changed
     kCoapResponseContent = 0x45,  ///< Content
 } otCoapCode;
@@ -87,8 +91,11 @@ typedef enum otCoapCode
  */
 typedef enum otCoapOptionType
 {
+    kCoapOptionObserve       = 6,    ///< Observe
     kCoapOptionUriPath       = 11,   ///< Uri-Path
     kCoapOptionContentFormat = 12,   ///< Content-Format
+    kCoapOptionMaxAge        = 14,   ///< Max-Age
+    kCoapOptionUriQuery      = 15,   ///< Uri-Query
 } otCoapOptionType;
 
 /**
@@ -211,6 +218,18 @@ void otCoapHeaderGenerateToken(otCoapHeader *aHeader, uint8_t aTokenLength);
 ThreadError otCoapHeaderAppendOption(otCoapHeader *aHeader, const otCoapOption *aOption);
 
 /**
+ * This function appends an Observe option.
+ *
+ * @param[inout]  aHeader   A pointer to the CoAP header.
+ * @param[in]     aObserve  Observe field value.
+ *
+ * @retval kThreadError_None         Successfully appended the option.
+ * @retval kThreadError_InvalidArgs  The option type is not equal or greater than the last option type.
+ * @retval kThreadError_NoBufs       The option length exceeds the buffer size.
+ */
+ThreadError otCoapHeaderAppendObserveOption(otCoapHeader *aHeader, uint32_t aObserve);
+
+/**
  * This function appends an Uri-Path option.
  *
  * @param[inout]  aHeader   A pointer to the CoAP header.
@@ -222,6 +241,30 @@ ThreadError otCoapHeaderAppendOption(otCoapHeader *aHeader, const otCoapOption *
  *
  */
 ThreadError otCoapHeaderAppendUriPathOptions(otCoapHeader *aHeader, const char *aUriPath);
+
+/**
+ * This function appends a Max-Age option.
+ *
+ * @param[inout]  aHeader   A pointer to the CoAP header.
+ * @param[in]     aMaxAge   The Max-Age value.
+ *
+ * @retval kThreadError_None         Successfully appended the option.
+ * @retval kThreadError_InvalidArgs  The option type is not equal or greater than the last option type.
+ * @retval kThreadError_NoBufs       The option length exceeds the buffer size.
+ */
+ThreadError otCoapHeaderAppendMaxAgeOption(otCoapHeader *aHeader, uint32_t aMaxAge);
+
+/**
+ * This function appends a single Uri-Query option.
+ *
+ * @param[inout]  aHeader   A pointer to the CoAP header.
+ * @param[in]     aUriQuery A pointer to NULL-terminated string, which should contain a single key=value pair.
+ *
+ * @retval kThreadError_None         Successfully appended the option.
+ * @retval kThreadError_InvalidArgs  The option type is not equal or greater than the last option type.
+ * @retval kThreadError_NoBufs       The option length exceeds the buffer size.
+ */
+ThreadError otCoapHeaderAppendUriQueryOption(otCoapHeader *aHeader, const char *aUriQuery);
 
 /**
  * This function adds Payload Marker indicating beginning of the payload to the CoAP header.
@@ -327,7 +370,7 @@ otMessage otCoapNewMessage(otInstance *aInstance, const otCoapHeader *aHeader);
 /**
  * This function sends a CoAP request.
  *
- * If a response for a request is expected, respective function and contex information should be provided.
+ * If a response for a request is expected, respective function and context information should be provided.
  * If no response is expected, these arguments should be NULL pointers.
  *
  * @param[in]  aInstance     A pointer to an OpenThread instance.

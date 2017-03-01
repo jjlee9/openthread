@@ -111,8 +111,6 @@ typedef enum OTLWF_DEVICE_STATUS
 #define OT_EVENT_TIMER_RUNNING      1
 #define OT_EVENT_TIMER_FIRED        2
 
-#define MAX_PENDING_MAC_SIZE 32 // TODO
-
 //
 // Define the filter struct
 //
@@ -160,9 +158,11 @@ typedef struct _MS_FILTER
     USHORT                          cmdTIDsInUse;
     spinel_tid_t                    cmdNextTID;
     NDIS_HANDLE                     cmdNblPool;
-#if DBG
+#ifdef COMMAND_INIT_RETRY
     ULONG                           cmdInitTryCount;
 #endif
+    otPlatResetReason               cmdResetReason;
+    KEVENT                          cmdResetCompleteEvent;
 
     //
     // Device Capabilities / State
@@ -207,6 +207,11 @@ typedef struct _MS_FILTER
         KEVENT                      EventWorkerThreadEnergyScanComplete;
 
         //
+        // OpenThread Settings Management
+        //
+        HANDLE                      otSettingsRegKey;
+
+        //
         // OpenThread state management
         //
         otDeviceRole                otCachedRole;
@@ -238,10 +243,6 @@ typedef struct _MS_FILTER
         uint16_t                    otShortAddress;
 
         BOOLEAN                     otPendingMacOffloadEnabled;
-        uint8_t                     otPendingShortAddressCount;
-        uint16_t                    otPendingShortAddresses[MAX_PENDING_MAC_SIZE];
-        uint8_t                     otPendingExtendedAddressCount;
-        uint64_t                    otPendingExtendedAddresses[MAX_PENDING_MAC_SIZE];
 
 #if DEBUG_ALLOC
         // Used for tracking memory allocations
@@ -264,6 +265,7 @@ typedef struct _MS_FILTER
         // OpenThread context buffer
         //
         otInstance*                 otCtx;
+        size_t                      otInstanceSize;
         PUCHAR                      otInstanceBuffer;
     };
     struct // Tunnel Mode Variables
