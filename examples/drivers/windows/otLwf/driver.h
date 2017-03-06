@@ -71,6 +71,9 @@ extern LIST_ENTRY          FilterModuleList;
 // Cached performance frequency of the system
 extern LARGE_INTEGER       FilterPerformanceFrequency;
 
+// TraceLogging Declaration - {BC26F84F-B5E0-4F32-BF17-6A1982BB2189}
+TRACELOGGING_DECLARE_PROVIDER(FilterTraceLog);
+
 #define FILTER_FRIENDLY_NAME        L"OpenThread NDIS LightWeight Filter"
 #define FILTER_UNIQUE_NAME          L"{B3A3845A-164E-4727-B12E-32B8DCE1F6CD}" //unique name, quid name
 #define FILTER_SERVICE_NAME         L"OTLWF"

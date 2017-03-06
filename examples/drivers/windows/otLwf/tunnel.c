@@ -442,6 +442,13 @@ otLwfTunValueIs(
 
         LogInfo(DRIVER_DEFAULT, "Interface %!GUID! new spinel role: %u", &pFilter->InterfaceGuid, value);
 
+        TraceLoggingWrite(
+            FilterTraceLog,
+            "InterfaceSpinelStateChange",
+            TraceLoggingGuid(pFilter->InterfaceGuid, "InterfaceGuid"),
+            TraceLoggingUInt32(value, "State"),
+            TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES));
+
         // Make sure we are in the correct media connect state
         otLwfIndicateLinkState(
             pFilter,

@@ -596,6 +596,15 @@ Return Value:
 
 exit:
 
+    TraceLoggingWrite(
+        FilterTraceLog,
+        "InterfaceArrival",
+        TraceLoggingGuid(pFilter->InterfaceGuid, "InterfaceGuid"),
+        TraceLoggingBoolean((BOOLEAN)ThreadOnHost, "ThreadOnHost"),
+        TraceLoggingUInt32(pFilter->DeviceCapabilities, "DeviceCapabilities"),
+        TraceLoggingUInt32(NdisStatus, "NdisStatus"),
+        TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES));
+
     //
     // Ensure the state is Paused if restart failed.
     //
@@ -681,6 +690,12 @@ N.B.: When the filter is in Pausing state, it can still process OID requests,
     //
     otLwfNotifyDeviceAvailabilityChange(pFilter, FALSE);
     LogInfo(DRIVER_DEFAULT, "Interface %!GUID! removal.", &pFilter->InterfaceGuid);
+
+    TraceLoggingWrite(
+        FilterTraceLog,
+        "InterfaceRemoval",
+        TraceLoggingGuid(pFilter->InterfaceGuid, "InterfaceGuid"),
+        TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES));
 
     //
     // Disable external references and wait for existing calls to complete

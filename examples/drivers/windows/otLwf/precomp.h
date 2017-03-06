@@ -46,14 +46,18 @@
 #include <nsihelper.h>
 #include <netioapi.h>
 #include <bcrypt.h>
+#include <TraceLoggingProvider.h>
 
-VOID  
-RtlCopyBufferToMdl(  
-    _In_reads_bytes_(BytesToCopy) CONST VOID *Buffer,  
-    _Inout_ PMDL MdlChain,  
-    _In_ SIZE_T MdlOffset,  
-    _In_ SIZE_T BytesToCopy,  
-    _Out_ SIZE_T* BytesCopied  
+#define MICROSOFT_KEYWORD_MEASURES      0x0000400000000000 // Info Level
+#define MICROSOFT_KEYWORD_TELEMETRY     0x0000200000000000 // Debug Level
+
+VOID
+RtlCopyBufferToMdl(
+    _In_reads_bytes_(BytesToCopy) CONST VOID *Buffer,
+    _Inout_ PMDL MdlChain,
+    _In_ SIZE_T MdlOffset,
+    _In_ SIZE_T BytesToCopy,
+    _Out_ SIZE_T* BytesCopied
     );
 
 #include <stdio.h>

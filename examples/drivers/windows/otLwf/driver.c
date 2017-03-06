@@ -46,6 +46,13 @@ LIST_ENTRY          FilterModuleList;
 // Cached performance frequency of the system
 LARGE_INTEGER       FilterPerformanceFrequency;
 
+// {BC26F84F-B5E0-4F32-BF17-6A1982BB2189}
+TRACELOGGING_DEFINE_PROVIDER(
+    FilterTraceLog,
+    "Microsoft.Windows.Networking.Thread.otLwf",
+    (0xbc26f84f, 0xb5e0, 0x4f32, 0xbf, 0x17, 0x6a, 0x19, 0x82, 0xbb, 0x21, 0x89),
+    TraceLoggingOptionGroup(0x4f50731a, 0x89cf, 0x4782, 0xb3, 0xe0, 0xdc, 0xe8, 0xc9, 0x4, 0x76, 0xba));
+
 INITCODE
 _Use_decl_annotations_
 NTSTATUS
@@ -77,8 +84,9 @@ Return Value:
 {
     NDIS_STATUS Status;
 
-    // Initialize WPP logging
+    // Initialize logging
     WPP_INIT_TRACING(DriverObject, RegistryPath);
+    TraceLoggingRegister(FilterTraceLog);
 
     // Save global DriverObject
     FilterDriverObject = DriverObject;
@@ -180,6 +188,7 @@ Return Value:
             NdisFDeregisterFilterDriver(FilterDriverHandle);
             FilterDriverHandle = NULL;
         }
+        TraceLoggingUnregister(FilterTraceLog);
         WPP_CLEANUP(DriverObject);
     }
 
@@ -236,7 +245,8 @@ Return Value:
     LogFuncExit(DRIVER_DEFAULT);
 
     //
-    // Clean up WPP logging
+    // Clean up logging
     //
+    TraceLoggingUnregister(FilterTraceLog);
     WPP_CLEANUP(DriverObject);
 }

@@ -304,6 +304,13 @@ otLwfProcessRoleStateChange(
 
     LogInfo(DRIVER_DEFAULT, "Interface %!GUID! new role: %!otDeviceRole!", &pFilter->InterfaceGuid, pFilter->otCachedRole);
 
+    TraceLoggingWrite(
+        FilterTraceLog,
+        "InterfaceThreadStateChange",
+        TraceLoggingGuid(pFilter->InterfaceGuid, "InterfaceGuid"),
+        TraceLoggingUInt32(pFilter->otCachedRole, "State"),
+        TraceLoggingKeyword(MICROSOFT_KEYWORD_MEASURES));
+
     // Make sure we are in the correct media connect state
     otLwfIndicateLinkState(
         pFilter, 
