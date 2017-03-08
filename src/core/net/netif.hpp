@@ -341,6 +341,13 @@ public:
     ThreadError RemoveExternalUnicastAddress(const Address &aAddress);
 
     /**
+     * This method removes all the previously added external (to OpenThread) unicast addresses from the
+     * network interface.
+     *
+     */
+    void RemoveAllExternalUnicastAddresses(void);
+
+    /**
      * This method indicates whether or not an address is assigned to this interface.
      *
      * @param[in]  aAddress  A reference to the unicast address.
@@ -417,7 +424,7 @@ public:
     ThreadError SubscribeExternalMulticast(const Address &aAddress);
 
     /**
-     * This method ussubscribes the network interface to the external (to OpenThread) multicast address.
+     * This method unsubscribes the network interface to the external (to OpenThread) multicast address.
      *
      * @param[in]  aAddress  A reference to the multicast address.
      *
@@ -429,24 +436,26 @@ public:
     ThreadError UnsubscribeExternalMulticast(const Address &aAddress);
 
     /**
+     * This method unsubscribes the network interface from all previously added external (to OpenThread) multicast
+     * addresses.
+     */
+    void UnsubscribeAllExternalMulticastAddresses(void);
+
+    /**
      * This method checks if multicast promiscuous mode is enabled on the network interface.
      *
      * @retval TRUE   If the multicast promiscuous mode is enabled.
      * @retval FALSE  If the multicast promiscuous mode is disabled.
      */
-    bool IsMulticastPromiscuousModeEnabled(void);
+    bool IsMulticastPromiscuousEnabled(void);
 
     /**
      * This method enables multicast promiscuous mode on the network interface.
      *
-     */
-    void EnableMulticastPromiscuousMode(void);
-
-    /**
-     * This method disables multicast promiscuous mode on the network interface.
+     * @param[in]  aEnabled  TRUE if Multicast Promiscuous mode is enabled, FALSE otherwise.
      *
      */
-    void DisableMulticastPromiscuousMode(void);
+    void SetMulticastPromiscuous(bool aEnabled);
 
     /**
      * This method registers a network interface callback.
@@ -532,7 +541,7 @@ private:
     NetifMulticastAddress *mMulticastAddresses;
     int8_t mInterfaceId;
     bool mAllRoutersSubscribed;
-    bool mMulticastPromiscuousMode;
+    bool mMulticastPromiscuous;
     Tasklet mStateChangedTask;
     Netif *mNext;
 

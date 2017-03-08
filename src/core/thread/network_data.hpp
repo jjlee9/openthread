@@ -34,7 +34,8 @@
 #ifndef NETWORK_DATA_HPP_
 #define NETWORK_DATA_HPP_
 
-#include <openthread-types.h>
+#include "openthread/types.h"
+
 #include <coap/coap_client.hpp>
 #include <net/udp6.hpp>
 #include <thread/lowpan.hpp>
@@ -98,6 +99,12 @@ public:
      *
      */
     NetworkData(ThreadNetif &aThreadNetif, bool aLocal);
+
+    /**
+     * This method clears the network data.
+     *
+     */
+    void Clear(void);
 
     /**
      * This method provides a full or stable copy of the Thread Network Data.

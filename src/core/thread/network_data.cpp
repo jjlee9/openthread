@@ -33,12 +33,13 @@
 
 #define WPP_NAME "network_data.tmh"
 
+#include "openthread/platform/random.h"
+
 #include <coap/coap_header.hpp>
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
 #include <common/logging.hpp>
 #include <mac/mac_frame.hpp>
-#include <platform/random.h>
 #include <thread/network_data.hpp>
 #include <thread/thread_netif.hpp>
 #include <thread/thread_tlvs.hpp>
@@ -52,6 +53,11 @@ NetworkData::NetworkData(ThreadNetif &aThreadNetif, bool aLocal):
     mLocal(aLocal),
     mLastAttemptWait(false),
     mLastAttempt(0)
+{
+    mLength = 0;
+}
+
+void NetworkData::Clear(void)
 {
     mLength = 0;
 }

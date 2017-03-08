@@ -47,7 +47,7 @@ Netif::Netif(Ip6 &aIp6, int8_t aInterfaceId):
     mMulticastAddresses(NULL),
     mInterfaceId(aInterfaceId),
     mAllRoutersSubscribed(false),
-    mMulticastPromiscuousMode(false),
+    mMulticastPromiscuous(false),
     mStateChangedTask(aIp6.mTaskletScheduler, &Netif::HandleStateChangedTask, this),
     mNext(NULL),
     mStateChangedFlags(0)
@@ -291,19 +291,28 @@ exit:
     return error;
 }
 
-bool Netif::IsMulticastPromiscuousModeEnabled(void)
+void Netif::UnsubscribeAllExternalMulticastAddresses(void)
 {
-    return mMulticastPromiscuousMode;
+    size_t num = sizeof(mExtMulticastAddresses) / sizeof(mExtMulticastAddresses[0]);
+
+    for (NetifMulticastAddress *entry = &mExtMulticastAddresses[0]; num > 0; num--, entry++)
+    {
+        // In unused entries, the `mNext` points back to the entry itself.
+        if (entry->mNext != entry)
+        {
+            UnsubscribeExternalMulticast(*static_cast<Address *>(&entry->mAddress));
+        }
+    }
 }
 
-void Netif::EnableMulticastPromiscuousMode(void)
+bool Netif::IsMulticastPromiscuousEnabled(void)
 {
-    mMulticastPromiscuousMode = true;
+    return mMulticastPromiscuous;
 }
 
-void Netif::DisableMulticastPromiscuousMode(void)
+void Netif::SetMulticastPromiscuous(bool aEnabled)
 {
-    mMulticastPromiscuousMode = false;
+    mMulticastPromiscuous = aEnabled;
 }
 
 const NetifUnicastAddress *Netif::GetUnicastAddresses() const
@@ -448,6 +457,20 @@ exit:
     return error;
 }
 
+void Netif::RemoveAllExternalUnicastAddresses(void)
+{
+    size_t num = sizeof(mExtUnicastAddresses) / sizeof(mExtUnicastAddresses[0]);
+
+    for (NetifUnicastAddress *entry = &mExtUnicastAddresses[0]; num > 0; num--, entry++)
+    {
+        // In unused entries, the `mNext` points back to the entry itself.
+        if (entry->mNext != entry)
+        {
+            RemoveExternalUnicastAddress(*static_cast<Address *>(&entry->mAddress));
+        }
+    }
+}
+
 bool Netif::IsUnicastAddress(const Address &aAddress) const
 {
     bool rval = false;
@@ -463,7 +486,6 @@ bool Netif::IsUnicastAddress(const Address &aAddress) const
 exit:
     return rval;
 }
-
 
 bool Netif::IsStateChangedCallbackPending(void)
 {

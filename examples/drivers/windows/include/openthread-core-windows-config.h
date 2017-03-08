@@ -68,12 +68,30 @@
 #define OPENTHREAD_CONFIG_MAX_JOINER_ENTRIES                16
 
 /**
+ * @def OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
+ *
+ * The message pool is managed by platform defined logic when this flag is set.
+ * This feature would typically be used when operating in a multi-threaded system
+ * and multiple threads need to access the message pool.
+ *
+ */
+#define OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT       1
+
+/**
  * @def OPENTHREAD_CONFIG_LOG_LEVEL
  *
  * The log level.
  *
  */
 #define OPENTHREAD_CONFIG_LOG_LEVEL                         OPENTHREAD_LOG_LEVEL_DEBG
+
+ /**
+ * @def OPENTHREAD_CONFIG_LOG_PKT_DUMP
+ *
+ * Define to enable log content of packets.
+ *
+ */
+#define OPENTHREAD_CONFIG_LOG_PKT_DUMP                      0
 
 #endif  // OPENTHREAD_CORE_WINDOWS_CONFIG_H_
 
