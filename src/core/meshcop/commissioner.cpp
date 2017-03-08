@@ -42,6 +42,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "openthread/platform/random.h"
+
 #include <coap/coap_header.hpp>
 #include <common/crc16.hpp>
 #include <common/encoding.hpp>
@@ -50,7 +52,6 @@
 #include <meshcop/commissioner.hpp>
 #include <meshcop/joiner_router.hpp>
 #include <meshcop/tlvs.hpp>
-#include <platform/random.h>
 #include <thread/thread_netif.hpp>
 #include <thread/thread_tlvs.hpp>
 #include <thread/thread_uris.hpp>
@@ -67,6 +68,7 @@ Commissioner::Commissioner(ThreadNetif &aThreadNetif):
     mState(kStateDisabled),
     mJoinerPort(0),
     mJoinerRloc(0),
+    mJoinerExpirationTimer(aThreadNetif.GetIp6().mTimerScheduler, HandleJoinerExpirationTimer, this),
     mTimer(aThreadNetif.GetIp6().mTimerScheduler, HandleTimer, this),
     mSessionId(0),
     mTransmitAttempts(0),
@@ -198,7 +200,7 @@ void Commissioner::ClearJoiners(void)
     otLogFuncExit();
 }
 
-ThreadError Commissioner::AddJoiner(const Mac::ExtAddress *aExtAddress, const char *aPSKd)
+ThreadError Commissioner::AddJoiner(const Mac::ExtAddress *aExtAddress, const char *aPSKd, uint32_t aTimeout)
 {
     ThreadError error = kThreadError_NoBufs;
 
@@ -225,6 +227,9 @@ ThreadError Commissioner::AddJoiner(const Mac::ExtAddress *aExtAddress, const ch
 
         strncpy(mJoiners[i].mPsk, aPSKd, sizeof(mJoiners[i].mPsk) - 1);
         mJoiners[i].mValid = true;
+        mJoiners[i].mExpirationTime = Timer::GetNow() + Timer::SecToMsec(aTimeout);
+
+        UpdateJoinerExpirationTimer();
 
         SendCommissionerSet();
 
@@ -262,6 +267,8 @@ ThreadError Commissioner::RemoveJoiner(const Mac::ExtAddress *aExtAddress)
         }
 
         mJoiners[i].mValid = false;
+
+        UpdateJoinerExpirationTimer();
 
         SendCommissionerSet();
 
@@ -307,6 +314,66 @@ void Commissioner::HandleTimer(void)
     case kStateActive:
         SendKeepAlive();
         break;
+    }
+}
+
+void Commissioner::HandleJoinerExpirationTimer(void *aContext)
+{
+    static_cast<Commissioner *>(aContext)->HandleJoinerExpirationTimer();
+}
+
+void Commissioner::HandleJoinerExpirationTimer(void)
+{
+    uint32_t now = Timer::GetNow();
+
+    // Remove expired Joiners.
+    for (size_t i = 0; i < sizeof(mJoiners) / sizeof(mJoiners[0]); i++)
+    {
+        if (!mJoiners[i].mValid)
+        {
+            continue;
+        }
+
+        if (static_cast<int32_t>(now - mJoiners[i].mExpirationTime) >= 0)
+        {
+            otLogDebgMeshCoP("removing joiner due to timeout");
+            RemoveJoiner(&mJoiners[i].mExtAddress);
+        }
+    }
+
+    UpdateJoinerExpirationTimer();
+}
+
+void Commissioner::UpdateJoinerExpirationTimer(void)
+{
+    uint32_t now = Timer::GetNow();
+    uint32_t nextTimeout = 0xffffffff;
+
+    // Check if timer should be set for next Joiner.
+    for (size_t i = 0; i < sizeof(mJoiners) / sizeof(mJoiners[0]); i++)
+    {
+        {
+            if (!mJoiners[i].mValid)
+            {
+                continue;
+            }
+
+            if (mJoiners[i].mExpirationTime - now < nextTimeout)
+            {
+                nextTimeout = mJoiners[i].mExpirationTime - now;
+            }
+        }
+    }
+
+    if (nextTimeout != 0xffffffff)
+    {
+        // Update the timer to the timeout of the next Joiner.
+        mJoinerExpirationTimer.Start(nextTimeout);
+    }
+    else
+    {
+        // No Joiners, stop the timer.
+        mJoinerExpirationTimer.Stop();
     }
 }
 
@@ -358,7 +425,7 @@ exit:
     return error;
 }
 
-void Commissioner::HandleMgmtCommissionerGetResponse(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleMgmtCommissionerGetResponse(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                                      const otMessageInfo *aMessageInfo, ThreadError aResult)
 {
     static_cast<Commissioner *>(aContext)->HandleMgmtCommissisonerGetResponse(
@@ -460,7 +527,7 @@ exit:
     return error;
 }
 
-void Commissioner::HandleMgmtCommissionerSetResponse(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleMgmtCommissionerSetResponse(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                                      const otMessageInfo *aMessageInfo, ThreadError aResult)
 {
     static_cast<Commissioner *>(aContext)->HandleMgmtCommissisonerSetResponse(
@@ -525,7 +592,7 @@ exit:
     return error;
 }
 
-void Commissioner::HandleLeaderPetitionResponse(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleLeaderPetitionResponse(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                                 const otMessageInfo *aMessageInfo, ThreadError aResult)
 {
     static_cast<Commissioner *>(aContext)->HandleLeaderPetitionResponse(
@@ -625,7 +692,7 @@ exit:
     return error;
 }
 
-void Commissioner::HandleLeaderKeepAliveResponse(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleLeaderKeepAliveResponse(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                                  const otMessageInfo *aMessageInfo, ThreadError aResult)
 {
     static_cast<Commissioner *>(aContext)->HandleLeaderKeepAliveResponse(
@@ -659,7 +726,7 @@ exit:
     otLogFuncExit();
 }
 
-void Commissioner::HandleRelayReceive(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleRelayReceive(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                       const otMessageInfo *aMessageInfo)
 {
     static_cast<Commissioner *>(aContext)->HandleRelayReceive(
@@ -747,7 +814,7 @@ exit:
     otLogFuncExit();
 }
 
-void Commissioner::HandleDatasetChanged(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleDatasetChanged(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                         const otMessageInfo *aMessageInfo)
 {
     static_cast<Commissioner *>(aContext)->HandleDatasetChanged(
@@ -772,7 +839,7 @@ exit:
     otLogFuncExit();
 }
 
-void Commissioner::HandleJoinerFinalize(void *aContext, otCoapHeader *aHeader, otMessage aMessage,
+void Commissioner::HandleJoinerFinalize(void *aContext, otCoapHeader *aHeader, otMessage *aMessage,
                                         const otMessageInfo *aMessageInfo)
 {
     static_cast<Commissioner *>(aContext)->HandleJoinerFinalize(
@@ -821,6 +888,7 @@ void Commissioner::SendJoinFinalizeResponse(const Coap::Header &aRequestHeader, 
     Ip6::MessageInfo joinerMessageInfo;
     MeshCoP::StateTlv stateTlv;
     Message *message;
+    Mac::ExtAddress extAddr;
 
     otLogFuncEntry();
 
@@ -840,6 +908,10 @@ void Commissioner::SendJoinFinalizeResponse(const Coap::Header &aRequestHeader, 
 
     mSendKek = true;
     SuccessOrExit(error = mNetif.GetSecureCoapServer().SendMessage(*message, joinerMessageInfo));
+
+    memcpy(extAddr.m8, mJoinerIid, sizeof(extAddr.m8));
+    extAddr.SetLocal(!extAddr.IsLocal());
+    RemoveJoiner(&extAddr);
 
     otLogInfoMeshCoP("sent joiner finalize response");
     otLogCertMeshCoP("[THCI] direction=send | type=JOIN_FIN.rsp");

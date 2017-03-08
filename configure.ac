@@ -68,7 +68,7 @@ AC_SUBST(LIBOPENTHREAD_VERSION_INFO,     [${LIBOPENTHREAD_VERSION_CURRENT}:${LIB
 # Check the sanity of the source directory by checking for the
 # presence of a key watch file
 #
-AC_CONFIG_SRCDIR([include/openthread.h])
+AC_CONFIG_SRCDIR([include/openthread/openthread.h])
 
 #
 # Tell autoconf where to find auxilliary build tools (e.g. config.guess,
@@ -337,81 +337,6 @@ AC_MSG_NOTICE([checking whether to build tests])
 NL_ENABLE_TESTS([yes])
 
 AM_CONDITIONAL([OPENTHREAD_BUILD_TESTS], [test "${nl_cv_build_tests}" = "yes"])
-
-# Check whether to run only the minimum set of tests.
-
-AC_ARG_WITH(tests,
-    [AS_HELP_STRING([--with-tests=TESTS],
-        [Specify the tests from one of: all, subset1, subset2, subset3, subset4, subset5 @<:@default=all@:>@.])],
-    [
-        case "${with_tests}" in
-
-        all|subset1|subset2|subset3|subset4|subset5)
-            ;;
-        *)
-            AC_MSG_ERROR([Invalid value ${with_tests} for --with-tests])
-            ;;
-        esac
-    ],
-    [with_tests=all])
-
-case ${with_tests} in
-
-    all)
-        OPENTHREAD_TESTS_SUBSET1=yes
-        OPENTHREAD_TESTS_SUBSET2=yes
-        OPENTHREAD_TESTS_SUBSET3=yes
-        OPENTHREAD_TESTS_SUBSET4=yes
-        OPENTHREAD_TESTS_SUBSET5=yes
-        ;;
-
-    subset1)
-        OPENTHREAD_TESTS_SUBSET1=yes
-        ;;
-
-    subset2)
-        OPENTHREAD_TESTS_SUBSET2=yes
-        ;;
-
-    subset3)
-        OPENTHREAD_TESTS_SUBSET3=yes
-        ;;
-
-    subset4)
-        OPENTHREAD_TESTS_SUBSET4=yes
-        ;;
-
-    subset5)
-        OPENTHREAD_TESTS_SUBSET5=yes
-        ;;
-
-esac
-
-AC_SUBST(OPENTHREAD_TESTS_SUBSET1)
-AM_CONDITIONAL([OPENTHREAD_TESTS_SUBSET1], [test "${OPENTHREAD_TESTS_SUBSET1}" = "yes"])
-AM_CONDITIONAL([OPENTHREAD_TESTS_SUBSET2], [test "${OPENTHREAD_TESTS_SUBSET2}" = "yes"])
-AM_CONDITIONAL([OPENTHREAD_TESTS_SUBSET3], [test "${OPENTHREAD_TESTS_SUBSET3}" = "yes"])
-AM_CONDITIONAL([OPENTHREAD_TESTS_SUBSET4], [test "${OPENTHREAD_TESTS_SUBSET4}" = "yes"])
-AM_CONDITIONAL([OPENTHREAD_TESTS_SUBSET5], [test "${OPENTHREAD_TESTS_SUBSET5}" = "yes"])
-
-# Check for Python and Python libraries used in the tests
-if test "${nl_cv_build_tests}" = "yes"; then
-    AC_MSG_CHECKING([checking for Python and Python libraries used in tests.])
-
-    # Check for Python
-    python --version 2> /dev/null
-    if test $? != 0; then
-        AC_MSG_ERROR(["Cannot run tests: missing Python."])
-    fi
-
-    # Check for Python pexpect library
-    python -c 'import pexpect' 2> /dev/null
-    if test $? != 0; then
-        AC_MSG_ERROR(["Cannot run tests: missing Python pexpect library."])
-    fi
-
-    AC_MSG_RESULT([ok])
-fi
 
 #
 #  Full Thread Device
@@ -1079,11 +1004,8 @@ NL_RESTORE_WERROR
 AC_CONFIG_FILES([
 Makefile
 include/Makefile
-include/cli/Makefile
-include/commissioning/Makefile
-include/dhcp6/Makefile
-include/ncp/Makefile
-include/platform/Makefile
+include/openthread/Makefile
+include/openthread/platform/Makefile
 src/Makefile
 src/cli/Makefile
 src/ncp/Makefile

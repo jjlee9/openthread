@@ -34,7 +34,8 @@
 #ifndef MLE_HPP_
 #define MLE_HPP_
 
-#include <openthread.h>
+#include "openthread/openthread.h"
+
 #include <common/encoding.hpp>
 #include <common/timer.hpp>
 #include <mac/mac.hpp>
@@ -1360,7 +1361,7 @@ private:
     void HandleParentRequestTimer(void);
     static void HandleDelayedResponseTimer(void *aContext);
     void HandleDelayedResponseTimer(void);
-    static void HandleUdpReceive(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo);
+    static void HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
     void HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
     static void HandleSendChildUpdateRequest(void *aContext);
     void HandleSendChildUpdateRequest(void);
@@ -1391,15 +1392,16 @@ private:
      */
     typedef struct NetworkInfo
     {
-        DeviceState          mDeviceState;                ///< Current Thread interface state.
+        DeviceState          mDeviceState;                                      ///< Current Thread interface state.
 
-        uint8_t              mDeviceMode;                 ///< Device mode setting.
-        uint16_t             mRloc16;                     ///< RLOC16
-        uint32_t             mKeySequence;                ///< Key Sequence
-        uint32_t             mMleFrameCounter;            ///< MLE Frame Counter
-        uint32_t             mMacFrameCounter;            ///< MAC Frame Counter
-        uint32_t             mPreviousPartitionId;        ///< PartitionId
-        Mac::ExtAddress      mExtAddress;                 ///< Extended Address
+        uint8_t              mDeviceMode;                                       ///< Device mode setting.
+        uint16_t             mRloc16;                                           ///< RLOC16
+        uint32_t             mKeySequence;                                      ///< Key Sequence
+        uint32_t             mMleFrameCounter;                                  ///< MLE Frame Counter
+        uint32_t             mMacFrameCounter;                                  ///< MAC Frame Counter
+        uint32_t             mPreviousPartitionId;                              ///< PartitionId
+        Mac::ExtAddress      mExtAddress;                                       ///< Extended Address
+        uint8_t              mMlIid[OT_IP6_ADDRESS_SIZE - OT_IP6_PREFIX_SIZE];  ///< IID from ML-EID
     } NetworkInfo;
 
     struct

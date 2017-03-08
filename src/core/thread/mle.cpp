@@ -33,6 +33,10 @@
 
 #define WPP_NAME "mle.tmh"
 
+#include "openthread/platform/radio.h"
+#include "openthread/platform/random.h"
+#include "openthread/platform/settings.h"
+
 #include <thread/mle.hpp>
 #include <common/code_utils.hpp>
 #include <common/debug.hpp>
@@ -44,9 +48,6 @@
 #include <meshcop/tlvs.hpp>
 #include <net/netif.hpp>
 #include <net/udp6.hpp>
-#include <platform/radio.h>
-#include <platform/random.h>
-#include <platform/settings.h>
 #include <thread/address_resolver.hpp>
 #include <thread/key_manager.hpp>
 #include <thread/mle_router.hpp>
@@ -127,7 +128,7 @@ Mle::Mle(ThreadNetif &aThreadNetif) :
     meshLocalPrefix[7] = 0x00;
 
     // mesh-local 64
-    for (int i = 8; i < 16; i++)
+    for (int i = OT_IP6_PREFIX_SIZE; i < OT_IP6_ADDRESS_SIZE; i++)
     {
         mMeshLocal64.GetAddress().mFields.m8[i] = static_cast<uint8_t>(otPlatRandomGet());
     }
@@ -283,6 +284,10 @@ ThreadError Mle::Restore(void)
     mNetif.GetMac().SetExtAddress(networkInfo.mExtAddress);
     UpdateLinkLocalAddress();
 
+    memcpy(&mMeshLocal64.GetAddress().mFields.m8[OT_IP6_PREFIX_SIZE],
+           networkInfo.mMlIid,
+           OT_IP6_ADDRESS_SIZE - OT_IP6_PREFIX_SIZE);
+
     if (networkInfo.mDeviceState == kDeviceStateChild)
     {
         length = sizeof(mParent);
@@ -326,6 +331,10 @@ ThreadError Mle::Store(void)
                                    OPENTHREAD_CONFIG_STORE_FRAME_COUNTER_AHEAD;
     networkInfo.mPreviousPartitionId = mLeaderData.GetPartitionId();
     memcpy(networkInfo.mExtAddress.m8, mNetif.GetMac().GetExtAddress(), sizeof(networkInfo.mExtAddress));
+    memcpy(networkInfo.mMlIid,
+           &mMeshLocal64.GetAddress().mFields.m8[OT_IP6_PREFIX_SIZE],
+           OT_IP6_ADDRESS_SIZE - OT_IP6_PREFIX_SIZE);
+
 
     if (mDeviceState == kDeviceStateChild)
     {
@@ -1950,7 +1959,7 @@ exit:
     return error;
 }
 
-void Mle::HandleUdpReceive(void *aContext, otMessage aMessage, const otMessageInfo *aMessageInfo)
+void Mle::HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
 {
     static_cast<Mle *>(aContext)->HandleUdpReceive(*static_cast<Message *>(aMessage),
                                                    *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
