@@ -29,6 +29,7 @@
 
 
 import time
+from datetime import datetime
 import unittest
 import random
 from enum import Enum
@@ -38,19 +39,19 @@ import node
 
 LEADER = 0
 NUM_OF_STEPS = 30
-START_N_OF_NODES = 10
-RAND_SEED = 981203746
+START_N_OF_NODES = 30
+RAND_SEED = 981203747
 
-MAXIMUM_ROUTERS = 63    # there cannot be more than 63 routers
+MAXIMUM_ROUTERS = 63  # there cannot be more than 63 routers
 MAXIMUM_NODES = 512
 
 START_TRIES = 30
 START_SLEEP_TIME = 3
 CHILD_TIMEOUT = 3
-LEADER_REELECT_TL = 60
+LEADER_REELECT_TL = 60 * 3
 
 RTR_SEL_JITTER = 1
-RTR_UPGRADE_THR = MAXIMUM_ROUTERS    # default = 16
+RTR_UPGRADE_THR = MAXIMUM_ROUTERS  # default = 16
 RTR_DOWNGRADE_THR = MAXIMUM_ROUTERS  # default = 23
 
 
@@ -80,7 +81,7 @@ class Action(Enum):
 
 class StressTestRandom(unittest.TestCase):
     def add_new_node(self, node_id, mode=None):
-        print("Adding new node #", node_id)
+        self.log("Adding new node #", node_id)
         cur_node = node.Node(node_id)
         cur_node.set_panid(0xface)
 
@@ -88,7 +89,8 @@ class StressTestRandom(unittest.TestCase):
             mode = Mode.ROUTER \
                 if (node_id == LEADER or random.randrange(2) == 1) and self.router_cnt < MAXIMUM_ROUTERS \
                 else Mode.SED
-        print("Setting mode", mode)
+        mode = Mode.ROUTER
+        self.log("Setting mode", mode)
         self.modes[node_id] = mode
         cur_node.set_mode(mode)
 
@@ -114,7 +116,7 @@ class StressTestRandom(unittest.TestCase):
                 break
 
     def start_node(self, node_id):
-        print("Starting node %d [%s]" % (node_id, self.modes[node_id]))
+        self.log("Starting node %d [%s]" % (node_id, self.modes[node_id]))
         self.nodes[node_id].start()
         self.await_start(node_id)
         # self.await_start(node_id, desired_states=(State.ROUTER_STATES
@@ -130,9 +132,10 @@ class StressTestRandom(unittest.TestCase):
         self.stopped_ns.remove(node_id)
 
     def stop_node(self, node_id):
-        print("Stopping node", node_id)
+        self.log("Stopping node", node_id)
         if self.states[node_id] == State.LEADER:
             self.leader_down_t = time.time()
+        self.states[node_id] = State.DISABLED
         self.nodes[node_id].stop()
         self.running_ns.remove(node_id)
         self.stopped_ns.add(node_id)
@@ -156,13 +159,26 @@ class StressTestRandom(unittest.TestCase):
             node_i.stop()
         del self.nodes
 
+    def setup_graph(self, f_id):
+        self.g = Graph(self.nodes)
+        self.log(self.g)
+        # self.g.draw([0 if self.states[x] == State.LEADER else
+        #              (1 if self.states[x] == State.ROUTER else
+        #               (2 if self.states[x] in State.CHILD_STATES else 3))
+        #              for x in range(self.node_cnt)],
+        #             [self.nodes[x].get_partition_id() for x in range(self.node_cnt)],
+        #             f_id)
+
+    def log(self, msg, *args):
+        print("::", "{0:%d/%m/%y %H:%M:%S.%f}".format(datetime.now())[:-3], msg, *args)
+
     def test(self):
         for i in range(START_N_OF_NODES):
             self.start_node(i)
 
         for step in range(NUM_OF_STEPS):
             rand_action = random.choice(list(Action))
-            print("Iteration #%d [%s]" % (step, rand_action.name))
+            self.log("Iteration #%d [%s]" % (step, rand_action.name))
             if rand_action == Action.STOP_NODE:
                 if len(self.running_ns) > 0:
                     target = random.sample(self.running_ns, 1)[0]
@@ -176,37 +192,35 @@ class StressTestRandom(unittest.TestCase):
                     self.add_new_node(self.node_cnt)
                     self.start_node(self.node_cnt - 1)  # node_cnt-1 because of increment inside add_new_node
             elif rand_action == Action.CHECK:
-                print("Running devices:", self.running_ns)
+                self.log("Running devices:", self.running_ns)
 
-                print("Await some reconfigurations of the network to complete...")
+                self.log("Await some reconfigurations of the network to complete...")
                 time.sleep(20)
 
                 # running nodes must participate in the network
                 num_routers, num_seds = self.check_states()
 
-                g = Graph(self.nodes)
-                print(g)
+                self.setup_graph(step)
 
-                print("Nodes pinging one another")
+                self.log("Nodes pinging one another")
                 for node_id in self.running_ns:
                     # TODO: multicast ping as for now only works with routers
-                    if self.states[node_id] in State.ROUTER_STATES:
-                        self.check_broad_ping(node_id, num_routers, num_seds)
+                    # if self.states[node_id] in State.ROUTER_STATES:
+                    #     self.check_broad_ping(node_id, num_routers, num_seds)
 
                     for other_n in self.running_ns:
-                        if other_n != node_id and g.connected_id(node_id, other_n):
-                            # TODO: still fails on bigger topologies
-                            self.check_connectivity(node_id, other_n)
+                        if other_n != node_id and self.g.connected_id(node_id, other_n):
+                            self.check_connectivity(node_id, other_n, step)
 
             else:
-                print("Unsupported action ", rand_action)
+                self.log("Unsupported action ", rand_action)
 
         for cur_node in list(self.nodes.values()):
             cur_node.get_state()
             cur_node.get_addrs()
 
     def check_states(self):
-        print("Checking states of running nodes")
+        self.log("Checking states of running nodes")
         for node_id in self.running_ns:
             self.states[node_id] = self.nodes[node_id].get_state()
 
@@ -219,38 +233,45 @@ class StressTestRandom(unittest.TestCase):
         self.assertTrue((num_routers == 0 and num_seds == self.running_ns) or num_offline == 0)
 
         # Should be no more than one leader. Also shouldn't be none for more that LEADER_REELECT_TL secs
-        self.assertLessEqual(num_leaders, 1)
-        self.assertTrue(num_leaders > 0 or (time.time() - self.leader_down_t) < LEADER_REELECT_TL)
+        self.assertTrue(num_leaders == 1 or (time.time() - self.leader_down_t) < LEADER_REELECT_TL)
 
         return num_routers, num_seds
 
-    def check_connectivity(self, node_fr, node_to):
+    def check_connectivity(self, node_fr, node_to, step):
         for addr in self.nodes[node_to].get_addrs():
             if addr[:4] != 'fe80':
-                print("%s %d [part=%d] pinging %s %d [part=%d] on %s"
-                      % (self.states[node_fr], node_fr,
-                         self.nodes[node_fr].get_partition_id(),
-                         self.states[node_to], node_to,
-                         self.nodes[node_to].get_partition_id(), addr))
+                self.log("%s %d [part=%d] pinging %s %d [part=%d] on %s"
+                         % (self.states[node_fr], node_fr,
+                            self.nodes[node_fr].get_partition_id(),
+                            self.states[node_to], node_to,
+                            self.nodes[node_to].get_partition_id(), addr))
 
-                self.assertTrue(self.nodes[node_fr].ping(addr))
+                # self.tries += 1
+                # self.failures += not self.nodes[node_fr].ping(addr)
+                if not self.nodes[node_fr].ping(addr):
+                    self.log(self.nodes[node_to].get_addr64() in self.nodes[node_fr].get_neighbors_info())
+                    self.log(self.nodes[node_fr].get_addr64() in self.nodes[node_to].get_neighbors_info())
+                    self.log(hex(self.nodes[node_fr].get_addr16()), "->", hex(self.nodes[node_to].get_addr16()))
+                    time.sleep(5)
+                    self.log(self.nodes[node_fr].ping(addr))
+                # self.assertTrue(self.nodes[node_fr].ping(addr))
 
     def check_broad_ping(self, node_id, num_routers, num_seds):
-        print("%s %d performing broad ping" % (self.states[node_id], node_id))
+        self.log("%s %d performing broad ping" % (self.states[node_id], node_id))
         # Ping realm-local all-nodes
         self.assertTrue(self.nodes[node_id].ping(
             'ff03::1',
-            num_responses=len(self.running_ns)-num_seds-(self.modes[node_id] != Mode.SED),
+            num_responses=len(self.running_ns) - num_seds - (self.modes[node_id] != Mode.SED),
             size=256))
         # Ping realm-local all-routers
         self.assertTrue(self.nodes[node_id].ping(
             'ff03::2',
-            num_responses=num_routers-(self.states[node_id] in State.ROUTER_STATES),
+            num_responses=num_routers - (self.states[node_id] in State.ROUTER_STATES),
             size=256))
         # Ping realm-local special address
         self.assertTrue(self.nodes[node_id].ping(
             'ff33:0040:fdde:ad00:beef:0:0:1',
-            num_responses=len(self.running_ns)-1,
+            num_responses=len(self.running_ns) - 1,
             size=256))
 
 

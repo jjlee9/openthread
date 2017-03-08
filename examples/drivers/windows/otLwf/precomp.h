@@ -108,7 +108,7 @@ typedef struct UDPHeader
 
 //#define DEBUG_TIMING
 //#define DEBUG_ALLOC
-#define LOG_BUFFERS
+//#define LOG_BUFFERS
 //#define FORCE_SYNCHRONOUS_RECEIVE
 #define COMMAND_INIT_RETRY
 

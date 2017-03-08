@@ -138,8 +138,8 @@ OTLWF_IOCTL_HANDLER IoCtls[] =
     { "IOCTL_OTLWF_OT_SEND_MGMT_COMMISSIONER_SET",  REF_IOCTL_FUNC(otSendMgmtCommissionerSet) },
     { "IOCTL_OTLWF_OT_KEY_SWITCH_GUARDTIME",        REF_IOCTL_FUNC_WITH_TUN(otKeySwitchGuardtime) },
     { "IOCTL_OTLWF_OT_FACTORY_RESET",               REF_IOCTL_FUNC(otFactoryReset) },
-	{ "IOCTL_OTLWF_OT_THREAD_AUTO_START",           REF_IOCTL_FUNC(otThreadAutoStart) },
-	{ "IOCTL_OTLWF_OT_NEXT_NEIGHBOR_INFO",			REF_IOCTL_FUNC(otNextNeighborInfo) }
+    { "IOCTL_OTLWF_OT_THREAD_AUTO_START",           REF_IOCTL_FUNC(otThreadAutoStart) },
+    { "IOCTL_OTLWF_OT_NEXT_NEIGHBOR_INFO",			REF_IOCTL_FUNC(otNextNeighborInfo) }
 };
 
 static_assert(ARRAYSIZE(IoCtls) == (MAX_OTLWF_IOCTL_FUNC_CODE - MIN_OTLWF_IOCTL_FUNC_CODE) + 1,
@@ -1612,7 +1612,7 @@ otLwfTunIoCtl_otLinkMode_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_THREAD_MODE)
     {
-		uint8_t numeric_mode = 0;
+        uint8_t numeric_mode = 0;
         if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT8_S, &numeric_mode))
         {
             otLinkModeConfig* aLinkMode = (otLinkModeConfig*)OutBuffer;
@@ -3794,7 +3794,7 @@ otLwfTunIoCtl_otDeviceRole_Handler(
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     if (Key == SPINEL_PROP_NET_ROLE)
     {
-		uint8_t spinel_role = 0;
+        uint8_t spinel_role = 0;
         if (try_spinel_datatype_unpack(Data, DataLength, SPINEL_DATATYPE_UINT8_S, &spinel_role))
         {
             switch (spinel_role)
@@ -3890,44 +3890,44 @@ otLwfIoCtl_otChildInfoByIndex(
 _IRQL_requires_max_(PASSIVE_LEVEL)
 NTSTATUS
 otLwfIoCtl_otNextNeighborInfo(
-	_In_ PMS_FILTER			pFilter,
-	_In_reads_bytes_(InBufferLength)
-			PUCHAR			InBuffer,
-	_In_	ULONG			InBufferLength,
-	_Out_writes_bytes_(*OutBufferLength)
-			PVOID			OutBuffer,
-	_Inout_	PULONG			OutBufferLength
-	)
+    _In_ PMS_FILTER			pFilter,
+    _In_reads_bytes_(InBufferLength)
+            PUCHAR			InBuffer,
+    _In_	ULONG			InBufferLength,
+    _Out_writes_bytes_(*OutBufferLength)
+            PVOID			OutBuffer,
+    _Inout_	PULONG			OutBufferLength
+    )
 {
-	NTSTATUS status = STATUS_INVALID_PARAMETER;
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
 
-	if (InBufferLength >= sizeof(otNeighborInfoIterator) &&
-		*OutBufferLength >= sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo)) 
-	{
-		otNeighborInfoIterator aIterator = *(otNeighborInfoIterator*)InBuffer;
-		otNeighborInfo* aInfo = (otNeighborInfo*) ((PUCHAR)OutBuffer + sizeof(otNeighborInfoIterator));
+    if (InBufferLength >= sizeof(otNeighborInfoIterator) &&
+        *OutBufferLength >= sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo)) 
+    {
+        otNeighborInfoIterator aIterator = *(otNeighborInfoIterator*)InBuffer;
+        otNeighborInfo* aInfo = (otNeighborInfo*) ((PUCHAR)OutBuffer + sizeof(otNeighborInfoIterator));
 
-		status = ThreadErrorToNtstatus(
-			otGetNextNeighborInfo(
-				pFilter->otCtx,
-				&aIterator,
-				aInfo
-			)
-		);
+        status = ThreadErrorToNtstatus(
+            otGetNextNeighborInfo(
+                pFilter->otCtx,
+                &aIterator,
+                aInfo
+            )
+        );
 
-		*OutBufferLength = sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo);
+        *OutBufferLength = sizeof(otNeighborInfoIterator) + sizeof(otNeighborInfo);
 
-		if (status == STATUS_SUCCESS) 
-		{
-			*(otNeighborInfoIterator*)OutBuffer = aIterator;
-		}
-	}
-	else 
-	{
-		*OutBufferLength = 0;
-	}
+        if (status == STATUS_SUCCESS) 
+        {
+            *(otNeighborInfoIterator*)OutBuffer = aIterator;
+        }
+    }
+    else 
+    {
+        *OutBufferLength = 0;
+    }
 
-	return status;
+    return status;
 }
 
 _IRQL_requires_max_(PASSIVE_LEVEL)

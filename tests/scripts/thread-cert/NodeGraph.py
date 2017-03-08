@@ -27,7 +27,9 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-import node
+import networkx as nx
+import matplotlib.pyplot as plt
+from copy import deepcopy
 
 
 class Graph:
@@ -50,6 +52,8 @@ class Graph:
             for addr in neighbors:
                 self.matrix[i][self.addr_ids[addr]] = True
 
+        self.adj = deepcopy(self.matrix)
+
         # We require two-way connectivity
         for i in range(self.n_nodes):
             for j in range(self.n_nodes):
@@ -69,8 +73,27 @@ class Graph:
         return self.matrix[node_a_id][node_b_id]
 
     def __str__(self):
-        res = ""
+        res = "Reachability Graph:\n"
         res += str(self.addr_ids)
         for row in self.matrix:
             res += "\n" + str(row)
         return res
+
+    def draw(self, states, parts, fig_id=None, show=False, directed=True):
+        g = nx.DiGraph() if directed else nx.Graph()
+        for addr in self.addr_ids:
+            g.add_node(self.addr_ids[addr], address=addr)
+        for i in range(self.n_nodes):
+            for j in range(self.n_nodes):
+                if i != j and self.adj[i][j] and (directed or self.adj[j][i]):
+                    g.add_edge(i, j)
+        colours = ['rbgc'[states[i]] for i in range(self.n_nodes)]
+        labels = dict((n, "%d [%d]: %s" % (n, parts[n], d['address'])) for (n, d) in g.nodes(data=True))
+        plt.clf()
+        plt.ioff()
+        plt.figure(figsize=(20, 20))
+        pos = nx.spring_layout(g, k=1.5, iterations=20)
+        nx.draw(g, pos, labels=labels, node_color=colours, edge_color='m')
+        plt.savefig("..\\Results\\cout\\figure_" + str(fig_id) + ".png", dpi=1000)
+        if show:
+            plt.show(block=False)

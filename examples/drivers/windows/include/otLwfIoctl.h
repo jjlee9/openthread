@@ -684,11 +684,11 @@ typedef struct otCommissionConfig
     // BOOLEAN - aAutoStart
 
 #define IOCTL_OTLWF_OT_NEXT_NEIGHBOR_INFO \
-	OTLWF_CTL_CODE(194, METHOD_BUFFERED, FILE_READ_DATA)
-	// GUID - InterfaceGuid
-	// otNeighborInfoIterator - aIterator (input)
-	// otNeighborInfoIterator - aNewIterator (output)
-	// otNeighborInfo - aInfo (output)
+    OTLWF_CTL_CODE(194, METHOD_BUFFERED, FILE_READ_DATA)
+    // GUID - InterfaceGuid
+    // otNeighborInfoIterator - aIterator (input)
+    // otNeighborInfoIterator - aNewIterator (output)
+    // otNeighborInfo - aInfo (output)
 
 // OpenThread function IOCTL codes
 #define MIN_OTLWF_IOCTL_FUNC_CODE 100
